@@ -1,264 +1,2952 @@
-// S05/W02 사장님 홈 — "오늘 처리할 일"을 맨 위에. 위험 → 7일 이내 → 확인 필요 순, [처리]는 해당 화면으로.
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router';
-import { useStore } from '../../state/store';
-import { areaCounts, computeTodos } from '../../domain/todos';
-import { evaluateRisk } from '../../domain/risk';
-import { dayPlan, netMinutes, weekDates, weekWarnings } from '../../domain/work';
-import { draftLines, payrollPeriodFor } from '../../domain/payroll';
-import { employeeInsurance } from '../../domain/insurance';
-import { estimateSeverance } from '../../domain/severance';
-import { computeDeadlines } from '../../domain/deadlines';
-import { resolveRule } from '../../domain/rules';
-import { fmtDate, fmtMD, fmtMDW, monthOf, WEEKDAY_KO, fmtMDT } from '../../domain/dates';
-import { holidayOn } from '../../data/holidays';
-import { Badge, Button, Card, cx, Empty, KV, levelTone, LinkButton, Money, PageHeader } from '../../ui/kit';
+@import 'tailwindcss';
+@import './styles/tokens.css';
 
-export default function OwnerHome() {
-  const { state, update, base } = useStore();
-  const [all, setAll] = useState(false);
-  const todos = useMemo(() => computeTodos(state, base), [state, base]);
-  const counts = areaCounts(todos);
-  const risk = evaluateRisk(state, base);
-  const active = state.employees.filter((e) => !e.resignDate || e.resignDate >= base);
-  const pendingOnb = active.filter((e) => e.onboarding === 'existing-pending');
-  const existingAll = active.filter((e) => e.onboarding !== 'new');
-  const wp = state.workplace!;
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+    scroll-padding-top: 120px;
+  }
+  body {
+    @apply bg-canvas text-ink antialiased;
+    font-feature-settings: 'tnum' 0;
+    letter-spacing: -0.025em;
+  }
+  button:not(:disabled),
+  summary {
+    cursor: pointer;
+  }
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-brand);
+    outline-offset: 4px;
+  }
+  input,
+  select,
+  textarea {
+    accent-color: var(--action);
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-muted);
+    opacity: 0.85;
+  }
+  input[type='checkbox'],
+  input[type='radio'] {
+    width: 17px;
+    height: 17px;
+    flex-shrink: 0;
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+  .grid > * {
+    min-width: 0;
+  }
+  dialog::backdrop {
+    background: #101a2c75;
+    backdrop-filter: blur(5px);
+  }
+  svg {
+    flex-shrink: 0;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+}
+[data-theme='dark'] .bg-white {
+  background-color: var(--surface);
+}
+[data-theme='dark'] :is(.bg-white\/60, .bg-white\/80, .bg-white\/90, .bg-white\/95) {
+  background-color: var(--surface);
+}
+[data-theme='dark'] .hover\:bg-white:hover {
+  background-color: var(--surface-raised);
+}
+[data-theme='dark'] .bg-ink {
+  background-color: #121a15;
+}
+[data-theme='dark'] .text-white {
+  color: #fff;
+}
+[data-theme='dark'] .bg-brand.text-white {
+  background: var(--action);
+}
+[data-theme='dark'] .text-\[\#191600\] {
+  color: #191600;
+}
+[data-theme='dark'] input,
+[data-theme='dark'] select,
+[data-theme='dark'] textarea {
+  color-scheme: dark;
+}
+[data-theme='dark'] .to-white {
+  --tw-gradient-to: var(--surface);
+}
 
-  const month = monthOf(base);
-  const money = useMemo(() => {
-    const lines = draftLines(state, month);
-    const gross = lines.reduce((s, l) => s + l.gross, 0);
-    let employer: number | null = 0;
-    for (const e of active) {
-      const t = employeeInsurance(state, e, base).totals.employer;
-      if (t === null) employer = null;
-      else if (employer !== null) employer += t;
-    }
-    const sevAccrual = active.reduce((s, e) => s + estimateSeverance(state, e, base).monthlyAccrual, 0);
-    return { gross, employer, sevAccrual };
-  }, [state, base, month, active]);
-  const nextPay = computeDeadlines(state, base).filter((d) => d.type === 'payday' && d.date >= base)[0];
+.brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+.brand-descriptor {
+  display: block;
+  color: var(--color-muted);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  margin-top: 5px;
+}
+.brand-symbol {
+  width: 32px;
+  height: 36px;
+  color: var(--color-brand);
+  flex-shrink: 0;
+}
+.icon-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  background: transparent;
+  flex-shrink: 0;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    transform 0.2s;
+}
+.icon-button:hover {
+  background: var(--subtle);
+  color: var(--color-brand);
+}
+.icon-button:active {
+  transform: scale(0.92);
+}
+.icon-button:disabled {
+  opacity: 0.35;
+}
+.ui-button {
+  min-height: 44px;
+  padding: 11px 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.4;
+  transition:
+    background 0.2s,
+    transform 0.2s,
+    box-shadow 0.2s;
+  white-space: nowrap;
+}
+.ui-button.primary {
+  background: var(--action);
+  color: #fff;
+}
+.ui-button.primary:hover {
+  background: var(--action-hover);
+  box-shadow: 0 5px 14px var(--action-ring);
+}
+.ui-button.secondary {
+  background: var(--subtle);
+  color: var(--text-secondary);
+}
+.ui-button.secondary:hover {
+  background: var(--color-line);
+}
+.ui-button:active,
+.kit-button:active {
+  transform: scale(0.97);
+}
+.ui-button:disabled {
+  opacity: 0.4;
+}
+.kit-button {
+  min-height: 36px;
+  transition:
+    background 0.2s,
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+.surface-card {
+  border-color: var(--color-line);
+  border-radius: var(--radius-card);
+  box-shadow: 0 3px 12px #1c355004;
+}
+.surface-card > div:first-child > h2 {
+  font-size: 17px;
+}
+.page-header h1 {
+  font-size: clamp(25px, 2vw, 32px);
+  letter-spacing: -0.045em;
+}
+.page-header {
+  padding: 6px 0 10px;
+}
+input.rounded-lg,
+select.rounded-lg,
+textarea.rounded-lg {
+  border-radius: 12px;
+  min-height: 42px;
+}
+dialog:not(.mobile-sidebar-dialog) {
+  border-radius: var(--radius-dialog);
+  box-shadow: 0 24px 100px #0004;
+}
+dialog[open] {
+  animation: dialog-in 0.24s ease-out;
+}
+dialog > .flex > div:first-child {
+  padding: 22px 24px 16px;
+  border-bottom-color: var(--color-line);
+}
+dialog > .flex > .overflow-y-auto {
+  padding: 20px 24px 24px;
+}
+.skip-link {
+  position: fixed;
+  left: 20px;
+  top: -100px;
+  padding: 12px 20px;
+  z-index: 100;
+  background: var(--surface);
+  border-radius: 10px;
+}
+.skip-link:focus {
+  top: 10px;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+}
+.header-login {
+  font-size: 14px;
+  color: var(--text-secondary);
+  padding: 12px;
+}
+.header-login:hover {
+  color: var(--color-brand);
+}
+.global-search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  width: min(540px, 100%);
+  border-radius: 14px;
+  padding: 14px 17px;
+  background: var(--subtle);
+  color: var(--color-muted);
+  text-align: left;
+  font-size: 14px;
+  transition:
+    background 0.2s,
+    box-shadow 0.2s;
+}
+.global-search:hover {
+  box-shadow: 0 0 0 2px var(--action-ring);
+}
+.global-search span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.global-search kbd {
+  background: var(--surface);
+  border: 1px solid var(--color-line);
+  border-radius: 5px;
+  padding: 1px 5px;
+  font-size: 10px;
+  font-family: inherit;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+.search-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 2px solid var(--action);
+  border-radius: 14px;
+  padding: 14px 16px;
+  color: var(--color-brand);
+}
+.search-input-wrap input {
+  width: 100%;
+  color: var(--color-ink);
+  outline: none;
+  font-size: 16px;
+  background: transparent;
+}
+.search-caption {
+  margin: 22px 4px 10px;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+.search-results {
+  display: grid;
+  gap: 3px;
+}
+.search-result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: 12px;
+  text-align: left;
+}
+.search-result.selected,
+.search-result:hover {
+  background: var(--color-brand-soft);
+}
+.search-result > span:nth-child(2) {
+  flex: 1;
+}
+.search-result strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+}
+.search-result small {
+  display: block;
+  color: var(--color-muted);
+  font-size: 11px;
+  margin-top: 3px;
+}
+.search-icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  background: var(--subtle);
+  border-radius: 11px;
+  color: var(--color-brand);
+}
+.search-footer {
+  display: flex;
+  gap: 16px;
+  padding-top: 16px;
+  margin-top: 12px;
+  border-top: 1px solid var(--color-line);
+  font-size: 11px;
+  color: var(--color-muted);
+}
+.search-empty {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 10px;
+  padding: 40px 0;
+  font-size: 13px;
+  color: var(--color-muted);
+}
+.search-empty strong {
+  font-size: 16px;
+  color: var(--color-ink);
+}
 
-  const today = active.map((e) => ({ e, plan: dayPlan(state, e, base), rec: state.attendance.find((a) => a.employeeId === e.id && a.date === base) })).filter((x) => x.plan.shift);
-  const week = weekDates(base);
-  const breakRule = resolveRule<{ per4h: number; per8h: number; waiver4hOnRequest: boolean }>('break.minimum', base);
-  const minorRule = resolveRule<{ daily: number; weekly: number }>('minor.limits', base);
-  const myNotes = state.notifications.filter((n) => n.to === 'owner');
-  const shown = all ? todos : todos.slice(0, 5);
+.app-header {
+  min-height: var(--header-height);
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  padding: 14px 30px 14px 22px;
+  border-bottom: 1px solid var(--color-line);
+  background: var(--surface);
+  position: sticky;
+  top: 0;
+  z-index: 35;
+}
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 222px;
+  flex-shrink: 0;
+}
+.app-header .global-search {
+  margin-right: auto;
+}
+.profile-button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  padding-left: 10px;
+  margin-left: 5px;
+  border-left: 1px solid var(--color-line);
+}
+.profile-avatar {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
+  border-radius: 50%;
+  font-weight: 700;
+}
+.notification-button {
+  position: relative;
+}
+.notification-button > span {
+  position: absolute;
+  right: 10px;
+  top: 8px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #f04452;
+  border: 1px solid var(--surface);
+}
+.shell-body {
+  display: flex;
+  align-items: flex-start;
+}
+.app-sidebar {
+  position: sticky;
+  top: var(--header-height);
+  height: calc(100dvh - var(--header-height));
+  width: 242px;
+  flex: 0 0 242px;
+  background: var(--surface);
+  border-right: 1px solid var(--color-line);
+  padding: 24px 16px 18px;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: auto;
+  transition:
+    width 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    flex-basis 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.workspace-switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 10px;
+  background: var(--subtle);
+  border-radius: 15px;
+  min-height: 66px;
+}
+.workspace-switch > span.sidebar-label {
+  flex: 1;
+  min-width: 0;
+}
+.workspace-switch strong {
+  display: block;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.workspace-switch small {
+  display: block;
+  margin-top: 4px;
+  color: var(--color-muted);
+  font-size: 11px;
+}
+.workspace-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+  color: var(--color-brand);
+  flex-shrink: 0;
+}
+.sidebar-section {
+  margin: 28px 14px 12px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-muted);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.sidebar-nav {
+  display: grid;
+  gap: 4px;
+  padding-bottom: 20px;
+}
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 12px;
+  padding: 13px 14px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  min-height: 46px;
+  transition:
+    background 0.16s,
+    color 0.16s;
+  white-space: nowrap;
+}
+.sidebar-link > svg {
+  color: var(--color-muted);
+}
+.sidebar-link:hover {
+  background: var(--subtle);
+}
+.sidebar-link.active {
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
+  font-weight: 650;
+  box-shadow: inset 3px 0 0 var(--color-brand);
+}
+.sidebar-link.active > svg {
+  color: var(--color-brand);
+}
+.sidebar-count {
+  margin-left: auto;
+  font-size: 10px;
+  background: var(--surface);
+  border-radius: 6px;
+  padding: 2px 6px;
+  color: var(--color-brand);
+}
+.sidebar-settings {
+  margin-top: 14px;
+}
+.sidebar-bottom {
+  margin-top: auto;
+  display: grid;
+  gap: 8px;
+}
+.sidebar-guide {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  border-radius: 15px;
+  padding: 15px 11px;
+  background: var(--color-brand-soft);
+  text-align: left;
+}
+.sidebar-guide > span.sidebar-label {
+  flex: 1;
+}
+.sidebar-guide strong {
+  display: block;
+  font-size: 12px;
+  color: var(--color-brand);
+}
+.sidebar-guide small {
+  display: block;
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+.guide-bulb {
+  color: var(--color-brand);
+}
+.sidebar-position {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 13px;
+  color: var(--color-muted);
+  font-size: 11px;
+  border-radius: 10px;
+  text-align: left;
+}
+.sidebar-position:hover {
+  background: var(--subtle);
+}
+.app-shell[data-collapsed='true'] .app-sidebar {
+  width: 80px;
+  flex-basis: 80px;
+  padding-inline: 12px;
+}
+.app-shell[data-collapsed='true'] .app-sidebar .sidebar-label {
+  display: none;
+}
+.app-shell[data-collapsed='true'] .app-sidebar .workspace-switch {
+  padding: 8px;
+  min-height: 52px;
+}
+.app-shell[data-collapsed='true'] .app-sidebar .sidebar-nav {
+  margin-top: 25px;
+}
+.app-shell[data-collapsed='true'] .app-sidebar .sidebar-link {
+  padding-inline: 17px;
+}
+.app-shell[data-collapsed='true'] .app-sidebar .sidebar-guide {
+  justify-content: center;
+  padding-inline: 8px;
+}
+.app-shell[data-collapsed='true'] .app-sidebar .sidebar-position {
+  justify-content: center;
+}
+.app-shell[data-side='right'] .app-sidebar {
+  order: 2;
+  border-right: 0;
+  border-left: 1px solid var(--color-line);
+}
+.app-content {
+  flex: 1;
+  min-width: 0;
+}
+.demo-bar {
+  font-size: 10px;
+  color: var(--color-muted);
+}
+.demo-bar-inner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 32px;
+  border-bottom: 1px solid var(--color-line);
+  background: var(--surface);
+}
+.demo-tag {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--color-brand);
+  background: var(--color-brand-soft);
+  border-radius: 4px;
+  padding: 2px 5px;
+}
+.demo-description {
+  flex: 1;
+}
+.demo-date {
+  padding-inline: 6px;
+}
+.demo-bar label {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+}
+.demo-bar select {
+  background: var(--subtle);
+  border-radius: 6px;
+  padding: 3px 7px;
+  color: var(--text-secondary);
+  outline-offset: 0;
+}
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 25px auto 16px;
+  padding: 0 34px;
+  max-width: 1450px;
+  color: var(--color-muted);
+  font-size: 11px;
+}
+.breadcrumb strong {
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.workspace-main {
+  padding: 0 34px 36px;
+  max-width: 1450px;
+  margin: 0 auto;
+  min-height: calc(100dvh - 250px);
+}
+.app-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  padding: 20px 34px 26px;
+  font-size: 10px;
+  color: var(--color-muted);
+}
+.app-footer > button {
+  margin-left: auto;
+}
+.mobile-bottom-nav {
+  display: none;
+}
+.mobile-sidebar-dialog {
+  max-width: none;
+  max-height: none;
+  width: 100%;
+  height: 100dvh;
+  margin: 0;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: var(--color-ink);
+}
+.mobile-sidebar-content {
+  width: min(310px, 86vw);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 16px;
+  background: var(--surface);
+  overflow-y: auto;
+  animation: drawer-in 0.25s ease-out;
+}
+.mobile-sidebar-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+.mobile-sidebar-dialog[data-side='right'] .mobile-sidebar-content {
+  margin-left: auto;
+  animation-name: drawer-right-in;
+}
+.role-header {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  justify-content: space-between;
+  padding: 18px max(24px, calc((100vw - 1180px) / 2));
+  background: var(--surface);
+  border-bottom: 1px solid var(--color-line);
+}
+.role-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  background: var(--surface);
+  border-top: 1px solid var(--color-line);
+  z-index: 30;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.role-bottom-nav > div {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  max-width: 576px;
+  margin: auto;
+}
+.role-bottom-nav a {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 5px;
+  padding: 14px 0;
+  color: var(--color-muted);
+  font-size: 11px;
+}
+.role-bottom-nav a.active {
+  color: var(--color-brand);
+  font-weight: 650;
+}
 
-  if (!active.length)
-    return (
-      <div>
-        <PageHeader title="시작해 볼까요" sub="직원이 아직 없어요. 채용 전 점검과 첫 직원 등록부터 해요." />
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card title="채용 전 점검">
-            <p className="text-sm text-muted">시급과 요일별 근무 시간을 넣으면 최저임금·주휴·4대보험·예상 인건비·필요한 서류를 보여줘요. 저장하지 않아요.</p>
-            <LinkButton to="/owner/precheck" variant="primary" className="mt-4">
-              채용 전 점검하기
-            </LinkButton>
-          </Card>
-          <Card title="첫 직원 등록">
-            <p className="text-sm text-muted">이미 일하는 직원이 있다면 등록 후 있는 서류·보험·지난 기한을 한 번에 정리해요.</p>
-            <LinkButton to="/owner/employees/new" variant="primary" className="mt-4">
-              직원 등록
-            </LinkButton>
-          </Card>
-        </div>
-      </div>
-    );
+.dashboard-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin: 0 0 26px;
+}
+.dashboard-heading .date-label {
+  font-size: 12px;
+  color: var(--color-muted);
+  margin-bottom: 10px;
+}
+.dashboard-heading h1 {
+  font-size: clamp(26px, 2.3vw, 32px);
+  line-height: 1.25;
+  font-weight: 750;
+  letter-spacing: -0.055em;
+}
+.dashboard-heading h1 span {
+  color: var(--color-brand);
+}
+.dashboard-heading p {
+  color: var(--color-muted);
+  font-size: 13px;
+  margin-top: 10px;
+}
+.dashboard-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr 1fr;
+  gap: 0;
+  margin-bottom: 24px;
+  background: var(--surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+.stat-card {
+  background: var(--surface);
+  border: 0;
+  border-radius: 0;
+  padding: 23px 25px;
+  display: flex;
+  flex-direction: column;
+  min-height: 154px;
+  position: relative;
+}
+.stat-card-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 550;
+}
+.stat-card-title > svg {
+  margin-left: auto;
+  color: var(--color-muted);
+}
+.stat-value {
+  font-size: clamp(27px, 2.1vw, 32px);
+  font-weight: 750;
+  line-height: 1.2;
+  letter-spacing: -0.045em;
+  margin: 18px 0 11px;
+  font-variant-numeric: tabular-nums;
+}
+.stat-value small {
+  font-size: 16px;
+  margin-left: 3px;
+  font-weight: 500;
+}
+.stat-card-bottom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  font-size: 11px;
+  color: var(--color-muted);
+}
+.stat-card + .stat-card {
+  border-left: 1px solid var(--color-line);
+}
+.stat-card:hover {
+  background: var(--surface-hover);
+}
+.stat-card.pay-card {
+  background: transparent;
+}
+.stat-card.pay-card .stat-value {
+  color: var(--color-brand);
+}
+.stat-card .status-chip {
+  margin-left: auto;
+  font-size: 10px;
+  background: var(--surface);
+  border-radius: 5px;
+  padding: 2px 6px;
+}
+.mini-progress {
+  height: 5px;
+  border-radius: 10px;
+  background: var(--subtle);
+  overflow: hidden;
+  display: flex;
+  gap: 3px;
+  margin-top: 16px;
+}
+.mini-progress span {
+  border-radius: 10px;
+  min-width: 4px;
+  background: var(--action);
+}
+.mini-progress span:nth-child(2) {
+  background: #8fc0ff;
+}
+.dashboard-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(280px, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+.dashboard-columns > * {
+  min-width: 0;
+}
+.dashboard-panel {
+  background: var(--surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  padding: 25px;
+}
+.panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.panel-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+.panel-heading h2 > span {
+  color: var(--color-brand);
+  font-size: 15px;
+}
+.panel-heading > a,
+.panel-heading > button {
+  color: var(--color-muted);
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.todo-filters {
+  display: flex;
+  gap: 6px;
+  padding-bottom: 9px;
+  margin-bottom: 5px;
+  overflow-x: auto;
+}
+.todo-filters button {
+  background: var(--subtle);
+  color: var(--color-muted);
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.todo-filters button.active {
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
+  font-weight: 700;
+}
+.todo-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 17px 0;
+  border-bottom: 1px solid var(--color-line);
+}
+.todo-row-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: 14px;
+  color: var(--color-brand);
+  background: var(--color-brand-soft);
+}
+.todo-row-icon.risk {
+  background: var(--color-risk-soft);
+  color: var(--color-risk);
+}
+.todo-row-icon.soon {
+  background: var(--color-warn-soft);
+  color: var(--color-warn);
+}
+.todo-row-content {
+  min-width: 0;
+  flex: 1;
+}
+.todo-row-content h3 {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.55;
+  text-wrap: wrap;
+}
+.todo-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 5px;
+  font-size: 10px;
+  color: var(--color-muted);
+}
+.todo-meta .priority {
+  font-weight: 650;
+}
+.todo-meta .risk {
+  color: var(--color-risk);
+}
+.todo-meta .soon {
+  color: var(--color-warn);
+}
+.todo-row > a {
+  font-size: 11px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  border-radius: 8px;
+  padding: 9px 8px;
+}
+.todo-row > a:hover {
+  background: var(--subtle);
+  color: var(--color-brand);
+}
+.todo-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 17px 0 0;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+.onboarding-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--color-brand-soft);
+  border-radius: 13px;
+  padding: 15px;
+  margin-top: 20px;
+}
+.onboarding-strip > svg {
+  color: var(--color-brand);
+}
+.onboarding-strip p {
+  flex: 1;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+.onboarding-strip a {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-brand);
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.dashboard-side {
+  display: grid;
+  gap: 22px;
+}
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.calendar-header strong {
+  font-size: 14px;
+  font-weight: 650;
+}
+.calendar-header > div {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.calendar-header .icon-button {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+}
+.mini-calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px 2px;
+  text-align: center;
+}
+.calendar-weekday {
+  color: var(--color-muted);
+  font-size: 10px;
+  padding-bottom: 10px;
+}
+.mini-calendar button {
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  height: 32px;
+  width: 100%;
+  max-width: 34px;
+  border-radius: 10px;
+  margin: auto;
+  position: relative;
+}
+.mini-calendar button:hover {
+  background: var(--subtle);
+}
+.mini-calendar button.today {
+  color: var(--color-brand);
+  background: var(--color-brand-soft);
+  font-weight: 700;
+}
+.mini-calendar button.selected {
+  background: var(--action);
+  color: #fff;
+}
+.mini-calendar button.has-deadline::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.calendar-events {
+  display: grid;
+  gap: 15px;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--color-line);
+}
+.calendar-event {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.calendar-event > i {
+  display: block;
+  width: 3px;
+  height: 28px;
+  border-radius: 3px;
+  background: var(--color-brand);
+  flex-shrink: 0;
+}
+.calendar-event:nth-child(2) > i {
+  background: var(--accent);
+}
+.calendar-event > span {
+  flex: 1;
+  min-width: 0;
+}
+.calendar-event strong {
+  font-size: 11px;
+  display: block;
+  font-weight: 600;
+  line-height: 1.55;
+}
+.calendar-event small {
+  color: var(--color-muted);
+  font-size: 10px;
+}
+.calendar-event > b {
+  font-size: 10px;
+  background: var(--color-warn-soft);
+  color: var(--color-warn);
+  border-radius: 5px;
+  padding: 3px 5px;
+  font-weight: 600;
+}
+.guide-callout {
+  padding: 23px;
+  border-radius: var(--radius-card);
+  background: var(--color-brand-soft);
+  position: relative;
+  overflow: hidden;
+}
+.guide-callout > .guide-callout-icon {
+  position: absolute;
+  right: 20px;
+  bottom: 19px;
+  width: 50px;
+  height: 58px;
+  background: var(--surface);
+  border: 1px solid var(--color-line);
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  color: var(--color-brand);
+  transform: rotate(5deg);
+}
+.guide-callout small {
+  color: var(--color-brand);
+  font-size: 10px;
+  font-weight: 650;
+}
+.guide-callout h3 {
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 700;
+  margin-top: 6px;
+}
+.guide-callout button {
+  margin-top: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--color-brand);
+  font-size: 11px;
+  font-weight: 650;
+}
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 22px;
+}
+.quick-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 18px 6px;
+  border: 1px solid var(--color-line);
+  background: var(--surface);
+  border-radius: 16px;
+  font-size: 11px;
+  font-weight: 600;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+.quick-action:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow);
+}
+.quick-action > span {
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
+  width: 37px;
+  height: 37px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+}
+.quick-action:nth-child(2) > span {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.quick-action:nth-child(3) > span {
+  color: var(--color-ok);
+  background: var(--color-ok-soft);
+}
+.quick-action:nth-child(4) > span {
+  color: var(--color-warn);
+  background: var(--color-warn-soft);
+}
+.schedule-panel {
+  margin-top: 22px;
+}
+.week-table {
+  min-width: 670px;
+  width: 100%;
+  text-align: center;
+  font-size: 11px;
+}
+.week-table th {
+  color: var(--color-muted);
+  font-size: 10px;
+  font-weight: 500;
+  padding: 10px 7px 15px;
+}
+.week-table th:first-child,
+.week-table td:first-child {
+  text-align: left;
+}
+.week-table th.today {
+  color: var(--color-brand);
+}
+.week-table td {
+  border-top: 1px solid var(--color-line);
+  padding: 15px 7px;
+}
+.week-table .shift-time {
+  display: inline-block;
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
+  border-radius: 7px;
+  padding: 7px 9px;
+  white-space: nowrap;
+}
+.employee-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+.employee-avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  color: var(--color-brand);
+  background: var(--color-brand-soft);
+  font-size: 11px;
+  font-weight: 650;
+}
+.employee-avatar[data-index='1'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.employee-avatar[data-index='2'] {
+  background: var(--color-warn-soft);
+  color: var(--color-warn);
+}
+.today-worker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+}
+.today-worker > span:nth-child(2) {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 550;
+}
+.today-worker small {
+  display: block;
+  font-size: 10px;
+  color: var(--color-muted);
+  font-weight: 400;
+  margin-top: 4px;
+}
+.today-worker > b {
+  font-size: 10px;
+  background: var(--subtle);
+  color: var(--color-muted);
+  padding: 4px 7px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+.notification-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 15px 0;
+  border-top: 1px solid var(--color-line);
+  font-size: 12px;
+}
+.notification-list li > span {
+  font-size: 10px;
+  color: var(--color-muted);
+  white-space: nowrap;
+  margin-left: auto;
+}
+.notification-list li > i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-brand);
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+.empty-copy {
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 1.8;
+  padding: 14px 0;
+}
+.checkup-progress {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: conic-gradient(var(--action) var(--progress), var(--subtle) 0);
+}
+.checkup-progress > span {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--surface);
+  display: grid;
+  place-items: center;
+  font-size: 17px;
+  font-weight: 700;
+}
+.checkup-summary {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.checkup-summary p {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.9;
+}
 
-  return (
-    <div>
-      <PageHeader
-        title={`오늘 처리할 일 ${todos.length}건`}
-        sub={`${wp.name || '내 사업장'} · 기준일 ${fmtDate(base)} · 참고용`}
-        actions={
-          <>
-            <LinkButton to="/owner/precheck">채용 전 점검</LinkButton>
-            <LinkButton to="/owner/employees/new" variant="primary">
-              직원 등록
-            </LinkButton>
-          </>
-        }
-      />
-      {pendingOnb.length > 0 && (
-        <Card className="mb-4 border-info/40 bg-info-soft/40" title={`있는 서류 체크하기 ${existingAll.length - pendingOnb.length}/${existingAll.length}명 완료`}>
-          <p className="text-sm text-muted">기존 직원은 이미 처리한 서류·보험·지난 기한을 먼저 정리해요. 정리 전에는 지난 기한을 위험으로 띄우지 않아요.</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {pendingOnb.map((e) => (
-              <LinkButton key={e.id} to={`/owner/employees/${e.id}/onboarding`} variant="primary" size="sm">
-                {e.alias} 정리하기
-              </LinkButton>
-            ))}
-          </div>
-        </Card>
-      )}
-      <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
-        <Card title="할 일" right="위험 → 7일 이내 → 확인 필요">
-          {!todos.length && <Empty title="지금 처리할 일이 없어요">새 기한이 다가오면 여기에 모여요.</Empty>}
-          <ul className="divide-y divide-line">
-            {shown.map((t) => (
-              <li key={t.id} className="flex items-center gap-3 py-2.5">
-                <Badge tone={levelTone(t.level)} className="w-12 justify-center">
-                  {t.badge}
-                </Badge>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">{t.title}</p>
-                  <p className="truncate text-xs text-muted">
-                    {t.area} · {t.basis}
-                  </p>
-                </div>
-                <LinkButton to={t.link} size="sm" className="shrink-0 border-brand text-brand">
-                  처리
-                </LinkButton>
-              </li>
-            ))}
-          </ul>
-          {todos.length > 5 && (
-            <button type="button" className="mt-2 text-sm font-semibold text-brand" onClick={() => setAll(!all)}>
-              {all ? '접기' : `모두 보기 (${todos.length}) ▸`}
-            </button>
-          )}
-          {!state.settings.kakaoBannerDismissed && (
-            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-canvas px-3 py-2 text-sm">
-              <span className="flex-1">카톡 "나에게 보내기"로 매일 할 일을 받아볼 수 있어요 — <b>연결 대기</b> (지금은 앱 안 알림·캘린더 파일만)</span>
-              <LinkButton size="sm" to="/owner/deadlines">캘린더 파일 받기</LinkButton>
-              <Button size="sm" variant="ghost" onClick={() => update((d) => { d.settings.kakaoBannerDismissed = true; })}>
-                닫기
-              </Button>
+.public-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--color-line);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+.public-header-main {
+  display: flex;
+  align-items: center;
+  gap: 45px;
+  max-width: 1280px;
+  margin: auto;
+  padding: 22px 30px;
+}
+.public-header-main .global-search {
+  flex: 1;
+  margin-right: auto;
+  background: var(--surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  padding-inline: 20px;
+}
+.public-nav {
+  max-width: 1280px;
+  margin: auto;
+  padding: 15px 30px;
+  border-top: 1px solid var(--color-line);
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.public-nav > a:hover,
+.public-nav > button:hover {
+  color: var(--color-brand);
+}
+.nav-app-link {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--color-brand);
+}
+.public-nav-note {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 400;
+  color: var(--color-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.status-dot {
+  width: 5px;
+  height: 5px;
+  background: var(--color-ok);
+  display: inline-block;
+  border-radius: 50%;
+}
+.landing-page {
+  background: var(--surface);
+}
+.landing-container {
+  max-width: 1180px;
+  margin: auto;
+  padding: 0 28px;
+}
+.landing-hero {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  align-items: center;
+  gap: 20px;
+  padding-top: 72px;
+  padding-bottom: 76px;
+}
+.landing-hero > *,
+.diagnosis-grid > *,
+.auth-layout > *,
+.feature-grid > * {
+  min-width: 0;
+}
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--color-brand);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.landing-hero h1 {
+  font-size: clamp(34px, 3.6vw, 48px);
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: -0.04em;
+  margin-top: 21px;
+}
+.landing-hero h1 span {
+  color: var(--color-brand);
+}
+.landing-hero-copy > p {
+  margin-top: 24px;
+  color: var(--color-muted);
+  font-size: 16px;
+  line-height: 1.9;
+}
+.hero-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 29px;
+}
+.hero-actions .ui-button {
+  min-height: 52px;
+  padding-inline: 22px;
+  font-size: 14px;
+  border-radius: 14px;
+}
+.hero-caption {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--color-muted);
+  font-size: 11px;
+  margin-top: 15px;
+}
+.hero-art {
+  position: relative;
+  min-height: 420px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  isolation: isolate;
+}
+.hero-art::before {
+  content: '';
+  position: absolute;
+  width: 91%;
+  height: 95%;
+  border-radius: 18px;
+  background: var(--color-brand-soft);
+  transform: rotate(3deg);
+  border: 1px solid var(--color-line);
+  z-index: -1;
+}
+.product-preview {
+  width: 410px;
+  max-width: 95%;
+  background: var(--surface);
+  border: 1px solid var(--color-line);
+  border-top: 3px solid var(--color-brand);
+  border-radius: 12px;
+  padding: 28px;
+  transform: rotate(-1deg);
+  box-shadow: 0 14px 36px #29332d12;
+}
+.preview-top {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 22px;
+  align-items: center;
+}
+.preview-top > i {
+  width: 6px;
+  height: 6px;
+  background: var(--color-line);
+  border-radius: 50%;
+}
+.preview-top > span {
+  font-size: 8px;
+  color: var(--color-muted);
+  margin-left: auto;
+}
+.preview-heading {
+  font-size: 18px;
+  font-weight: 750;
+  line-height: 1.5;
+  margin-bottom: 18px;
+}
+.preview-heading small {
+  display: block;
+  font-size: 10px;
+  color: var(--color-muted);
+  font-weight: 400;
+}
+.preview-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.preview-stats > div {
+  background: var(--subtle);
+  border-radius: 12px;
+  padding: 15px;
+}
+.preview-stats > div:first-child {
+  background: var(--color-brand-soft);
+}
+.preview-stats span {
+  display: block;
+  font-size: 9px;
+  color: var(--color-muted);
+}
+.preview-stats b {
+  display: block;
+  font-size: 19px;
+  margin-top: 9px;
+  color: var(--color-brand);
+}
+.preview-list-title {
+  font-size: 11px;
+  font-weight: 650;
+  margin: 20px 0 3px;
+}
+.preview-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--color-line);
+  padding: 12px 0;
+  font-size: 10px;
+}
+.preview-row > span {
+  width: 28px;
+  height: 28px;
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+}
+.preview-row > small {
+  margin-left: auto;
+  background: var(--color-warn-soft);
+  color: var(--color-warn);
+  padding: 3px 6px;
+  border-radius: 5px;
+  font-size: 8px;
+}
+.landing-divider {
+  border-top: 1px solid var(--color-line);
+}
+.landing-section {
+  padding-top: 70px;
+  padding-bottom: 70px;
+}
+.landing-section h2 {
+  font-size: clamp(27px, 3vw, 36px);
+  line-height: 1.4;
+  font-weight: 750;
+  letter-spacing: -0.055em;
+  margin-top: 13px;
+}
+.section-description {
+  font-size: 14px;
+  color: var(--color-muted);
+  line-height: 1.8;
+  margin-top: 14px;
+}
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 35px;
+}
+.feature-tile {
+  padding: 27px;
+  border-radius: 21px;
+  background: var(--color-canvas);
+  transition: transform 0.2s;
+}
+.feature-tile:hover {
+  transform: translateY(-4px);
+}
+.feature-tile > span {
+  display: grid;
+  place-items: center;
+  width: 43px;
+  height: 43px;
+  border-radius: 14px;
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
+  margin-bottom: 19px;
+}
+.feature-tile h3 {
+  font-size: 16px;
+  font-weight: 650;
+}
+.feature-tile p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--color-muted);
+  margin-top: 10px;
+}
+.diagnosis-section {
+  background: var(--color-canvas);
+}
+.diagnosis-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 70px;
+  align-items: center;
+}
+.diagnosis-box {
+  padding: 32px;
+  border-radius: 25px;
+  background: var(--surface);
+  border: 1px solid var(--color-line);
+  min-height: 300px;
+  box-shadow: var(--shadow);
+}
+.diagnosis-box [role='radiogroup'],
+.diagnosis-box [role='group'] {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+.diagnosis-box [role='radio'],
+.diagnosis-box [role='checkbox'] {
+  text-align: left;
+  padding: 14px 17px;
+  min-height: 48px;
+  border-radius: 13px;
+}
+.diagnosis-checks {
+  display: grid;
+  gap: 15px;
+  margin-top: 26px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.diagnosis-checks > span {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.diagnosis-checks svg {
+  color: var(--color-brand);
+}
+.principle-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 40px;
+  padding: 35px 0;
+  margin-top: 20px;
+  border-bottom: 1px solid var(--color-line);
+}
+.principle-row h3 {
+  font-size: 16px;
+  font-weight: 650;
+  margin: 14px 0 10px;
+}
+.principle-row p {
+  font-size: 12px;
+  line-height: 1.9;
+  color: var(--color-muted);
+}
+.principle-row svg {
+  color: var(--color-brand);
+}
+.faq-section {
+  max-width: 800px;
+  margin: auto;
+}
+.faq-list {
+  margin-top: 27px;
+}
+.faq-list details {
+  border-bottom: 1px solid var(--color-line);
+  padding: 23px 0;
+}
+.faq-list summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.faq-list summary svg {
+  transform: rotate(90deg);
+  transition: transform 0.2s;
+  color: var(--color-muted);
+}
+.faq-list details[open] summary svg {
+  transform: rotate(-90deg);
+}
+.faq-list p {
+  font-size: 13px;
+  line-height: 1.9;
+  color: var(--color-muted);
+  margin-top: 17px;
+  animation: fade-in 0.2s;
+}
+.landing-cta {
+  border-radius: 27px;
+  padding: 45px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  background: var(--color-brand-soft);
+}
+.landing-cta h2 {
+  margin: 0;
+  font-size: 28px;
+}
+.landing-cta p {
+  margin-top: 12px;
+  color: var(--color-muted);
+  font-size: 13px;
+}
+.landing-footer {
+  padding-top: 35px;
+  padding-bottom: 35px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  border-top: 1px solid var(--color-line);
+  color: var(--color-muted);
+  font-size: 10px;
+  line-height: 1.8;
+}
+.landing-footer .brand-lockup {
+  font-size: 16px;
+  color: var(--color-ink);
+}
+.landing-footer .brand-symbol {
+  width: 25px;
+  height: 27px;
+}
+.landing-footer .brand-descriptor {
+  display: none;
+}
+
+.auth-page {
+  min-height: 100dvh;
+  background: var(--surface);
+}
+.auth-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  max-width: 1120px;
+  margin: auto;
+  padding: 55px 30px 65px;
+  gap: 90px;
+  align-items: start;
+}
+.auth-story {
+  padding: 20px 0;
+  position: sticky;
+  top: 180px;
+}
+.auth-story h1 {
+  font-size: 38px;
+  font-weight: 750;
+  line-height: 1.4;
+  margin-top: 18px;
+  letter-spacing: -0.055em;
+}
+.auth-story h1 span {
+  color: var(--color-brand);
+}
+.auth-story > p {
+  margin-top: 18px;
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--color-muted);
+}
+.auth-art {
+  background: var(--color-brand-soft);
+  border-radius: 30px;
+  padding: 30px;
+  margin-top: 33px;
+}
+.auth-art-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 22px;
+}
+.auth-art-title > span {
+  font-size: 10px;
+  color: var(--color-brand);
+  background: var(--surface);
+  padding: 3px 7px;
+  border-radius: 5px;
+}
+.auth-art-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  padding: 13px 0;
+}
+.auth-art-step > span {
+  width: 35px;
+  height: 35px;
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--color-brand);
+  display: grid;
+  place-items: center;
+}
+.auth-art-step > b {
+  margin-left: auto;
+  color: var(--color-ok);
+  width: 20px;
+  height: 20px;
+  background: var(--color-ok-soft);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+.auth-art-note {
+  font-size: 10px;
+  color: var(--color-muted);
+  margin-top: 16px;
+  line-height: 1.6;
+}
+.auth-form-area {
+  max-width: 440px;
+  width: 100%;
+}
+.auth-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--color-line);
+  margin-bottom: 28px;
+}
+.auth-tabs a {
+  padding: 15px 0;
+  margin-right: 28px;
+  font-size: 18px;
+  font-weight: 650;
+  color: var(--color-muted);
+  border-bottom: 2px solid transparent;
+}
+.auth-tabs a.active {
+  color: var(--color-ink);
+  border-bottom-color: var(--color-ink);
+}
+.auth-form-area h2 {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.045em;
+}
+.auth-form-sub {
+  margin: 9px 0 24px;
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 1.8;
+}
+.auth-fields {
+  display: grid;
+  gap: 18px;
+}
+.auth-field > label {
+  display: block;
+  font-size: 12px;
+  font-weight: 550;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+.auth-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  padding: 0 16px;
+  min-height: 52px;
+  background: var(--color-canvas);
+  color: var(--color-muted);
+  transition: box-shadow 0.2s;
+}
+.auth-input:focus-within {
+  box-shadow: 0 0 0 2px var(--action);
+  background: var(--surface);
+}
+.auth-input input {
+  width: 100%;
+  min-width: 0;
+  font-size: 14px;
+  outline: none;
+  background: transparent;
+  color: var(--color-ink);
+  padding: 16px 0;
+}
+.auth-input .icon-button {
+  width: 28px;
+  height: 32px;
+}
+.auth-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--color-muted);
+  margin: 18px 0;
+}
+.auth-options > span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.auth-options > button:hover {
+  color: var(--color-brand);
+}
+.auth-submit {
+  width: 100%;
+  min-height: 52px;
+  border-radius: 13px;
+  font-size: 14px;
+}
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  color: var(--color-muted);
+  font-size: 10px;
+  margin: 22px 0;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-line);
+}
+.kakao-login {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border-radius: 13px;
+  min-height: 51px;
+  font-size: 13px;
+  background: #fee500;
+  color: #271f00;
+  font-weight: 600;
+}
+.kakao-login > span {
+  font-weight: 400;
+  font-size: 9px;
+  padding: 3px 5px;
+  border-radius: 4px;
+  background: #c5b1003b;
+}
+.auth-notice {
+  padding: 13px 15px;
+  margin-top: 17px;
+  border-radius: 12px;
+  background: var(--color-brand-soft);
+  color: var(--color-info);
+  font-size: 12px;
+  line-height: 1.8;
+}
+.auth-error {
+  margin-top: 7px;
+  font-size: 11px;
+  color: var(--color-risk);
+}
+.demo-entry {
+  border: 1px solid var(--color-line);
+  background: var(--color-canvas);
+  padding: 20px;
+  border-radius: 16px;
+  margin-top: 25px;
+}
+.demo-entry-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 650;
+}
+.demo-entry-title svg {
+  color: var(--color-brand);
+}
+.demo-entry > p {
+  font-size: 11px;
+  color: var(--color-muted);
+  margin: 8px 0 15px;
+  line-height: 1.8;
+}
+.demo-entry > .ui-button {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--color-line);
+  color: var(--color-brand);
+  margin-top: 7px;
+}
+.demo-entry > .ui-button.primary {
+  background: var(--action);
+  color: #fff;
+  border-color: transparent;
+}
+.auth-extra {
+  margin-top: 26px;
+  font-size: 11px;
+}
+.auth-extra summary {
+  color: var(--color-muted);
+  padding: 10px 0;
+}
+.auth-extra-content {
+  padding: 15px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.auth-extra-content .ui-button {
+  min-height: 35px;
+  padding: 8px 12px;
+  font-size: 11px;
+}
+.auth-privacy-note {
+  font-size: 10px;
+  color: var(--color-muted);
+  text-align: center;
+  margin-top: 23px;
+  line-height: 1.8;
+}
+
+.guide-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 7px;
+  margin-bottom: 20px;
+}
+.guide-tabs button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  justify-content: center;
+  border-radius: 10px;
+  background: var(--subtle);
+  font-size: 10px;
+  padding: 10px 4px;
+  color: var(--color-muted);
+}
+.guide-tabs button span {
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  background: var(--surface);
+  font-size: 9px;
+}
+.guide-tabs button.active {
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
+  font-weight: 650;
+}
+.guide-tabs button.active span {
+  background: var(--action);
+  color: #fff;
+}
+.guide-scene {
+  background: var(--color-canvas);
+  border: 1px solid var(--color-line);
+  border-radius: 18px;
+  height: 270px;
+  display: flex;
+  padding: 15px 22px 24px 16px;
+  gap: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.guide-mini-sidebar {
+  width: 35px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding-top: 7px;
+}
+.guide-mini-sidebar > .brand-lockup {
+  margin-bottom: 10px;
+}
+.guide-mini-sidebar .brand-symbol {
+  width: 21px;
+  height: 24px;
+}
+.guide-mini-sidebar > span:not(.brand-symbol) {
+  color: var(--color-muted);
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+}
+.guide-mini-sidebar > span.active {
+  color: var(--color-brand);
+  background: var(--color-brand-soft);
+}
+.guide-mini-content {
+  min-width: 0;
+  flex: 1;
+  position: relative;
+  padding: 13px 0;
+}
+.guide-eyebrow {
+  font-size: 12px;
+  font-weight: 650;
+}
+.guide-skeleton {
+  height: 5px;
+  background: var(--color-line);
+  width: 35%;
+  border-radius: 4px;
+  margin: 10px 0 20px;
+}
+.guide-demo-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 13px;
+  background: var(--surface);
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  font-size: 10px;
+  margin-top: 8px;
+}
+.guide-demo-row > span:not(.guide-demo-icon) {
+  flex: 1;
+}
+.guide-demo-row > b {
+  padding: 7px 9px;
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
+  font-size: 9px;
+  border-radius: 7px;
+  white-space: nowrap;
+}
+.guide-demo-icon {
+  color: var(--color-brand);
+}
+.guide-demo-row.muted {
+  opacity: 0.6;
+}
+.guide-cursor {
+  position: absolute;
+  right: 8%;
+  bottom: 14%;
+  color: var(--action);
+  opacity: 0;
+  z-index: 2;
+}
+.is-playing .guide-cursor {
+  animation: guide-cursor 6.5s ease-in-out infinite;
+}
+.guide-success {
+  position: absolute;
+  bottom: -3px;
+  left: 2%;
+  right: 2%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  background: var(--color-ok-soft);
+  color: var(--color-ok);
+  padding: 10px;
+  font-size: 10px;
+  border-radius: 10px;
+  opacity: 0;
+}
+.is-playing .guide-success {
+  animation: guide-success 6.5s ease-in-out infinite;
+}
+.guide-demo-label {
+  position: absolute;
+  bottom: 7px;
+  right: 12px;
+  font-size: 8px;
+  color: var(--color-muted);
+}
+.guide-input {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+  border-radius: 8px;
+  margin: 7px 0;
+  padding: 9px 12px;
+  font-size: 10px;
+}
+.guide-input span {
+  color: var(--color-muted);
+}
+.guide-input b {
+  font-weight: 550;
+}
+.guide-demo-cta {
+  background: var(--action);
+  color: #fff;
+  padding: 10px 15px;
+  text-align: center;
+  font-size: 10px;
+  border-radius: 8px;
+  margin-top: 12px;
+}
+.guide-week {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 15px;
+}
+.guide-week > span {
+  background: var(--surface);
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  padding: 10px 3px;
+  text-align: center;
+  font-size: 9px;
+  flex: 1;
+  color: var(--color-muted);
+}
+.guide-week b {
+  display: block;
+  font-size: 9px;
+  margin-top: 10px;
+}
+.guide-week .today {
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
+  border-color: var(--color-brand);
+}
+.guide-pay {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 18px;
+}
+.guide-pay > span {
+  font-size: 10px;
+  color: var(--color-muted);
+}
+.guide-pay > b {
+  display: block;
+  font-size: 25px;
+  font-weight: 750;
+  margin-top: 6px;
+}
+.guide-pay small {
+  font-size: 13px;
+  margin-left: 3px;
+  font-weight: 500;
+}
+.guide-copy {
+  margin: 23px 0;
+}
+.guide-copy > span {
+  color: var(--color-brand);
+  font-weight: 650;
+  letter-spacing: 0.07em;
+  font-size: 10px;
+}
+.guide-copy h3 {
+  font-size: 21px;
+  font-weight: 700;
+  margin: 8px 0 9px;
+}
+.guide-copy p {
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--color-muted);
+}
+.guide-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.guide-dots {
+  margin-right: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.guide-dots > button {
+  width: 7px;
+  height: 7px;
+  border-radius: 5px;
+  background: var(--color-line);
+  transition: width 0.2s;
+}
+.guide-dots > button.active {
+  width: 20px;
+  background: var(--action);
+}
+.loading-screen {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  color: var(--color-muted);
+  font-size: 13px;
+}
+.loading-mark {
+  animation: gentle-float 1.5s ease-in-out infinite;
+}
+.page-transition {
+  animation: page-in 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal {
+  animation: page-in 0.6s both;
+}
+.reveal.delay-1 {
+  animation-delay: 0.1s;
+}
+.reveal.delay-2 {
+  animation-delay: 0.2s;
+}
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes drawer-right-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes gentle-float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -9px;
+  }
+}
+@keyframes guide-cursor {
+  0%,
+  15% {
+    opacity: 0;
+    transform: translate(20px, 25px);
+  }
+  27%,
+  52% {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+  43% {
+    transform: scale(0.85);
+  }
+  65%,
+  100% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+}
+@keyframes guide-success {
+  0%,
+  43% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  52%,
+  91% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@media (min-width: 1600px) {
+  .workspace-main,
+  .breadcrumb {
+    max-width: 1390px;
+  }
+  .stat-card {
+    min-height: 185px;
+    padding: 27px 30px;
+  }
+  .dashboard-panel {
+    padding: 29px;
+  }
+  .todo-row {
+    padding: 20px 0;
+  }
+}
+@media (max-width: 1199px) {
+  .app-header {
+    gap: 20px;
+    padding-inline: 18px;
+  }
+  .app-brand {
+    width: 210px;
+    gap: 8px;
+  }
+  .app-sidebar {
+    flex-basis: 220px;
+    width: 220px;
+    padding-inline: 12px;
+  }
+  .workspace-main {
+    padding-inline: 25px;
+  }
+  .breadcrumb {
+    padding-inline: 25px;
+  }
+  .demo-date {
+    display: none;
+  }
+  .demo-bar-inner {
+    padding-inline: 25px;
+  }
+  .stat-grid {
+    gap: 12px;
+  }
+  .stat-card {
+    padding: 20px;
+  }
+  .dashboard-columns {
+    gap: 16px;
+    grid-template-columns: minmax(0, 1.6fr) minmax(255px, 1fr);
+  }
+  .dashboard-panel {
+    padding: 21px;
+  }
+  .public-header-main {
+    gap: 25px;
+  }
+  .public-nav-note {
+    display: none;
+  }
+  .auth-layout {
+    gap: 65px;
+  }
+}
+@media (max-width: 1023px) {
+  .app-sidebar {
+    display: none;
+  }
+  .app-header {
+    gap: 20px;
+  }
+  .app-brand {
+    width: auto;
+  }
+  .app-header .global-search {
+    max-width: none;
+  }
+  .workspace-main {
+    padding-bottom: 30px;
+  }
+  .app-footer {
+    padding-bottom: 100px;
+  }
+  .mobile-bottom-nav {
+    position: fixed;
+    inset: auto 0 0;
+    background: var(--surface);
+    border-top: 1px solid var(--color-line);
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    z-index: 35;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .mobile-bottom-nav a,
+  .mobile-bottom-nav > button {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    gap: 5px;
+    color: var(--color-muted);
+    font-size: 10px;
+    padding: 13px 0;
+  }
+  .mobile-bottom-nav a.active {
+    color: var(--color-brand);
+    font-weight: 650;
+  }
+  .demo-description {
+    font-size: 9px;
+  }
+  .demo-bar label > span {
+    display: none;
+  }
+  .public-header-main {
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 17px 24px;
+  }
+  .public-header-main > a {
+    margin-right: auto;
+  }
+  .public-header-main .global-search {
+    order: 3;
+    flex-basis: 100%;
+    max-width: none;
+    width: 100%;
+  }
+  .public-nav {
+    padding-inline: 24px;
+  }
+  .landing-hero {
+    padding-top: 42px;
+    padding-bottom: 50px;
+  }
+  .landing-hero h1 {
+    font-size: 36px;
+  }
+  .hero-art {
+    min-height: 350px;
+  }
+  .product-preview {
+    padding: 17px;
+  }
+  .landing-hero-copy > p {
+    font-size: 14px;
+  }
+  .hero-actions .ui-button {
+    padding-inline: 16px;
+    font-size: 12px;
+  }
+  .diagnosis-grid {
+    gap: 40px;
+  }
+  .auth-layout {
+    gap: 40px;
+    padding-top: 35px;
+  }
+  .auth-story {
+    top: 220px;
+  }
+  .auth-story h1 {
+    font-size: 31px;
+  }
+}
+@media (max-width: 767px) {
+  :root {
+    --header-height: 68px;
+  }
+  .app-header {
+    padding: 11px 15px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .app-brand {
+    gap: 6px;
+    margin-right: auto;
+  }
+  .brand-lockup {
+    font-size: 18px;
+    gap: 8px;
+  }
+  .brand-symbol {
+    width: 27px;
+    height: 29px;
+  }
+  .brand-descriptor {
+    font-size: 8px;
+  }
+  .app-header .global-search {
+    order: 3;
+    width: 100%;
+    padding-block: 11px;
+    border-radius: 11px;
+    font-size: 12px;
+  }
+  .app-header {
+    position: relative;
+  }
+  .app-header .header-actions {
+    gap: 1px;
+  }
+  .profile-button {
+    padding-left: 6px;
+    margin-left: 0;
+  }
+  .profile-button > span:not(.profile-avatar),
+  .profile-button > svg,
+  .guide-header-button {
+    display: none;
+  }
+  .icon-button {
+    width: 36px;
+    height: 36px;
+  }
+  .profile-avatar {
+    width: 30px;
+    height: 30px;
+  }
+  .demo-bar-inner {
+    padding: 9px 18px;
+    gap: 6px;
+  }
+  .demo-description {
+    flex-basis: calc(100% - 50px);
+  }
+  .demo-bar label {
+    margin-left: auto;
+    position: absolute;
+    right: 18px;
+    margin-top: 38px;
+    font-size: 10px;
+    z-index: 1;
+  }
+  .demo-description {
+    line-height: 1.65;
+    padding-right: 0;
+  }
+  .demo-bar label select {
+    background: var(--surface);
+    border: 1px solid var(--color-line);
+  }
+  .breadcrumb {
+    margin-top: 19px;
+    margin-bottom: 22px;
+    padding-inline: 20px;
+    font-size: 10px;
+  }
+  .workspace-main {
+    padding-inline: 18px;
+  }
+  .dashboar…6221 tokens truncated…div className="panel-heading">
+              <h2>이번 주 근무</h2>
+              <Link to="/owner/work">
+                {fmtMD(week[0])}–{fmtMD(week[6])}
+                <Icon name="chevron" size={12} />
+              </Link>
             </div>
-          )}
-        </Card>
-        <div className="grid content-start gap-4">
-          <Card title="점검 현황" right={`주의 ${Object.values(counts).reduce((a, b) => a + b, 0)}건`}>
-            <div className="flex flex-wrap gap-2">
-              {(['서류', '임금', '보험·퇴직금', '기한', '외국인', '근무'] as const).map((a) => (
-                <span key={a} className={cx('rounded-lg border px-2.5 py-1 text-sm', counts[a] ? 'border-risk/30 bg-risk-soft text-risk' : 'border-line')}>
-                  {a} {counts[a]}
-                </span>
-              ))}
-            </div>
-            <div className="mt-3 flex items-center justify-between border-t border-line pt-3 text-sm">
-              <span>
-                노무 위험 점검 <b className="num">{risk.answered}/{risk.total}</b>
-                {risk.riskCount > 0 && <Badge tone="risk" className="ml-2">위험 {risk.riskCount}</Badge>}
-              </span>
-              <LinkButton to="/owner/risk" size="sm">
-                {risk.answered < risk.total ? '이어서 하기' : '다시 보기'}
-              </LinkButton>
-            </div>
-          </Card>
-          <Card title="이번 달" right={`${Number(month.slice(5))}월 근무분 · 예상`}>
-            <KV k="예상 인건비 (지급액)" v={<Money value={money.gross} />} />
-            <KV k="+ 4대보험 사장님 부담" v={money.employer === null ? <span className="text-warn">일부 금액은 기준 없음</span> : <Money value={money.employer} />} />
-            <KV k="다음 급여일" v={nextPay ? `${fmtMDW(nextPay.date)} · ${nextPay.title}` : '—'} />
-            <KV k="퇴직금 예상 적립 (월)" v={<Money value={money.sevAccrual} />} />
-            <p className="mt-1 text-xs text-muted">지급일 매달 {wp.payDay}일 · {wp.payMonthBasis === 'previous' ? '전월분' : '당월분'} · 산정 {fmtMD(payrollPeriodFor(wp, month).from)}~{fmtMD(payrollPeriodFor(wp, month).to)}</p>
-          </Card>
-          <Card title="오늘 근무" right={wp.gpsEnabled ? 'GPS 기록 기준' : '일정 기준'}>
-            <p className="text-sm">
-              예정 {today.length}명 · 출근 {today.filter((x) => x.rec?.original.clockIn).length} · 아직 {today.filter((x) => !x.rec).length}
-            </p>
-            <ul className="mt-2 text-sm text-muted">
-              {today.map((x) => (
-                <li key={x.e.id}>
-                  {x.e.alias} {x.plan.shift!.start}–{x.plan.shift!.end} {x.rec ? `· 출근 ${x.rec.original.clockIn}` : ''}
-                </li>
-              ))}
-            </ul>
-            <LinkButton to="/owner/work?tab=attendance" size="sm" className="mt-2">
-              출퇴근 기록
-            </LinkButton>
-          </Card>
-        </div>
-      </div>
-
-      <Card title="이번 주 근무" className="mt-4" right={`${fmtMD(week[0])}–${fmtMD(week[6])}${state.busyDays.filter((b) => week.includes(b.date)).map((b) => ` · 바쁜 날 ${fmtMD(b.date)} ${b.memo}`).join('')}`}>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-sm">
-            <thead>
-              <tr className="bg-canvas text-left text-xs text-muted">
-                <th className="px-2 py-2"></th>
-                {week.map((d, i) => (
-                  <th key={d} className={cx('px-2 py-2 font-semibold', d === base && 'text-brand')}>
-                    {WEEKDAY_KO[i]} {fmtMD(d)}
-                    {holidayOn(d) && <span className="block text-[10px] text-risk">{holidayOn(d)!.name}</span>}
-                  </th>
-                ))}
-                <th className="px-2 py-2">주 합계</th>
-                <th className="px-2 py-2">확인</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {active.map((e) => {
-                let total = 0;
-                const cells = week.map((d) => {
-                  const p = dayPlan(state, e, d);
-                  if (p.shift) total += netMinutes(p.shift);
-                  return p;
-                });
-                const warns = weekWarnings(state, e, week[0], breakRule.ok ? breakRule.value : null, minorRule.ok ? minorRule.value : null);
-                const variableEmpty = cells.every((c) => !c.shift) && cells.some((c) => c.variableNeedsInput);
-                return (
-                  <tr key={e.id}>
-                    <td className="px-2 py-2 font-semibold">
-                      <Link to={`/owner/employees/${e.id}`}>{e.alias}</Link>
-                    </td>
-                    {variableEmpty ? (
-                      <td colSpan={7} className="px-2 py-2 text-muted">
-                        매주 달라요 · 이번 주 입력 필요
-                      </td>
-                    ) : (
-                      cells.map((p) => (
-                        <td key={p.date} className="num px-2 py-2">
-                          {p.shift ? `${p.shift.start.slice(0, 2)}–${p.shift.end.slice(0, 2)}` : p.off === 'leave' ? <Badge tone="info">연차</Badge> : p.off === 'absent' ? <Badge tone="muted">결근</Badge> : p.off === 'subOut' ? <Badge tone="muted">대타</Badge> : p.off === 'publicHoliday' ? <Badge tone="muted">유급휴일</Badge> : '–'}
-                        </td>
-                      ))
-                    )}
-                    <td className={cx('num px-2 py-2', warns.some((w) => w.level === 'risk') && 'font-bold text-warn')}>{(total / 60).toFixed(1).replace(/\.0$/, '')}h</td>
-                    <td className="px-2 py-2">
-                      {warns.slice(0, 2).map((w, i) => (
-                        <Badge key={i} tone={w.level === 'risk' ? 'warn' : 'info'} className="mr-1 max-w-[180px] truncate">
-                          {w.text.length > 14 ? w.text.slice(0, 14) + '…' : w.text}
-                        </Badge>
+            {!active.length ? (
+              <p className="empty-copy">직원을 등록하면 주간 근무 일정이 여기에 보여요.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="week-table" aria-label="이번 주 직원 근무 일정">
+                  <thead>
+                    <tr>
+                      <th scope="col">직원</th>
+                      {week.map((d, i) => (
+                        <th scope="col" key={d} className={d === base ? 'today' : ''}>
+                          {WEEKDAY_KO[i]}
+                          <span className="block mt-1">{d.slice(8)}</span>
+                        </th>
                       ))}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      <th scope="col">합계</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {active.map((e, i) => {
+                      let total = 0;
+                      const plans = week.map((d) => {
+                        const p = dayPlan(state, e, d);
+                        if (p.shift) total += netMinutes(p.shift);
+                        return p;
+                      });
+                      return (
+                        <tr key={e.id}>
+                          <th scope="row">
+                            <Link className="employee-cell" to={'/owner/employees/' + e.id}>
+                              <span className="employee-avatar" data-index={i % 3}>
+                                {e.alias.slice(-1)}
+                              </span>
+                              {e.alias}
+                            </Link>
+                          </th>
+                          {plans.map((p) => (
+                            <td key={p.date}>
+                              {p.shift ? (
+                                <span className="shift-time">
+                                  {p.shift.start.slice(0, 2)}–{p.shift.end.slice(0, 2)}
+                                </span>
+                              ) : p.off === 'leave' ? (
+                                <Badge tone="info">연차</Badge>
+                              ) : p.off === 'absent' ? (
+                                <Badge tone="muted">결근</Badge>
+                              ) : p.off === 'subOut' ? (
+                                <Badge tone="muted">대타</Badge>
+                              ) : p.off === 'publicHoliday' ? (
+                                <Badge tone="muted">유급휴일</Badge>
+                              ) : (
+                                <span className="text-muted">–</span>
+                              )}
+                            </td>
+                          ))}
+                          <td className="font-semibold">{(total / 60).toFixed(1).replace(/\.0$/, '')}h</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <Link className="todo-more" to="/owner/work">
+              일정 자세히 보기
+              <Icon name="arrow" size={13} />
+            </Link>
+          </section>
+          <section className="dashboard-panel schedule-panel" id="notifications">
+            <div className="panel-heading">
+              <h2>우리 가게 알림</h2>
+              <span className="text-[10px] text-muted">앱 안 알림</span>
+            </div>
+            {notes.length ? (
+              <ul className="notification-list">
+                {notes.slice(0, 5).map((n) => (
+                  <li key={n.id}>
+                    {!n.readAt && <i aria-label="안 읽음" />}
+                    <Link
+                      to={n.link}
+                      onClick={() =>
+                        update((d) => {
+                          const note = d.notifications.find((v) => v.id === n.id);
+                          if (note && !note.readAt) note.readAt = new Date().toISOString();
+                        })
+                      }
+                    >
+                      {n.text}
+                    </Link>
+                    <span>{fmtMDT(n.createdAt)}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="empty-copy">아직 새로운 알림이 없어요.</p>
+            )}
+            <p className="mt-3 text-[10px] text-muted">
+              카카오 알림은 연결 준비 중이에요. 현재는 앱 안에서만 확인할 수 있어요.
+            </p>
+          </section>
         </div>
-        <LinkButton to="/owner/work" size="sm" className="mt-3">
-          근무 일정 열기
-        </LinkButton>
-      </Card>
-
-      <div className="mt-4 grid gap-4 md:grid-cols-2">
-        <Card title="알림함 (앱 안)" right="카톡은 연결 대기 — 보내지 않았어요">
-          {!myNotes.length && <p className="text-sm text-muted">알림이 없어요.</p>}
-          <ul className="divide-y divide-line text-sm">
-            {myNotes.slice(0, 6).map((n) => (
-              <li key={n.id} className="flex items-center gap-2 py-2">
-                {!n.readAt && <span className="h-2 w-2 shrink-0 rounded-full bg-risk" aria-label="안 읽음" />}
-                <Link to={n.link} className="flex-1" onClick={() => update((d) => { const x = d.notifications.find((y) => y.id === n.id); if (x && !x.readAt) x.readAt = new Date().toISOString(); })}>
-                  {n.text}
-                </Link>
-                <span className="shrink-0 text-xs text-muted">{fmtMDT(n.createdAt)}</span>
-              </li>
-            ))}
-          </ul>
-        </Card>
-        <Card title="바로가기">
-          <div className="flex flex-wrap gap-2">
-            <LinkButton to="/owner/precheck">채용 전 점검</LinkButton>
-            <LinkButton to="/owner/employees/new">직원 등록</LinkButton>
-            <LinkButton to="/owner/payroll">급여 확정</LinkButton>
-            <LinkButton to="/owner/consult">상담</LinkButton>
-            <LinkButton to="/owner/deadlines">캘린더 내보내기</LinkButton>
-          </div>
-        </Card>
+        <div className="dashboard-side">
+          <MonthCalendar base={base} deadlines={deadlines} />
+          <section className="guide-callout">
+            <small>처음이라면, 함께 시작해요</small>
+            <h3>
+              쉽게 따라 하는
+              <br />
+              우리 가게 관리 가이드
+            </h3>
+            <button onClick={openGuide}>
+              <Icon name="play" size={12} />
+              움직이는 가이드 보기
+              <Icon name="chevron" size={12} />
+            </button>
+            <span className="guide-callout-icon">
+              <Icon name="file" size={27} />
+            </span>
+          </section>
+          <section className="dashboard-panel">
+            <div className="panel-heading">
+              <h2>오늘 근무</h2>
+              <Link to="/owner/work?tab=attendance">
+                기록 보기
+                <Icon name="chevron" size={12} />
+              </Link>
+            </div>
+            {today.length ? (
+              today.map(({ e, plan, rec }, i) => (
+                <div className="today-worker" key={e.id}>
+                  <span className="employee-avatar" data-index={i % 3}>
+                    {e.alias.slice(-1)}
+                  </span>
+                  <span>
+                    {e.alias}
+                    <small>
+                      {plan.shift!.start}–{plan.shift!.end}
+                    </small>
+                  </span>
+                  <b>{rec?.original.clockOut ? '퇴근' : rec?.original.clockIn ? '출근' : '출근 전'}</b>
+                </div>
+              ))
+            ) : (
+              <p className="empty-copy">오늘 예정된 근무가 없어요.</p>
+            )}
+          </section>
+          <section className="dashboard-panel">
+            <div className="panel-heading">
+              <h2>노무 점검</h2>
+              <Link to="/owner/risk">
+                이어서 하기
+                <Icon name="chevron" size={12} />
+              </Link>
+            </div>
+            <div className="checkup-summary">
+              <div
+                className="checkup-progress"
+                style={
+                  { '--progress': (risk.answered / Math.max(1, risk.total)) * 100 + '%' } as CSSProperties
+                }
+              >
+                <span>
+                  {risk.answered}/{risk.total}
+                </span>
+              </div>
+              <p>
+                우리 가게 노무 상태
+                <br />
+                <strong>
+                  {risk.riskCount ? '확인이 필요한 항목 ' + risk.riskCount + '개' : '차근차근 점검해 보세요'}
+                </strong>
+              </p>
+            </div>
+          </section>
+          <section className="dashboard-panel">
+            <div className="panel-heading">
+              <h2>미리 준비해요</h2>
+              <Icon name="wallet" size={18} className="text-muted" />
+            </div>
+            <div className="flex justify-between gap-3 text-xs">
+              <span className="text-muted">다음 급여일</span>
+              <Link className="font-semibold text-brand" to="/owner/payroll">
+                {nextPay ? fmtMDW(nextPay.date) : '등록 후 확인'}
+              </Link>
+            </div>
+            <div className="flex justify-between gap-3 text-xs mt-4">
+              <span className="text-muted">퇴직금 월 적립 참고</span>
+              <span className="font-semibold">{won(sevAccrual)}</span>
+            </div>
+            <p className="text-[10px] text-muted mt-4 leading-5">
+              금액은 등록한 조건에 따른 예상이에요.
+              <br />
+              실제 지급 전 계산 내역을 확인해 주세요.
+            </p>
+          </section>
+        </div>
       </div>
     </div>
   );

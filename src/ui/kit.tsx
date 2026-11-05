@@ -1,5 +1,15 @@
 // 공통 UI 부품. 모든 버튼은 실제 동작 / 이유 있는 비활성(reason) / 연결 대기 중 하나여야 한다.
-import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ButtonHTMLAttributes,
+  type ReactNode,
+} from 'react';
 import { Link } from 'react-router';
 import { resolveRule, sourceLabel, STATUS_LABEL } from '../domain/rules';
 import type { IntegrationStatus } from '../adapters/integrations';
@@ -16,7 +26,19 @@ const VARIANT: Record<Variant, string> = {
   kakao: 'bg-kakao text-[#191600] border border-kakao',
 };
 
-export function Button({ variant = 'secondary', size = 'md', reason, className, children, disabled, ...rest }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: 'sm' | 'md' | 'lg'; reason?: string }) {
+export function Button({
+  variant = 'secondary',
+  size = 'md',
+  reason,
+  className,
+  children,
+  disabled,
+  ...rest
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: Variant;
+  size?: 'sm' | 'md' | 'lg';
+  reason?: string;
+}) {
   const id = useId();
   const isDisabled = disabled || !!reason;
   return (
@@ -28,8 +50,12 @@ export function Button({ variant = 'secondary', size = 'md', reason, className, 
         aria-describedby={reason ? id : undefined}
         title={reason}
         className={cx(
-          'inline-flex items-center justify-center gap-1.5 rounded-lg font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50',
-          size === 'sm' ? 'px-2.5 py-1 text-sm' : size === 'lg' ? 'px-5 py-3 text-base' : 'px-3.5 py-2 text-sm',
+          'kit-button inline-flex items-center justify-center gap-1.5 rounded-xl font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+          size === 'sm'
+            ? 'px-2.5 py-1 text-sm'
+            : size === 'lg'
+              ? 'px-5 py-3 text-base'
+              : 'px-3.5 py-2 text-sm',
           VARIANT[variant],
           className,
         )}
@@ -45,11 +71,28 @@ export function Button({ variant = 'secondary', size = 'md', reason, className, 
   );
 }
 
-export function LinkButton({ to, variant = 'secondary', size = 'md', className, children }: { to: string; variant?: Variant; size?: 'sm' | 'md' | 'lg'; className?: string; children: ReactNode }) {
+export function LinkButton({
+  to,
+  variant = 'secondary',
+  size = 'md',
+  className,
+  children,
+}: {
+  to: string;
+  variant?: Variant;
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
+  children: ReactNode;
+}) {
   return (
     <Link
       to={to}
-      className={cx('inline-flex items-center justify-center gap-1.5 rounded-lg font-semibold transition-colors', size === 'sm' ? 'px-2.5 py-1 text-sm' : size === 'lg' ? 'px-5 py-3 text-base' : 'px-3.5 py-2 text-sm', VARIANT[variant], className)}
+      className={cx(
+        'kit-button inline-flex items-center justify-center gap-1.5 rounded-xl font-semibold transition-colors',
+        size === 'sm' ? 'px-2.5 py-1 text-sm' : size === 'lg' ? 'px-5 py-3 text-base' : 'px-3.5 py-2 text-sm',
+        VARIANT[variant],
+        className,
+      )}
     >
       {children}
     </Link>
@@ -66,13 +109,46 @@ const TONE: Record<Tone, string> = {
   brand: 'bg-brand-soft text-brand',
 };
 
-export function Badge({ tone = 'muted', children, className }: { tone?: Tone; children: ReactNode; className?: string }) {
-  return <span className={cx('inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold', TONE[tone], className)}>{children}</span>;
+export function Badge({
+  tone = 'muted',
+  children,
+  className,
+}: {
+  tone?: Tone;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <span
+      className={cx(
+        'inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold',
+        TONE[tone],
+        className,
+      )}
+    >
+      {children}
+    </span>
+  );
 }
 
-export function Card({ title, right, children, className, id }: { title?: ReactNode; right?: ReactNode; children: ReactNode; className?: string; id?: string }) {
+export function Card({
+  title,
+  right,
+  children,
+  className,
+  id,
+}: {
+  title?: ReactNode;
+  right?: ReactNode;
+  children: ReactNode;
+  className?: string;
+  id?: string;
+}) {
   return (
-    <section id={id} className={cx('rounded-2xl border border-line bg-white p-4 sm:p-5', className)}>
+    <section
+      id={id}
+      className={cx('surface-card rounded-2xl border border-line bg-white p-4 sm:p-5', className)}
+    >
       {(title || right) && (
         <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
           {title && <h2 className="text-base font-bold">{title}</h2>}
@@ -84,9 +160,17 @@ export function Card({ title, right, children, className, id }: { title?: ReactN
   );
 }
 
-export function PageHeader({ title, sub, actions }: { title: ReactNode; sub?: ReactNode; actions?: ReactNode }) {
+export function PageHeader({
+  title,
+  sub,
+  actions,
+}: {
+  title: ReactNode;
+  sub?: ReactNode;
+  actions?: ReactNode;
+}) {
   return (
-    <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+    <div className="page-header mb-6 flex flex-wrap items-end justify-between gap-3">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
         {sub && <p className="mt-1 text-sm text-muted">{sub}</p>}
@@ -97,10 +181,23 @@ export function PageHeader({ title, sub, actions }: { title: ReactNode; sub?: Re
 }
 
 /** 너비를 따로 줄 때 쓰는 입력칸 스타일 */
-export const inputBaseCls = 'rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 disabled:bg-canvas';
+export const inputBaseCls =
+  'rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 disabled:bg-canvas';
 export const inputCls = `w-full ${inputBaseCls}`;
 
-export function Field({ label, hint, error, children, htmlFor }: { label: ReactNode; hint?: ReactNode; error?: string | null; children: ReactNode; htmlFor?: string }) {
+export function Field({
+  label,
+  hint,
+  error,
+  children,
+  htmlFor,
+}: {
+  label: ReactNode;
+  hint?: ReactNode;
+  error?: string | null;
+  children: ReactNode;
+  htmlFor?: string;
+}) {
   return (
     <div className="flex flex-col gap-1">
       <label htmlFor={htmlFor} className="text-sm font-semibold">
@@ -117,7 +214,19 @@ export function Field({ label, hint, error, children, htmlFor }: { label: ReactN
   );
 }
 
-export function Choice<T extends string>({ options, value, onChange, name, multi }: { options: { value: T; label: ReactNode }[]; value: T | T[] | null; onChange: (v: T) => void; name: string; multi?: boolean }) {
+export function Choice<T extends string>({
+  options,
+  value,
+  onChange,
+  name,
+  multi,
+}: {
+  options: { value: T; label: ReactNode }[];
+  value: T | T[] | null;
+  onChange: (v: T) => void;
+  name: string;
+  multi?: boolean;
+}) {
   return (
     <div role={multi ? 'group' : 'radiogroup'} aria-label={name} className="flex flex-wrap gap-2">
       {options.map((o) => {
@@ -129,7 +238,10 @@ export function Choice<T extends string>({ options, value, onChange, name, multi
             role={multi ? 'checkbox' : 'radio'}
             aria-checked={on}
             onClick={() => onChange(o.value)}
-            className={cx('rounded-lg border px-3 py-2 text-sm font-semibold transition-colors', on ? 'border-brand bg-brand text-white' : 'border-line bg-white hover:border-brand/50')}
+            className={cx(
+              'rounded-lg border px-3 py-2 text-sm font-semibold transition-colors',
+              on ? 'border-brand bg-brand text-white' : 'border-line bg-white hover:border-brand/50',
+            )}
           >
             {o.label}
           </button>
@@ -144,9 +256,20 @@ export function Money({ value, className }: { value: number | null | undefined; 
   return <span className={cx('num', className)}>{Math.round(value).toLocaleString('ko-KR')}원</span>;
 }
 
-export const won = (n: number | null | undefined) => (n === null || n === undefined ? '—' : `${Math.round(n).toLocaleString('ko-KR')}원`);
+export const won = (n: number | null | undefined) =>
+  n === null || n === undefined ? '—' : `${Math.round(n).toLocaleString('ko-KR')}원`;
 
-export function Notice({ tone = 'info', title, children, className }: { tone?: Tone; title?: ReactNode; children?: ReactNode; className?: string }) {
+export function Notice({
+  tone = 'info',
+  title,
+  children,
+  className,
+}: {
+  tone?: Tone;
+  title?: ReactNode;
+  children?: ReactNode;
+  className?: string;
+}) {
   return (
     <div className={cx('rounded-xl px-4 py-3 text-sm', TONE[tone], className)}>
       {title && <p className="font-bold">{title}</p>}
@@ -155,7 +278,15 @@ export function Notice({ tone = 'info', title, children, className }: { tone?: T
   );
 }
 
-export function Empty({ title, children, action }: { title: ReactNode; children?: ReactNode; action?: ReactNode }) {
+export function Empty({
+  title,
+  children,
+  action,
+}: {
+  title: ReactNode;
+  children?: ReactNode;
+  action?: ReactNode;
+}) {
   return (
     <div className="rounded-xl border border-dashed border-line bg-white/60 px-4 py-8 text-center">
       <p className="font-semibold">{title}</p>
@@ -166,13 +297,32 @@ export function Empty({ title, children, action }: { title: ReactNode; children?
 }
 
 export function RuleStatusBadge({ status }: { status: string }) {
-  const tone: Tone = status === 'verified' ? 'ok' : status === 'announced' || status === 'partial' ? 'warn' : status === 'pending' || status === 'needsExpert' ? 'risk' : 'muted';
-  const label = (STATUS_LABEL as Record<string, string>)[status] ?? (status === 'noValueForDate' || status === 'unknownRule' ? STATUS_LABEL.missing : status);
+  const tone: Tone =
+    status === 'verified'
+      ? 'ok'
+      : status === 'announced' || status === 'partial'
+        ? 'warn'
+        : status === 'pending' || status === 'needsExpert'
+          ? 'risk'
+          : 'muted';
+  const label =
+    (STATUS_LABEL as Record<string, string>)[status] ??
+    (status === 'noValueForDate' || status === 'unknownRule' ? STATUS_LABEL.missing : status);
   return <Badge tone={tone}>{label}</Badge>;
 }
 
 /** "근거 ▾" — rules.json의 값·상태·출처를 보여준다 */
-export function Basis({ ids, date, text, label = '근거' }: { ids: string[]; date: string; text?: string; label?: string }) {
+export function Basis({
+  ids,
+  date,
+  text,
+  label = '근거',
+}: {
+  ids: string[];
+  date: string;
+  text?: string;
+  label?: string;
+}) {
   const uniq = Array.from(new Set(ids));
   if (!uniq.length && !text) return null;
   return (
@@ -193,7 +343,11 @@ export function Basis({ ids, date, text, label = '근거' }: { ids: string[]; da
               </div>
               {r.ok && (
                 <p className="mt-0.5 text-muted">
-                  값: <code className="text-ink">{typeof r.value === 'object' ? JSON.stringify(r.value) : String(r.value)}</code> · 시행 {r.effectiveFrom ?? '—'} ~ {r.effectiveTo ?? '현재'}
+                  값:{' '}
+                  <code className="text-ink">
+                    {typeof r.value === 'object' ? JSON.stringify(r.value) : String(r.value)}
+                  </code>{' '}
+                  · 시행 {r.effectiveFrom ?? '—'} ~ {r.effectiveTo ?? '현재'}
                 </p>
               )}
               <ul className="mt-0.5 list-disc pl-4 text-muted">
@@ -204,7 +358,12 @@ export function Basis({ ids, date, text, label = '근거' }: { ids: string[]; da
                     {s.url && (
                       <>
                         {' '}
-                        <a className="text-info underline" href={s.url} target="_blank" rel="noreferrer noopener">
+                        <a
+                          className="text-info underline"
+                          href={s.url}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                        >
                           원문
                         </a>
                       </>
@@ -216,17 +375,31 @@ export function Basis({ ids, date, text, label = '근거' }: { ids: string[]; da
             </div>
           );
         })}
-        <p className="text-muted">기준일 {date} · 참고용 안내예요. 개별 사건의 법률 판단을 대신하지 않아요.</p>
+        <p className="text-muted">
+          기준일 {date} · 참고용 안내예요. 개별 사건의 법률 판단을 대신하지 않아요.
+        </p>
       </div>
     </details>
   );
 }
 
 export function ConnBadge({ status }: { status: IntegrationStatus }) {
-  return <Badge tone={status === 'live' ? 'ok' : status === 'demo' ? 'brand' : 'warn'}>{STATUS_TEXT[status]}</Badge>;
+  return (
+    <Badge tone={status === 'live' ? 'ok' : status === 'demo' ? 'brand' : 'warn'}>
+      {STATUS_TEXT[status]}
+    </Badge>
+  );
 }
 
-export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: { value: T; label: ReactNode; hidden?: boolean }[]; value: T; onChange: (v: T) => void }) {
+export function Tabs<T extends string>({
+  tabs,
+  value,
+  onChange,
+}: {
+  tabs: { value: T; label: ReactNode; hidden?: boolean }[];
+  value: T;
+  onChange: (v: T) => void;
+}) {
   return (
     <div role="tablist" className="mb-4 flex gap-1 overflow-x-auto border-b border-line">
       {tabs
@@ -238,7 +411,10 @@ export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: { valu
             type="button"
             aria-selected={value === t.value}
             onClick={() => onChange(t.value)}
-            className={cx('-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold', value === t.value ? 'border-brand text-brand' : 'border-transparent text-muted hover:text-ink')}
+            className={cx(
+              '-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold',
+              value === t.value ? 'border-brand text-brand' : 'border-transparent text-muted hover:text-ink',
+            )}
           >
             {t.label}
           </button>
@@ -247,8 +423,23 @@ export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: { valu
   );
 }
 
-export function Modal({ open, onClose, title, children, footer, wide }: { open: boolean; onClose: () => void; title: ReactNode; children: ReactNode; footer?: ReactNode; wide?: boolean }) {
+export function Modal({
+  open,
+  onClose,
+  title,
+  children,
+  footer,
+  wide,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: ReactNode;
+  children: ReactNode;
+  footer?: ReactNode;
+  wide?: boolean;
+}) {
   const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
@@ -258,23 +449,36 @@ export function Modal({ open, onClose, title, children, footer, wide }: { open: 
   return (
     <dialog
       ref={ref}
+      aria-labelledby={titleId}
       onClose={onClose}
       onCancel={(e) => {
         e.preventDefault();
         onClose();
       }}
-      className={cx('m-auto w-[calc(100%-2rem)] rounded-2xl border border-line bg-white p-0 text-ink shadow-xl', wide ? 'max-w-2xl' : 'max-w-lg')}
+      className={cx(
+        'm-auto w-[calc(100%-2rem)] rounded-2xl border border-line bg-white p-0 text-ink shadow-xl',
+        wide ? 'max-w-2xl' : 'max-w-lg',
+      )}
     >
       {open && (
         <div className="flex max-h-[85vh] flex-col">
           <div className="flex items-center justify-between border-b border-line px-5 py-3">
-            <h2 className="text-base font-bold">{title}</h2>
-            <button type="button" onClick={onClose} className="rounded-md px-2 py-1 text-muted hover:bg-canvas" aria-label="닫기">
+            <h2 id={titleId} className="text-base font-bold">
+              {title}
+            </h2>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md px-2 py-1 text-muted hover:bg-canvas"
+              aria-label="닫기"
+            >
               ✕
             </button>
           </div>
           <div className="overflow-y-auto px-5 py-4">{children}</div>
-          {footer && <div className="flex flex-wrap justify-end gap-2 border-t border-line px-5 py-3">{footer}</div>}
+          {footer && (
+            <div className="flex flex-wrap justify-end gap-2 border-t border-line px-5 py-3">{footer}</div>
+          )}
         </div>
       )}
     </dialog>
@@ -293,9 +497,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastCtx.Provider value={push}>
       {children}
-      <div aria-live="polite" className="no-print pointer-events-none fixed inset-x-0 bottom-20 z-50 flex flex-col items-center gap-2 px-4 md:bottom-6">
+      <div
+        aria-live="polite"
+        className="no-print pointer-events-none fixed inset-x-0 bottom-20 z-50 flex flex-col items-center gap-2 px-4 md:bottom-6"
+      >
         {items.map((i) => (
-          <div key={i.id} className={cx('pointer-events-auto rounded-xl px-4 py-2 text-sm font-semibold shadow-lg', TONE[i.tone])}>
+          <div
+            key={i.id}
+            className={cx(
+              'pointer-events-auto rounded-xl px-4 py-2 text-sm font-semibold shadow-lg',
+              TONE[i.tone],
+            )}
+          >
             {i.msg}
           </div>
         ))}
@@ -306,7 +519,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 export const useToast = () => useContext(ToastCtx);
 
 export function levelTone(level: string): Tone {
-  return level === 'risk' || level === 'overdue' ? 'risk' : level === 'soon' || level === 'due7' ? 'warn' : level === 'check' ? 'info' : level === 'done' || level === 'ok' ? 'ok' : 'muted';
+  return level === 'risk' || level === 'overdue'
+    ? 'risk'
+    : level === 'soon' || level === 'due7'
+      ? 'warn'
+      : level === 'check'
+        ? 'info'
+        : level === 'done' || level === 'ok'
+          ? 'ok'
+          : 'muted';
 }
 
 export function download(filename: string, content: string, type: string) {

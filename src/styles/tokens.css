@@ -1,0 +1,67 @@
+/* Project-owned visual tokens. Keep action colors, surface colors and radii here. */
+@theme {
+  --font-sans:
+    'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
+    'Malgun Gothic', system-ui, sans-serif;
+  --color-brand: #2d6454;
+  --color-brand-dark: #214c40;
+  --color-brand-soft: #eaf1eb;
+  --color-ink: #29332d;
+  --color-muted: #6d766f;
+  --color-line: #e2e5dc;
+  --color-canvas: #f7f7f0;
+  --color-risk: #b8444c;
+  --color-risk-soft: #f8eded;
+  --color-warn: #986229;
+  --color-warn-soft: #f8f0df;
+  --color-info: #4e6e79;
+  --color-info-soft: #edf2f3;
+  --color-ok: #36755a;
+  --color-ok-soft: #edf4ed;
+  --color-kakao: #fee500;
+}
+:root {
+  --surface: #fffefa;
+  --surface-raised: #fffefa;
+  --surface-hover: #f1f3eb;
+  --subtle: #f0f2ea;
+  --text-secondary: #535f56;
+  --shadow: 0 6px 24px #29332d0a;
+  --header-height: 82px;
+  --action: #2d6454;
+  --action-hover: #214c40;
+  --action-ring: #2d645440;
+  --accent: #ae7357;
+  --accent-soft: #f5ebe2;
+  --radius-control: 10px;
+  --radius-card: 18px;
+  --radius-dialog: 20px;
+}
+:root[data-theme='dark'] {
+  --surface: #202924;
+  --surface-raised: #29362e;
+  --surface-hover: #2c3b31;
+  --subtle: #2a362e;
+  --text-secondary: #becac0;
+  --color-brand: #a0cbb0;
+  --color-brand-dark: #b5d7c1;
+  --color-brand-soft: #2c4034;
+  --color-ink: #edf0e8;
+  --color-muted: #a8b6aa;
+  --color-line: #3b493e;
+  --color-canvas: #181f1b;
+  --color-risk: #edabb0;
+  --color-risk-soft: #422d32;
+  --color-warn: #e5c08b;
+  --color-warn-soft: #3b3428;
+  --color-info: #b0cad0;
+  --color-info-soft: #2a3b3f;
+  --color-ok: #a3d2af;
+  --color-ok-soft: #2c4032;
+  --shadow: 0 8px 32px #00000020;
+  --action: #356d55;
+  --action-hover: #407d63;
+  --action-ring: #a0cbb044;
+  --accent: #ddb697;
+  --accent-soft: #3d342d;
+}
