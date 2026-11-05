@@ -1,0 +1,60 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
+  --color-brand: #1d5866;
+  --color-brand-dark: #144450;
+  --color-brand-soft: #e3eef0;
+  --color-ink: #17212b;
+  --color-muted: #5b6b77;
+  --color-line: #e2e7ea;
+  --color-canvas: #f3f5f6;
+  --color-risk: #b8322a;
+  --color-risk-soft: #fce8e6;
+  --color-warn: #995a00;
+  --color-warn-soft: #fff0d9;
+  --color-info: #2f5d78;
+  --color-info-soft: #e5eef4;
+  --color-ok: #2a7149;
+  --color-ok-soft: #e3f2e8;
+  --color-kakao: #fee500;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-canvas text-ink antialiased;
+    font-feature-settings: 'tnum' 0;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+  /* 그리드 항목이 긴 한 줄 텍스트 때문에 화면 밖으로 넓어지지 않게 */
+  .grid > * {
+    min-width: 0;
+  }
+  dialog::backdrop {
+    background: rgb(15 23 30 / 0.45);
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+  }
+  .print-area {
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}

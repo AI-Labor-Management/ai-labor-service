@@ -1,0 +1,2702 @@
+{
+ "schema": "bix-rules/1",
+ "generatedAt": "2026-11-04",
+ "basis": "2026-11-04 기준 국가법령정보센터 현행·시행예정 조문(data/laws), 고용노동부·보건복지부 고시와 보도자료",
+ "howToRead": {
+  "values": "시행 구간(effectiveFrom~effectiveTo)별 값. 계산기는 기준일이 들어가는 값을 고른다.",
+  "status": {
+   "verified": "1차 출처 원문에서 확인",
+   "partial": "일부만 확인 (note 참고)",
+   "announced": "정부 의결·발표만 있고 법령 개정 전",
+   "pending": "법률은 바뀌었지만 금액·범위를 정할 시행령이 없음",
+   "needsExpert": "노무사 확인 필요 (22번)"
+  },
+  "sources.check": "build_rules.py가 data/laws 조문에서 quote를 찾은 결과와 조문 해시. 해시가 바뀌면 원문이 바뀐 것이므로 다시 확인한다.",
+  "appliesTo.minEmployees": "이 인원 이상 사업장에만 적용"
+ },
+ "rules": [
+  {
+   "id": "minimumWage.hourly",
+   "label": "최저임금 시간급",
+   "category": "wage",
+   "unit": "원",
+   "check": "A1",
+   "usedIn": [
+    "08"
+   ],
+   "values": [
+    {
+     "value": 10320,
+     "effectiveFrom": "2026-01-01",
+     "effectiveTo": "2026-12-31",
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "notice",
+       "ref": "고용노동부고시 제2025-47호",
+       "quote": "10,320원",
+       "file": "2026년 적용 최저임금 고시(고용노동부 고시 제2025-47호).pdf",
+       "url": "https://www.moel.go.kr/info/lawinfo/instruction/view.do?bbs_seq=20250800121",
+       "check": {
+        "ok": true
+       }
+      },
+      {
+       "type": "law",
+       "law": "최저임금법",
+       "article": "제10조",
+       "quote": "고시",
+       "paragraph": 1,
+       "ref": "최저임금법#제10조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2020-05-26",
+        "versionStatus": "current",
+        "hash": "48920df0c0c8",
+        "lawEffective": "2020-05-26",
+        "lawNumber": "법률 제17326호"
+       }
+      }
+     ]
+    },
+    {
+     "value": 10700,
+     "effectiveFrom": "2027-01-01",
+     "effectiveTo": "2027-12-31",
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "notice",
+       "ref": "고용노동부고시 제2026-60호",
+       "quote": "10,700원",
+       "file": "2027년 적용 최저임금 고시(고용노동부 고시 제2026-60호).pdf",
+       "url": "https://www.moel.go.kr/info/lawinfo/instruction/view.do?bbs_seq=20260800150",
+       "check": {
+        "ok": true
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "minimumWage.monthly209h",
+   "label": "최저임금 월 환산액(주 40시간, 209시간)",
+   "category": "wage",
+   "unit": "원",
+   "check": "A1",
+   "usedIn": [
+    "08"
+   ],
+   "values": [
+    {
+     "value": 2156880,
+     "effectiveFrom": "2026-01-01",
+     "effectiveTo": "2026-12-31",
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "notice",
+       "ref": "고용노동부고시 제2025-47호",
+       "quote": "2,156,880원",
+       "file": "2026년 적용 최저임금 고시(고용노동부 고시 제2025-47호).pdf",
+       "check": {
+        "ok": true
+       }
+      }
+     ]
+    },
+    {
+     "value": 2236300,
+     "effectiveFrom": "2027-01-01",
+     "effectiveTo": "2027-12-31",
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "notice",
+       "ref": "고용노동부고시 제2026-60호",
+       "quote": "2,236,300원",
+       "file": "2027년 적용 최저임금 고시(고용노동부 고시 제2026-60호).pdf",
+       "check": {
+        "ok": true
+       }
+      }
+     ]
+    }
+   ],
+   "note": "참고 표시용. 판정은 시간급 환산으로 한다."
+  },
+  {
+   "id": "minimumWage.probation",
+   "label": "수습 중 최저임금 감액",
+   "category": "wage",
+   "unit": "비율",
+   "check": "C1",
+   "usedIn": [
+    "08"
+   ],
+   "values": [
+    {
+     "value": {
+      "reduction": 0.1,
+      "maxMonths": 3,
+      "minContractYears": 1,
+      "excludeSimpleLabor": true
+     },
+     "effectiveFrom": "2019-01-01",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "최저임금법",
+       "article": "제5조",
+       "quote": "1년 이상의 기간을 정하여 근로계약을 체결하고 수습 중에 있는 근로자로서 수습을 시작한 날부터 3개월 이내인 사람",
+       "paragraph": 2,
+       "ref": "최저임금법#제5조②",
+       "check": {
+        "ok": true,
+        "versionFrom": "2020-05-26",
+        "versionStatus": "current",
+        "hash": "08488bfd2a04",
+        "lawEffective": "2020-05-26",
+        "lawNumber": "법률 제17326호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "최저임금법 시행령",
+       "article": "제3조",
+       "quote": "100분의 10을 뺀 금액",
+       "ref": "최저임금법 시행령#제3조",
+       "check": {
+        "ok": true,
+        "versionFrom": "2019-01-01",
+        "versionStatus": "current",
+        "hash": "97910993c56b",
+        "lawEffective": "2019-01-01",
+        "lawNumber": "대통령령 제29469호"
+       }
+      },
+      {
+       "type": "notice",
+       "ref": "고용노동부고시 제2018-23호 (단순노무직종)",
+       "quote": "단순노무종사자",
+       "file": "최저임금법 제5조에 따른 단순노무직종 근로자 지정 고시문.pdf",
+       "check": {
+        "ok": true
+       }
+      }
+     ]
+    }
+   ],
+   "note": "음식점·카페 직무가 단순노무(대분류 9)에 드는지는 22번 C1. 화면은 자동 감액하지 않는다."
+  },
+  {
+   "id": "minimumWage.inclusion.excludedShare",
+   "label": "최저임금 산입 제외 비율 (정기상여금·현금 복리후생비)",
+   "category": "wage",
+   "unit": "비율",
+   "check": "A10",
+   "usedIn": [
+    "08"
+   ],
+   "values": [
+    {
+     "value": {
+      "bonus": 0,
+      "welfareCash": 0
+     },
+     "effectiveFrom": "2024-01-01",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "최저임금법",
+       "article": "제2조",
+       "quote": "2024년부터는 100분의 0",
+       "addendum": "15666",
+       "ref": "최저임금법#부칙(제15666호)제2조",
+       "check": {
+        "ok": true,
+        "versionFrom": null,
+        "versionStatus": "current",
+        "hash": "5bec96672f5d",
+        "lawEffective": "2020-05-26",
+        "lawNumber": "법률 제17326호"
+       }
+      }
+     ]
+    }
+   ],
+   "note": "매월 1회 이상 정기 지급분은 전액 산입. 소정근로 외 임금은 제외(최저임금법 제6조④1)."
+  },
+  {
+   "id": "weeklyHoliday.minWeeklyHours",
+   "label": "주휴·연차 적용 최소 주 소정근로시간",
+   "category": "wage",
+   "unit": "시간",
+   "check": "A9",
+   "usedIn": [
+    "08",
+    "13"
+   ],
+   "values": [
+    {
+     "value": 15,
+     "effectiveFrom": "2008-03-21",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "근로기준법",
+       "article": "제18조",
+       "quote": "15시간 미만인 근로자에 대하여는 제55조와 제60조를 적용하지 아니한다",
+       "paragraph": 3,
+       "ref": "근로기준법#제18조③",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-10-08",
+        "versionStatus": "current",
+        "hash": "db1390520c94",
+        "lawEffective": "2026-10-08",
+        "lawNumber": "법률 제21533호"
+       }
+      }
+     ]
+    }
+   ],
+   "note": "4주 평균으로 판단"
+  },
+  {
+   "id": "weeklyHoliday.paidHours",
+   "label": "주휴 시간 계산",
+   "category": "wage",
+   "unit": "식",
+   "check": "A9",
+   "usedIn": [
+    "08"
+   ],
+   "values": [
+    {
+     "value": {
+      "formula": "min(weeklyHours,40) / 40 * 8",
+      "condition": "1주 소정근로일 개근"
+     },
+     "effectiveFrom": "2018-06-29",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "근로기준법 시행령",
+       "article": "제30조",
+       "quote": "1주 동안의 소정근로일을 개근한 자에게 주어야 한다",
+       "paragraph": 1,
+       "ref": "근로기준법 시행령#제30조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2025-10-23",
+        "versionStatus": "current",
+        "hash": "9cfcc3a721fa",
+        "lawEffective": "2025-10-23",
+        "lawNumber": "대통령령 제35436호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "근로기준법 시행령",
+       "quote": "4주 동안의 소정근로시간을 그 기간의 통상 근로자의 총 소정근로일 수로 나눈 시간 수",
+       "appendix": "[별표 2]",
+       "ref": "근로기준법 시행령#별표2",
+       "check": {
+        "ok": true,
+        "appendixHash": "c05ee3619967",
+        "lawEffective": "2025-10-23",
+        "lawNumber": "대통령령 제35436호"
+       }
+      }
+     ]
+    }
+   ],
+   "note": "통상 근로자 주 5일 기준일 때 별표 2 식과 같다. 퇴사 주 주휴는 22번 C2."
+  },
+  {
+   "id": "premium.overtime",
+   "label": "연장근로 가산율",
+   "category": "wage",
+   "unit": "비율",
+   "check": "A12",
+   "usedIn": [
+    "08"
+   ],
+   "values": [
+    {
+     "value": 0.5,
+     "effectiveFrom": "2018-03-20",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "근로기준법",
+       "article": "제56조",
+       "quote": "통상임금의 100분의 50 이상을 가산",
+       "paragraph": 1,
+       "ref": "근로기준법#제56조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-10-08",
+        "versionStatus": "current",
+        "hash": "61610c620b7d",
+        "lawEffective": "2026-10-08",
+        "lawNumber": "법률 제21533호"
+       }
+      }
+     ]
+    }
+   ],
+   "appliesTo": {
+    "minEmployees": 5
+   }
+  },
+  {
+   "id": "premium.night",
+   "label": "야간근로 가산율 (22:00~06:00)",
+   "category": "wage",
+   "unit": "비율",
+   "check": "A12",
+   "usedIn": [
+    "08"
+   ],
+   "values": [
+    {
+     "value": {
+      "rate": 0.5,
+      "start": "22:00",
+      "end": "06:00"
+     },
+     "effectiveFrom": "2018-03-20",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "근로기준법",
+       "article": "제56조",
+       "quote": "오후 10시부터 다음 날 오전 6시 사이의 근로",
+       "paragraph": 3,
+       "ref": "근로기준법#제56조③",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-10-08",
+        "versionStatus": "current",
+        "hash": "61610c620b7d",
+        "lawEffective": "2026-10-08",
+        "lawNumber": "법률 제21533호"
+       }
+      }
+     ]
+    }
+   ],
+   "appliesTo": {
+    "minEmployees": 5
+   }
+  },
+  {
+   "id": "premium.holiday",
+   "label": "휴일근로 가산율",
+   "category": "wage",
+   "unit": "비율",
+   "check": "A12",
+   "usedIn": [
+    "08"
+   ],
+   "values": [
+    {
+     "value": {
+      "within8h": 0.5,
+      "over8h": 1.0
+     },
+     "effectiveFrom": "2018-03-20",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "근로기준법",
+       "article": "제56조",
+       "quote": "8시간을 초과한 휴일근로: 통상임금의 100분의 100",
+       "paragraph": 2,
+       "ref": "근로기준법#제56조②",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-10-08",
+        "versionStatus": "current",
+        "hash": "61610c620b7d",
+        "lawEffective": "2026-10-08",
+        "lawNumber": "법률 제21533호"
+       }
+      }
+     ]
+    }
+   ],
+   "appliesTo": {
+    "minEmployees": 5
+   }
+  },
+  {
+   "id": "workHours.limits",
+   "label": "법정 근로시간과 연장 한도",
+   "category": "work",
+   "unit": "시간",
+   "check": "C7",
+   "usedIn": [
+    "12",
+    "13"
+   ],
+   "values": [
+    {
+     "value": {
+      "weekly": 40,
+      "daily": 8,
+      "overtimeWeeklyMax": 12
+     },
+     "effectiveFrom": "2012-02-01",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "근로기준법",
+       "article": "제50조",
+       "quote": "40시간을 초과할 수 없다",
+       "paragraph": 1,
+       "ref": "근로기준법#제50조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-10-08",
+        "versionStatus": "current",
+        "hash": "9ec6972a140f",
+        "lawEffective": "2026-10-08",
+        "lawNumber": "법률 제21533호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "근로기준법",
+       "article": "제50조",
+       "quote": "8시간을 초과할 수 없다",
+       "paragraph": 2,
+       "ref": "근로기준법#제50조②",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-10-08",
+        "versionStatus": "current",
+        "hash": "9ec6972a140f",
+        "lawEffective": "2026-10-08",
+        "lawNumber": "법률 제21533호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "근로기준법",
+       "article": "제53조",
+       "quote": "1주 간에 12시간을 한도로",
+       "paragraph": 1,
+       "ref": "근로기준법#제53조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-10-08",
+        "versionStatus": "current",
+        "hash": "1ec8442d743f",
+        "lawEffective": "2026-10-08",
+        "lawNumber": "법률 제21533호"
+       }
+      }
+     ]
+    }
+   ],
+   "appliesTo": {
+    "minEmployees": 5
+   },
+   "note": "1~4명은 제50·53조 미적용(시행령 별표 1). 위험 점검에서 '법적 의무 아님·권장'."
+  },
+  {
+   "id": "break.minimum",
+   "label": "휴게시간",
+   "category": "work",
+   "unit": "분",
+   "check": "B18",
+   "usedIn": [
+    "12",
+    "13"
+   ],
+   "values": [
+    {
+     "value": {
+      "per4h": 30,
+      "per8h": 60,
+      "waiver4hOnRequest": false
+     },
+     "effectiveFrom": "2026-10-08",
+     "effectiveTo": "2026-12-09",
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "근로기준법",
+       "article": "제54조",
+       "quote": "4시간인 경우에는 30분 이상, 8시간인 경우에는 1시간 이상",
+       "paragraph": 1,
+       "ref": "근로기준법#제54조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-10-08",
+        "versionStatus": "current",
+        "hash": "f6370c40748f",
+        "lawEffective": "2026-10-08",
+        "lawNumber": "법률 제21533호"
+       }
+      }
+     ]
+    },
+    {
+     "value": {
+      "per4h": 30,
+      "per8h": 60,
+      "waiver4hOnRequest": true
+     },
+     "effectiveFrom": "2026-12-10",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "근로기준법",
+       "article": "제54조",
+       "quote": "근로자가 휴게시간을 이용하지 아니할 것을 명시적으로 요청한 때에는 그러하지 아니하다",
+       "paragraph": 1,
+       "ref": "근로기준법#제54조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-12-10",
+        "versionStatus": "scheduled",
+        "hash": "1d67cbf4cb29",
+        "lawEffective": "2026-10-08",
+        "lawNumber": "법률 제21533호"
+       }
+      }
+     ]
+    }
+   ],
+   "note": "1~4명에도 적용(별표 1 제4장 제54조)."
+  },
+  {
+   "id": "minor.limits",
+   "label": "18세 미만 근로시간·취직인허증",
+   "category": "work",
+   "unit": "시간",
+   "check": "B19",
+   "usedIn": [
+    "08",
+    "12",
+    "13"
+   ],
+   "values": [
+    {
+     "value": {
+      "daily": 7,
+      "weekly": 35,
+      "extraDaily": 1,
+      "extraWeekly": 5,
+      "permitUnderAge": 15
+     },
+     "effectiveFrom": "2020-05-26",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "근로기준법",
+       "article": "제69조",
+       "quote": "1일에 7시간, 1주에 35시간을 초과하지 못한다",
+       "ref": "근로기준법#제69조",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-10-08",
+        "versionStatus": "current",
+        "hash": "59851fb000a3",
+        "lawEffective": "2026-10-08",
+        "lawNumber": "법률 제21533호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "근로기준법",
+       "article": "제64조",
+       "quote": "15세 미만인 사람",
+       "paragraph": 1,
+       "ref": "근로기준법#제64조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-10-08",
+        "versionStatus": "current",
+        "hash": "2db246b664d2",
+        "lawEffective": "2026-10-08",
+        "lawNumber": "법률 제21533호"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "annualLeave.accrual",
+   "label": "연차 발생",
+   "category": "leave",
+   "unit": "일",
+   "check": "B16",
+   "usedIn": [
+    "13"
+   ],
+   "values": [
+    {
+     "value": {
+      "firstYearPerMonth": 1,
+      "base": 15,
+      "attendanceRate": 0.8,
+      "plusEvery2Years": 1,
+      "max": 25,
+      "splitHourly": false
+     },
+     "effectiveFrom": "2018-05-29",
+     "effectiveTo": "2027-06-09",
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "근로기준법",
+       "article": "제60조",
+       "quote": "80퍼센트 이상 출근한 근로자에게 15일의 유급휴가",
+       "paragraph": 1,
+       "ref": "근로기준법#제60조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-10-08",
+        "versionStatus": "current",
+        "hash": "07f737d62a35",
+        "lawEffective": "2026-10-08",
+        "lawNumber": "법률 제21533호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "근로기준법",
+       "article": "제60조",
+       "quote": "1개월 개근 시 1일의 유급휴가",
+       "paragraph": 2,
+       "ref": "근로기준법#제60조②",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-10-08",
+        "versionStatus": "current",
+        "hash": "07f737d62a35",
+        "lawEffective": "2026-10-08",
+        "lawNumber": "법률 제21533호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "근로기준법",
+       "article": "제60조",
+       "quote": "25일을 한도로",
+       "paragraph": 4,
+       "ref": "근로기준법#제60조④",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-10-08",
+        "versionStatus": "current",
+        "hash": "07f737d62a35",
+        "lawEffective": "2026-10-08",
+        "lawNumber": "법률 제21533호"
+       }
+      }
+     ]
+    },
+    {
+     "value": {
+      "firstYearPerMonth": 1,
+      "base": 15,
+      "attendanceRate": 0.8,
+      "plusEvery2Years": 1,
+      "max": 25,
+      "splitHourly": true,
+      "hourlyUnit": null
+     },
+     "effectiveFrom": "2027-06-10",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "근로기준법",
+       "article": "제60조",
+       "quote": "대통령령으로 정하는 시간단위 및 일수의 범위에서 분할하여 청구한 때에는 이를 부여하여야 한다",
+       "paragraph": 5,
+       "ref": "근로기준법#제60조⑤",
+       "check": {
+        "ok": true,
+        "versionFrom": "2027-06-10",
+        "versionStatus": "scheduled",
+        "hash": "80c6ce914e7a",
+        "lawEffective": "2026-10-08",
+        "lawNumber": "법률 제21533호"
+       }
+      }
+     ],
+     "note": "시간 단위 범위는 시행령 미정 (hourlyUnit=null)"
+    }
+   ],
+   "appliesTo": {
+    "minEmployees": 5
+   }
+  },
+  {
+   "id": "annualLeave.partTime",
+   "label": "단시간근로자 연차 계산",
+   "category": "leave",
+   "unit": "식",
+   "check": "B16",
+   "usedIn": [
+    "13"
+   ],
+   "values": [
+    {
+     "value": {
+      "formula": "fullTimeDays * partTimeHours / fullTimeHours * 8",
+      "roundUpHour": true
+     },
+     "effectiveFrom": "2021-10-14",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "근로기준법 시행령",
+       "quote": "1시간 미만은 1시간으로 본다",
+       "appendix": "[별표 2]",
+       "ref": "근로기준법 시행령#별표2",
+       "check": {
+        "ok": true,
+        "appendixHash": "c05ee3619967",
+        "lawEffective": "2025-10-23",
+        "lawNumber": "대통령령 제35436호"
+       }
+      }
+     ]
+    }
+   ],
+   "appliesTo": {
+    "minEmployees": 5
+   }
+  },
+  {
+   "id": "annualLeave.changeTiming",
+   "label": "연차 시기 변경 조건",
+   "category": "leave",
+   "unit": "문구",
+   "check": "C5",
+   "usedIn": [
+    "13"
+   ],
+   "values": [
+    {
+     "value": "사업 운영에 막대한 지장이 있는 경우",
+     "effectiveFrom": "2012-02-01",
+     "effectiveTo": "2027-06-09",
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "근로기준법",
+       "article": "제60조",
+       "quote": "사업 운영에 막대한 지장이 있는 경우",
+       "paragraph": 5,
+       "ref": "근로기준법#제60조⑤",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-10-08",
+        "versionStatus": "current",
+        "hash": "07f737d62a35",
+        "lawEffective": "2026-10-08",
+        "lawNumber": "법률 제21533호"
+       }
+      }
+     ]
+    },
+    {
+     "value": "사업 운영에 막대한 지장이 있는 경우",
+     "effectiveFrom": "2027-06-10",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "근로기준법",
+       "article": "제60조",
+       "quote": "사업 운영에 막대한 지장이 있는 경우",
+       "paragraph": 6,
+       "ref": "근로기준법#제60조⑥",
+       "check": {
+        "ok": true,
+        "versionFrom": "2027-06-10",
+        "versionStatus": "scheduled",
+        "hash": "80c6ce914e7a",
+        "lawEffective": "2026-10-08",
+        "lawNumber": "법률 제21533호"
+       }
+      }
+     ]
+    }
+   ],
+   "appliesTo": {
+    "minEmployees": 5
+   }
+  },
+  {
+   "id": "annualLeave.promotion",
+   "label": "연차 사용 촉진 시점",
+   "category": "leave",
+   "unit": "개월·일",
+   "check": "B17",
+   "usedIn": [
+    "11",
+    "13"
+   ],
+   "values": [
+    {
+     "value": {
+      "overOneYear": {
+       "notifyMonthsBefore": 6,
+       "notifyWindowDays": 10,
+       "designateMonthsBefore": 2
+      },
+      "underOneYear": {
+       "notifyMonthsBefore": 3,
+       "notifyWindowDays": 10,
+       "designateMonthsBefore": 1,
+       "lateNotifyMonthsBefore": 1,
+       "lateNotifyWindowDays": 5,
+       "lateDesignateDaysBefore": 10
+      }
+     },
+     "effectiveFrom": "2020-03-31",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "근로기준법",
+       "article": "제61조",
+       "quote": "끝나기 6개월 전을 기준으로 10일 이내에",
+       "paragraph": 1,
+       "ref": "근로기준법#제61조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-10-08",
+        "versionStatus": "current",
+        "hash": "6267269a45c0",
+        "lawEffective": "2026-10-08",
+        "lawNumber": "법률 제21533호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "근로기준법",
+       "article": "제61조",
+       "quote": "끝나기 2개월 전까지",
+       "paragraph": 1,
+       "ref": "근로기준법#제61조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-10-08",
+        "versionStatus": "current",
+        "hash": "6267269a45c0",
+        "lawEffective": "2026-10-08",
+        "lawNumber": "법률 제21533호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "근로기준법",
+       "article": "제61조",
+       "quote": "최초 1년의 근로기간이 끝나기 3개월 전을 기준으로 10일 이내에",
+       "paragraph": 2,
+       "ref": "근로기준법#제61조②",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-10-08",
+        "versionStatus": "current",
+        "hash": "6267269a45c0",
+        "lawEffective": "2026-10-08",
+        "lawNumber": "법률 제21533호"
+       }
+      }
+     ]
+    }
+   ],
+   "appliesTo": {
+    "minEmployees": 5
+   }
+  },
+  {
+   "id": "scope.under5.appliedArticles",
+   "label": "1~4명 사업장에 적용되는 근로기준법 조문",
+   "category": "scope",
+   "unit": "목록",
+   "check": "B6",
+   "usedIn": [
+    "07",
+    "08",
+    "12",
+    "13"
+   ],
+   "values": [
+    {
+     "value": {
+      "ch1": "제1조~제13조",
+      "ch2": [
+       "제15조",
+       "제17조",
+       "제18조",
+       "제19조①",
+       "제20조~제22조",
+       "제23조②",
+       "제26조",
+       "제35조~제42조"
+      ],
+      "ch3": [
+       "제43조~제45조",
+       "제47조~제49조"
+      ],
+      "ch4": [
+       "제54조",
+       "제55조①",
+       "제63조"
+      ],
+      "ch5": [
+       "제64조",
+       "제65조①③",
+       "제66조~제69조",
+       "제70조②③",
+       "제71조",
+       "제72조",
+       "제74조"
+      ],
+      "ch6": [
+       "제76조"
+      ],
+      "ch8": [
+       "제78조~제92조"
+      ],
+      "ch11": [
+       "제101조~제106조"
+      ],
+      "ch12": [
+       "제107조~제116조"
+      ]
+     },
+     "effectiveFrom": "2018-06-29",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "근로기준법 시행령",
+       "quote": "제54조, 제55조제1항, 제63조",
+       "appendix": "[별표 1]",
+       "ref": "근로기준법 시행령#별표1",
+       "check": {
+        "ok": true,
+        "appendixHash": "3e3e47856ffa",
+        "lawEffective": "2025-10-23",
+        "lawNumber": "대통령령 제35436호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "근로기준법 시행령",
+       "quote": "제15조, 제17조, 제18조, 제19조제1항, 제20조부터 제22조까지의 규정, 제23조제2항, 제26조, 제35조부터 제42조까지의 규정",
+       "appendix": "[별표 1]",
+       "ref": "근로기준법 시행령#별표1",
+       "check": {
+        "ok": true,
+        "appendixHash": "3e3e47856ffa",
+        "lawEffective": "2025-10-23",
+        "lawNumber": "대통령령 제35436호"
+       }
+      }
+     ]
+    }
+   ],
+   "note": "연장·야간·휴일 가산(제56조), 공휴일 유급(제55조②), 연차(제60조), 해고 서면통지(제27조), 괴롭힘(제76조의2·3), 법령 게시(제14조)는 미적용."
+  },
+  {
+   "id": "scope.headcount",
+   "label": "상시근로자 수 산정",
+   "category": "scope",
+   "unit": "식",
+   "check": "B5",
+   "usedIn": [
+    "06"
+   ],
+   "values": [
+    {
+     "value": {
+      "formula": "1개월 연인원 / 가동일수",
+      "underHalfRule": true,
+      "annualLeaveBasis": "1년간 월 단위",
+      "familyOnlyExempt": "동거하는 친족만"
+     },
+     "effectiveFrom": "2018-06-29",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "근로기준법 시행령",
+       "article": "제7조의2",
+       "quote": "2분의 1 미만인 경우",
+       "paragraph": 2,
+       "ref": "근로기준법 시행령#제7조의2②",
+       "check": {
+        "ok": true,
+        "versionFrom": "2025-10-23",
+        "versionStatus": "current",
+        "hash": "455457c5fe2f",
+        "lawEffective": "2025-10-23",
+        "lawNumber": "대통령령 제35436호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "근로기준법",
+       "article": "제11조",
+       "quote": "동거하는 친족만을 사용하는 사업 또는 사업장",
+       "paragraph": 1,
+       "ref": "근로기준법#제11조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-10-08",
+        "versionStatus": "current",
+        "hash": "c91c047cde08",
+        "lawEffective": "2026-10-08",
+        "lawNumber": "법률 제21533호"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dismissal.notice",
+   "label": "해고 예고",
+   "category": "end",
+   "unit": "일",
+   "check": "C11",
+   "usedIn": [
+    "11"
+   ],
+   "values": [
+    {
+     "value": {
+      "daysBefore": 30,
+      "payInLieuDays": 30,
+      "exemptUnderMonths": 3
+     },
+     "effectiveFrom": "2019-01-15",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "근로기준법",
+       "article": "제26조",
+       "quote": "적어도 30일 전에 예고를 하여야 하고",
+       "ref": "근로기준법#제26조",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-10-08",
+        "versionStatus": "current",
+        "hash": "6e4f7e5de31f",
+        "lawEffective": "2026-10-08",
+        "lawNumber": "법률 제21533호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "근로기준법",
+       "article": "제26조",
+       "quote": "계속 근로한 기간이 3개월 미만인 경우",
+       "ref": "근로기준법#제26조",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-10-08",
+        "versionStatus": "current",
+        "hash": "6e4f7e5de31f",
+        "lawEffective": "2026-10-08",
+        "lawNumber": "법률 제21533호"
+       }
+      }
+     ]
+    }
+   ],
+   "note": "1~4명에도 적용, 서면 통지(제27조)는 5명 이상"
+  },
+  {
+   "id": "records.retentionYears",
+   "label": "근로계약 관련 서류 보존",
+   "category": "docs",
+   "unit": "년",
+   "check": "B12",
+   "usedIn": [
+    "07"
+   ],
+   "values": [
+    {
+     "value": {
+      "years": 3,
+      "items": [
+       "근로자 명부",
+       "근로계약서",
+       "임금대장",
+       "임금 결정·지급 서류",
+       "고용·해고·퇴직 서류",
+       "승급·감급 서류",
+       "휴가 서류",
+       "서면 합의 서류",
+       "연소자 증명 서류"
+      ],
+      "wageStatement": "권장"
+     },
+     "effectiveFrom": "2021-03-30",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "근로기준법",
+       "article": "제42조",
+       "quote": "3년간 보존하여야 한다",
+       "ref": "근로기준법#제42조",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-10-08",
+        "versionStatus": "current",
+        "hash": "608eabddd7d5",
+        "lawEffective": "2026-10-08",
+        "lawNumber": "법률 제21533호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "근로기준법 시행령",
+       "article": "제22조",
+       "quote": "임금대장",
+       "paragraph": 1,
+       "ref": "근로기준법 시행령#제22조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2025-10-23",
+        "versionStatus": "current",
+        "hash": "f3273bbc6d7f",
+        "lawEffective": "2025-10-23",
+        "lawNumber": "대통령령 제35436호"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "records.rosterException",
+   "label": "근로자 명부 작성 예외",
+   "category": "docs",
+   "unit": "일",
+   "check": "B7",
+   "usedIn": [
+    "07",
+    "11"
+   ],
+   "values": [
+    {
+     "value": {
+      "dailyWorkerUnderDays": 30
+     },
+     "effectiveFrom": "2007-06-29",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "근로기준법 시행령",
+       "article": "제21조",
+       "quote": "사용기간이 30일 미만인 일용근로자",
+       "ref": "근로기준법 시행령#제21조",
+       "check": {
+        "ok": true,
+        "versionFrom": "2025-10-23",
+        "versionStatus": "current",
+        "hash": "506821458085",
+        "lawEffective": "2025-10-23",
+        "lawNumber": "대통령령 제35436호"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "wageStatement.electronic",
+   "label": "임금명세서 전자 교부",
+   "category": "docs",
+   "unit": "문구",
+   "check": "B22",
+   "usedIn": [
+    "08",
+    "17"
+   ],
+   "values": [
+    {
+     "value": "서면(전자문서를 포함한다)",
+     "effectiveFrom": "2021-11-19",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "근로기준법",
+       "article": "제48조",
+       "quote": "전자문서",
+       "paragraph": 2,
+       "ref": "근로기준법#제48조②",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-10-08",
+        "versionStatus": "current",
+        "hash": "29f6eefca711",
+        "lawEffective": "2026-10-08",
+        "lawNumber": "법률 제21533호"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "severance.basic",
+   "label": "퇴직금",
+   "category": "end",
+   "unit": "식",
+   "check": "A11",
+   "usedIn": [
+    "10"
+   ],
+   "values": [
+    {
+     "value": {
+      "daysPerYear": 30,
+      "minServiceYears": 1,
+      "minWeeklyHours": 15,
+      "paymentDays": 14,
+      "averageWage": "3개월 임금 총액 / 총일수, 통상임금보다 적으면 통상임금"
+     },
+     "effectiveFrom": "2021-04-13",
+     "effectiveTo": null,
+     "status": "partial",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "퇴직급여법",
+       "article": "제8조",
+       "quote": "계속근로기간 1년에 대하여 30일분 이상의 평균임금",
+       "paragraph": 1,
+       "ref": "퇴직급여법#제8조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-09-18",
+        "versionStatus": "current",
+        "hash": "e8f3fbb26645",
+        "lawEffective": "2026-09-18",
+        "lawNumber": "법률 제21475호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "퇴직급여법",
+       "article": "제4조",
+       "quote": "계속근로기간이 1년 미만인 근로자",
+       "paragraph": 1,
+       "ref": "퇴직급여법#제4조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-09-18",
+        "versionStatus": "current",
+        "hash": "524a9f6944c0",
+        "lawEffective": "2026-09-18",
+        "lawNumber": "법률 제21475호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "퇴직급여법",
+       "article": "제9조",
+       "quote": "14일 이내에 퇴직금을 지급하여야 한다",
+       "paragraph": 1,
+       "ref": "퇴직급여법#제9조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-09-18",
+        "versionStatus": "current",
+        "hash": "583f5b317f58",
+        "lawEffective": "2026-09-18",
+        "lawNumber": "법률 제21475호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "근로기준법",
+       "article": "제2조",
+       "quote": "통상임금액을 평균임금으로 한다",
+       "paragraph": 2,
+       "ref": "근로기준법#제2조②",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-10-08",
+        "versionStatus": "current",
+        "hash": "4967494b65cf",
+        "lawEffective": "2026-10-08",
+        "lawNumber": "법률 제21533호"
+       }
+      }
+     ],
+     "note": "상여·연차수당 3/12 가산과 일할 계산은 법령에 없음 → 22번"
+    }
+   ]
+  },
+  {
+   "id": "insurance.pension.rate",
+   "label": "국민연금 보험료율 (근로자·사용자 각각)",
+   "category": "insurance",
+   "unit": "비율",
+   "check": "A2",
+   "usedIn": [
+    "10"
+   ],
+   "values": [
+    {
+     "value": 0.0475,
+     "effectiveFrom": "2026-01-01",
+     "effectiveTo": "2026-12-31",
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "국민연금법",
+       "article": "제4조",
+       "quote": "2026년은 1만분의 475",
+       "paragraph": 1,
+       "addendum": "20903",
+       "ref": "국민연금법#부칙(제20903호)제4조①",
+       "check": {
+        "ok": true,
+        "versionFrom": null,
+        "versionStatus": "current",
+        "hash": "a1fe03bf6c1b",
+        "lawEffective": "2026-10-20",
+        "lawNumber": "법률 제22096호"
+       }
+      }
+     ]
+    },
+    {
+     "value": 0.05,
+     "effectiveFrom": "2027-01-01",
+     "effectiveTo": "2027-12-31",
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "국민연금법",
+       "article": "제4조",
+       "quote": "2027년은 1만분의 500",
+       "paragraph": 1,
+       "addendum": "20903",
+       "ref": "국민연금법#부칙(제20903호)제4조①",
+       "check": {
+        "ok": true,
+        "versionFrom": null,
+        "versionStatus": "current",
+        "hash": "a1fe03bf6c1b",
+        "lawEffective": "2026-10-20",
+        "lawNumber": "법률 제22096호"
+       }
+      }
+     ]
+    },
+    {
+     "value": 0.0525,
+     "effectiveFrom": "2028-01-01",
+     "effectiveTo": "2028-12-31",
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "국민연금법",
+       "article": "제4조",
+       "quote": "2028년은 1만분의 525",
+       "paragraph": 1,
+       "addendum": "20903",
+       "ref": "국민연금법#부칙(제20903호)제4조①",
+       "check": {
+        "ok": true,
+        "versionFrom": null,
+        "versionStatus": "current",
+        "hash": "a1fe03bf6c1b",
+        "lawEffective": "2026-10-20",
+        "lawNumber": "법률 제22096호"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "insurance.pension.baseIncome",
+   "label": "국민연금 기준소득월액 하한·상한",
+   "category": "insurance",
+   "unit": "원",
+   "check": "A2",
+   "usedIn": [
+    "10"
+   ],
+   "values": [
+    {
+     "value": {
+      "min": 410000,
+      "max": 6590000,
+      "truncateUnder": 1000
+     },
+     "effectiveFrom": "2026-07-01",
+     "effectiveTo": "2027-06-30",
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "notice",
+       "ref": "보건복지부고시 제2026-31호",
+       "quote": "410천원",
+       "url": "https://www.law.go.kr/행정규칙/국민연금기준소득월액하한액과상한액",
+       "check": {
+        "ok": null,
+        "reason": "원본 파일 없음 (화면 확인)"
+       }
+      },
+      {
+       "type": "law",
+       "law": "국민연금법 시행령",
+       "article": "제5조",
+       "quote": "천원 미만을 버린 금액",
+       "paragraph": 1,
+       "ref": "국민연금법 시행령#제5조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-01-01",
+        "versionStatus": "current",
+        "hash": "bcf9e0fc953d",
+        "lawEffective": "2026-01-01",
+        "lawNumber": "대통령령 제35602호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "국민연금법 시행령",
+       "article": "제5조",
+       "quote": "해당 연도 7월부터 다음 연도 6월까지",
+       "paragraph": 4,
+       "ref": "국민연금법 시행령#제5조④",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-01-01",
+        "versionStatus": "current",
+        "hash": "bcf9e0fc953d",
+        "lawEffective": "2026-01-01",
+        "lawNumber": "대통령령 제35602호"
+       }
+      }
+     ],
+     "note": "고시 본문은 국가법령정보센터 행정규칙 화면에서 확인(파일 미보관)"
+    }
+   ]
+  },
+  {
+   "id": "insurance.pension.age",
+   "label": "국민연금 사업장가입자 나이",
+   "category": "insurance",
+   "unit": "세",
+   "check": "B1",
+   "usedIn": [
+    "10"
+   ],
+   "values": [
+    {
+     "value": {
+      "min": 18,
+      "maxExclusive": 60
+     },
+     "effectiveFrom": "2026-01-01",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "국민연금법",
+       "article": "제8조",
+       "quote": "18세 이상 60세 미만",
+       "paragraph": 1,
+       "ref": "국민연금법#제8조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-10-20",
+        "versionStatus": "current",
+        "hash": "73357ad482a9",
+        "lawEffective": "2026-10-20",
+        "lawNumber": "법률 제22096호"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "insurance.health.rate",
+   "label": "건강보험료율 (합계, 근로자·사용자 반씩)",
+   "category": "insurance",
+   "unit": "비율",
+   "check": "A3",
+   "usedIn": [
+    "10"
+   ],
+   "values": [
+    {
+     "value": 0.0719,
+     "effectiveFrom": "2026-01-01",
+     "effectiveTo": "2026-12-31",
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "국민건강보험법 시행령",
+       "article": "제44조",
+       "quote": "1만분의 719",
+       "paragraph": 1,
+       "ref": "국민건강보험법 시행령#제44조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-10-01",
+        "versionStatus": "current",
+        "hash": "dd6b160fdef9",
+        "lawEffective": "2026-10-01",
+        "lawNumber": "대통령령 제36675호"
+       }
+      }
+     ]
+    },
+    {
+     "value": 0.0719,
+     "effectiveFrom": "2027-01-01",
+     "effectiveTo": "2027-12-31",
+     "status": "announced",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "press",
+       "ref": "보건복지부 보도자료 2026.9.8",
+       "url": "https://www.mohw.go.kr/board.es?mid=a10503000000&bid=0027&act=view&list_no=1491824",
+       "note": "건강보험정책심의위원회 2027년 7.19% 유지 의결",
+       "check": {
+        "ok": null,
+        "reason": "보도자료 (법령 개정 전)"
+       }
+      }
+     ],
+     "note": "시행령 개정 전"
+    }
+   ]
+  },
+  {
+   "id": "insurance.ltc.rate",
+   "label": "장기요양보험료율 (소득 대비 합계)",
+   "category": "insurance",
+   "unit": "비율",
+   "check": "A3",
+   "usedIn": [
+    "10"
+   ],
+   "values": [
+    {
+     "value": 0.009448,
+     "effectiveFrom": "2026-01-01",
+     "effectiveTo": "2026-12-31",
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "노인장기요양보험법 시행령",
+       "article": "제4조",
+       "quote": "100만분의 9,448",
+       "ref": "노인장기요양보험법 시행령#제4조",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-05-12",
+        "versionStatus": "current",
+        "hash": "887b4aeebd1a",
+        "lawEffective": "2026-05-12",
+        "lawNumber": "대통령령 제36325호"
+       }
+      }
+     ]
+    },
+    {
+     "value": 0.009994,
+     "effectiveFrom": "2027-01-01",
+     "effectiveTo": "2027-12-31",
+     "status": "announced",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "press",
+       "ref": "보건복지부 보도자료 2026.10.30",
+       "url": "https://www.mohw.go.kr/board.es?mid=a10503000000&bid=0027&act=view&list_no=1492396",
+       "note": "장기요양위원회 2027년 0.9994% 의결",
+       "check": {
+        "ok": null,
+        "reason": "보도자료 (법령 개정 전)"
+       }
+      }
+     ],
+     "note": "시행령 개정 전"
+    }
+   ]
+  },
+  {
+   "id": "insurance.employment.unemploymentRate",
+   "label": "고용보험 실업급여 보험료율 (합계, 반씩)",
+   "category": "insurance",
+   "unit": "비율",
+   "check": "A4",
+   "usedIn": [
+    "10"
+   ],
+   "values": [
+    {
+     "value": 0.018,
+     "effectiveFrom": "2022-07-01",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "징수법 시행령",
+       "article": "제12조",
+       "quote": "실업급여의 보험료율: 1천분의 18",
+       "paragraph": 1,
+       "ref": "징수법 시행령#제12조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2025-12-23",
+        "versionStatus": "current",
+        "hash": "46cdc42f7706",
+        "lawEffective": "2025-12-23",
+        "lawNumber": "대통령령 제35935호"
+       }
+      }
+     ]
+    }
+   ],
+   "note": "2027년 2.0%안은 시행령 개정 전이라 넣지 않음"
+  },
+  {
+   "id": "insurance.employment.stabilityRate",
+   "label": "고용안정·직업능력개발 보험료율 (사용자)",
+   "category": "insurance",
+   "unit": "비율",
+   "check": "A4",
+   "usedIn": [
+    "10"
+   ],
+   "values": [
+    {
+     "value": {
+      "under150": 0.0025
+     },
+     "effectiveFrom": "2013-07-01",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "징수법 시행령",
+       "article": "제12조",
+       "quote": "상시근로자수가 150명 미만인 사업주의 사업: 1만분의 25",
+       "paragraph": 1,
+       "ref": "징수법 시행령#제12조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2025-12-23",
+        "versionStatus": "current",
+        "hash": "46cdc42f7706",
+        "lawEffective": "2025-12-23",
+        "lawNumber": "대통령령 제35935호"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "insurance.industrial.rate",
+   "label": "산재보험료율 (음식·숙박·도소매)",
+   "category": "insurance",
+   "unit": "비율",
+   "check": "A5",
+   "usedIn": [
+    "10"
+   ],
+   "values": [
+    {
+     "value": {
+      "business": 0.008,
+      "commute": 0.0006,
+      "total": 0.0086
+     },
+     "effectiveFrom": "2026-01-01",
+     "effectiveTo": "2026-12-31",
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "notice",
+       "ref": "고용노동부고시 제2025-91호 별지",
+       "quote": "8",
+       "file": "[별지] 2026년도 사업종류별 산재보험료율(2026년도 사업종류별 산재보험료율).pdf",
+       "url": "https://www.moel.go.kr/info/lawinfo/instruction/view.do?bbs_seq=20251201757",
+       "check": {
+        "ok": true
+       }
+      }
+     ],
+     "note": "전액 사용자. 2027년 고시는 12월 말 예정"
+    }
+   ]
+  },
+  {
+   "id": "insurance.employment.eligibility",
+   "label": "고용보험 적용 제외 기준",
+   "category": "insurance",
+   "unit": "조건",
+   "check": "B1",
+   "usedIn": [
+    "10"
+   ],
+   "values": [
+    {
+     "value": {
+      "excludeIf": "월 60시간 미만 또는 주 15시간 미만",
+      "except": [
+       "3개월 이상 계속 근로",
+       "일용근로자"
+      ]
+     },
+     "effectiveFrom": "2023-06-27",
+     "effectiveTo": "2026-12-31",
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "고용보험법 시행령",
+       "article": "제3조",
+       "quote": "1개월간 소정근로시간이 60시간 미만이거나 1주간의 소정근로시간이 15시간 미만인 근로자",
+       "paragraph": 1,
+       "ref": "고용보험법 시행령#제3조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-09-18",
+        "versionStatus": "current",
+        "hash": "bd25a2559b49",
+        "lawEffective": "2026-09-18",
+        "lawNumber": "대통령령 제36588호"
+       }
+      }
+     ]
+    },
+    {
+     "value": {
+      "excludeIf": "보수가 대통령령 소득기준 미만",
+      "incomeThreshold": null,
+      "except": [
+       "일용근로자",
+       "3개월 이상 계속 근로",
+       "둘 이상 사업 합산 신청"
+      ]
+     },
+     "effectiveFrom": "2027-01-01",
+     "effectiveTo": null,
+     "status": "pending",
+     "verifiedAt": null,
+     "verifiedBy": null,
+     "sources": [
+      {
+       "type": "law",
+       "law": "고용보험법",
+       "article": "제10조",
+       "quote": "보수가 대통령령으로 정하는 소득 기준",
+       "paragraph": 1,
+       "ref": "고용보험법#제10조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2027-01-01",
+        "versionStatus": "scheduled",
+        "hash": "4817e2bf8d23",
+        "lawEffective": "2026-09-18",
+        "lawNumber": "법률 제21473호"
+       }
+      }
+     ],
+     "note": "소득기준 금액은 시행령 확정 전 (입법예고 월 80만 원은 쓰지 않음)"
+    }
+   ]
+  },
+  {
+   "id": "insurance.employment.age65",
+   "label": "65세 이후 신규 고용 시 실업급여 미적용",
+   "category": "insurance",
+   "unit": "세",
+   "check": "B2",
+   "usedIn": [
+    "10"
+   ],
+   "values": [
+    {
+     "value": 65,
+     "effectiveFrom": "2019-01-15",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "고용보험법",
+       "article": "제10조",
+       "quote": "65세 이후에 고용",
+       "paragraph": 2,
+       "ref": "고용보험법#제10조②",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-09-18",
+        "versionStatus": "current",
+        "hash": "3cf44b1c6bcc",
+        "lawEffective": "2026-09-18",
+        "lawNumber": "법률 제21473호"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "insurance.reportDeadline",
+   "label": "4대보험 취득·상실 신고 기한",
+   "category": "deadline",
+   "unit": "기한",
+   "check": "B3",
+   "usedIn": [
+    "10",
+    "11"
+   ],
+   "values": [
+    {
+     "value": {
+      "health": {
+       "days": 14,
+       "from": "취득·상실일"
+      },
+      "pension": {
+       "rule": "다음 달 15일"
+      },
+      "employment": {
+       "rule": "다음 달 15일"
+      },
+      "industrial": {
+       "rule": "다음 달 15일"
+      }
+     },
+     "effectiveFrom": "2026-01-01",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "국민건강보험법",
+       "article": "제8조",
+       "quote": "자격을 취득한 날부터 14일 이내에",
+       "paragraph": 2,
+       "ref": "국민건강보험법#제8조②",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-10-08",
+        "versionStatus": "current",
+        "hash": "ac1fc10e6b2c",
+        "lawEffective": "2026-10-08",
+        "lawNumber": "법률 제21522호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "국민건강보험법",
+       "article": "제10조",
+       "quote": "자격을 잃은 날부터 14일 이내에",
+       "paragraph": 2,
+       "ref": "국민건강보험법#제10조②",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-10-08",
+        "versionStatus": "current",
+        "hash": "5537754c83f5",
+        "lawEffective": "2026-10-08",
+        "lawNumber": "법률 제21522호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "국민연금법 시행규칙",
+       "article": "제6조",
+       "quote": "다음 달 15일까지",
+       "paragraph": 1,
+       "ref": "국민연금법 시행규칙#제6조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-02-13",
+        "versionStatus": "current",
+        "hash": "35499c16796d",
+        "lawEffective": "2026-02-13",
+        "lawNumber": "보건복지부령 제1157호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "고용보험법 시행령",
+       "article": "제7조",
+       "quote": "다음 달 15일까지",
+       "paragraph": 1,
+       "ref": "고용보험법 시행령#제7조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-09-18",
+        "versionStatus": "current",
+        "hash": "7697c44de3c7",
+        "lawEffective": "2026-09-18",
+        "lawNumber": "대통령령 제36588호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "징수법",
+       "article": "제16조의10",
+       "quote": "다음 달 15일까지",
+       "paragraph": 3,
+       "ref": "징수법#제16조의10③",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-10-08",
+        "versionStatus": "current",
+        "hash": "22e0c717c793",
+        "lawEffective": "2026-10-08",
+        "lawNumber": "법률 제21532호"
+       }
+      }
+     ]
+    }
+   ],
+   "note": "2027.1.1부터 징수법 제16조의10이 '월 보수 등의 신고'(매월)로 바뀜. 취득·상실 기한(③④)은 같음."
+  },
+  {
+   "id": "foreignWorker.departureInsurance",
+   "label": "E-9 출국만기보험",
+   "category": "insurance",
+   "unit": "일",
+   "check": "B14",
+   "usedIn": [
+    "10"
+   ],
+   "values": [
+    {
+     "value": {
+      "replacesSeverance": true,
+      "paymentDays": 14
+     },
+     "effectiveFrom": "2025-10-01",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "외국인고용법",
+       "article": "제13조",
+       "quote": "퇴직금제도를 설정한 것으로 본다",
+       "paragraph": 2,
+       "ref": "외국인고용법#제13조②",
+       "check": {
+        "ok": true,
+        "versionFrom": "2025-10-01",
+        "versionStatus": "current",
+        "hash": "0bf17e45a274",
+        "lawEffective": "2025-10-01",
+        "lawNumber": "법률 제21065호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "외국인고용법",
+       "article": "제13조",
+       "quote": "출국한 때부터 14일",
+       "paragraph": 3,
+       "ref": "외국인고용법#제13조③",
+       "check": {
+        "ok": true,
+        "versionFrom": "2025-10-01",
+        "versionStatus": "current",
+        "hash": "0bf17e45a274",
+        "lawEffective": "2025-10-01",
+        "lawNumber": "법률 제21065호"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "healthCertificate",
+   "label": "보건증(건강진단) 주기",
+   "category": "docs",
+   "unit": "년",
+   "check": "B4",
+   "usedIn": [
+    "07",
+    "11"
+   ],
+   "values": [
+    {
+     "value": {
+      "everyYears": 1,
+      "windowDaysBeforeAfter": 30
+     },
+     "effectiveFrom": "2026-09-29",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "건강진단규칙",
+       "article": "제2조",
+       "quote": "매 1년마다 건강진단을 받아야 한다",
+       "paragraph": 2,
+       "ref": "건강진단규칙#제2조②",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-09-29",
+        "versionStatus": "current",
+        "hash": "457f374fa8c3",
+        "lawEffective": "2026-09-29",
+        "lawNumber": "총리령 제2156호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "건강진단규칙",
+       "article": "제2조",
+       "quote": "유효기간은 1년",
+       "paragraph": 3,
+       "ref": "건강진단규칙#제2조③",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-09-29",
+        "versionStatus": "current",
+        "hash": "457f374fa8c3",
+        "lawEffective": "2026-09-29",
+        "lawNumber": "총리령 제2156호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "건강진단규칙",
+       "article": "제2조",
+       "quote": "만료일 전후 각각 30일 이내",
+       "paragraph": 4,
+       "ref": "건강진단규칙#제2조④",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-09-29",
+        "versionStatus": "current",
+        "hash": "457f374fa8c3",
+        "lawEffective": "2026-09-29",
+        "lawNumber": "총리령 제2156호"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "foodHygieneEducation",
+   "label": "식품위생교육 (영업자)",
+   "category": "docs",
+   "unit": "시간",
+   "check": "B11",
+   "usedIn": [
+    "07"
+   ],
+   "values": [
+    {
+     "value": {
+      "hoursPerYear": 3,
+      "target": "영업자(종업원 아님)"
+     },
+     "effectiveFrom": "2026-09-01",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "식품위생법 시행규칙",
+       "article": "제52조",
+       "quote": "영 제21조제1호부터 제9호까지의 영업자",
+       "paragraph": 1,
+       "ref": "식품위생법 시행규칙#제52조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-09-01",
+        "versionStatus": "current",
+        "hash": "1f405af85d24",
+        "lawEffective": "2026-09-01",
+        "lawNumber": "총리령 제2150호"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "sexualHarassmentEducation",
+   "label": "직장 내 성희롱 예방교육",
+   "category": "docs",
+   "unit": "회",
+   "check": "B10",
+   "usedIn": [
+    "07"
+   ],
+   "values": [
+    {
+     "value": {
+      "perYear": 1,
+      "under10MayPostMaterials": true
+     },
+     "effectiveFrom": "2026-09-18",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "남녀고용평등법 시행령",
+       "article": "제3조",
+       "quote": "연 1회 이상",
+       "paragraph": 1,
+       "ref": "남녀고용평등법 시행령#제3조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-09-18",
+        "versionStatus": "current",
+        "hash": "080589a106ee",
+        "lawEffective": "2026-09-18",
+        "lawNumber": "대통령령 제36589호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "남녀고용평등법 시행령",
+       "article": "제3조",
+       "quote": "10명 미만",
+       "paragraph": 4,
+       "ref": "남녀고용평등법 시행령#제3조④",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-09-18",
+        "versionStatus": "current",
+        "hash": "080589a106ee",
+        "lawEffective": "2026-09-18",
+        "lawNumber": "대통령령 제36589호"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "fixedTerm.maxYears",
+   "label": "기간제 사용 기간",
+   "category": "docs",
+   "unit": "년",
+   "check": "B8",
+   "usedIn": [
+    "07",
+    "11"
+   ],
+   "values": [
+    {
+     "value": {
+      "years": 2,
+      "under5Applies": false
+     },
+     "effectiveFrom": "2007-07-01",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "기간제법",
+       "article": "제4조",
+       "quote": "2년을 초과하지 아니하는 범위 안에서",
+       "paragraph": 1,
+       "ref": "기간제법#제4조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2021-05-18",
+        "versionStatus": "current",
+        "hash": "b499a2091947",
+        "lawEffective": "2021-05-18",
+        "lawNumber": "법률 제18177호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "기간제법 시행령",
+       "quote": "제17조",
+       "appendix": "[별표 1]",
+       "ref": "기간제법 시행령#별표1",
+       "check": {
+        "ok": true,
+        "appendixHash": "64bdaae00f4f",
+        "lawEffective": "2021-04-08",
+        "lawNumber": "대통령령 제31611호"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "fixedTerm.writtenTerms",
+   "label": "기간제·단시간 서면 명시 사항",
+   "category": "docs",
+   "unit": "목록",
+   "check": "B8",
+   "usedIn": [
+    "07"
+   ],
+   "values": [
+    {
+     "value": {
+      "all": [
+       "계약기간",
+       "근로시간·휴게",
+       "임금 구성·계산·지급방법",
+       "휴일·휴가",
+       "장소·업무",
+       "근로일·근로일별 근로시간(단시간)"
+      ],
+      "under5": [
+       "계약기간",
+       "휴게",
+       "임금 구성·계산·지급방법",
+       "휴일",
+       "장소·업무"
+      ]
+     },
+     "effectiveFrom": "2020-05-26",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "기간제법",
+       "article": "제17조",
+       "quote": "근로일 및 근로일별 근로시간",
+       "ref": "기간제법#제17조",
+       "check": {
+        "ok": true,
+        "versionFrom": "2021-05-18",
+        "versionStatus": "current",
+        "hash": "547bab94f3ff",
+        "lawEffective": "2021-05-18",
+        "lawNumber": "법률 제18177호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "기간제법 시행령",
+       "quote": "제17조제1호·제2호(휴게에 관한 사항에 한정한다)·제3호·제4호(휴일에 관한 사항에 한정한다)·제5호",
+       "appendix": "[별표 1]",
+       "ref": "기간제법 시행령#별표1",
+       "check": {
+        "ok": true,
+        "appendixHash": "64bdaae00f4f",
+        "lawEffective": "2021-04-08",
+        "lawNumber": "대통령령 제31611호"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "fixedTerm.partTimeOvertime",
+   "label": "단시간근로자 초과근로",
+   "category": "wage",
+   "unit": "비율",
+   "check": "B8",
+   "usedIn": [
+    "08"
+   ],
+   "values": [
+    {
+     "value": {
+      "premium": 0.5,
+      "weeklyMax": 12,
+      "consentRequired": true
+     },
+     "effectiveFrom": "2014-09-19",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "기간제법",
+       "article": "제6조",
+       "quote": "1주간에 12시간을 초과하여 근로하게 할 수 없다",
+       "paragraph": 1,
+       "ref": "기간제법#제6조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2021-05-18",
+        "versionStatus": "current",
+        "hash": "a78f172db55e",
+        "lawEffective": "2021-05-18",
+        "lawNumber": "법률 제18177호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "기간제법",
+       "article": "제6조",
+       "quote": "통상임금의 100분의 50 이상을 가산",
+       "paragraph": 3,
+       "ref": "기간제법#제6조③",
+       "check": {
+        "ok": true,
+        "versionFrom": "2021-05-18",
+        "versionStatus": "current",
+        "hash": "a78f172db55e",
+        "lawEffective": "2021-05-18",
+        "lawNumber": "법률 제18177호"
+       }
+      }
+     ]
+    }
+   ],
+   "appliesTo": {
+    "minEmployees": 5
+   },
+   "note": "1~4명은 기간제법 시행령 별표 1에 제6조가 없어 미적용"
+  },
+  {
+   "id": "holidays.legal",
+   "label": "유급 공휴일 근거 (5명 이상)",
+   "category": "calendar",
+   "unit": "목록",
+   "check": "B20",
+   "usedIn": [
+    "08",
+    "20"
+   ],
+   "values": [
+    {
+     "value": {
+      "source": "관공서의 공휴일에 관한 규정 제2조(일요일 제외) + 제3조 대체공휴일",
+      "includesLaborDay": true
+     },
+     "effectiveFrom": "2026-05-11",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "근로기준법 시행령",
+       "article": "제30조",
+       "quote": "제2조 각 호(제1호는 제외한다)",
+       "paragraph": 2,
+       "ref": "근로기준법 시행령#제30조②",
+       "check": {
+        "ok": true,
+        "versionFrom": "2025-10-23",
+        "versionStatus": "current",
+        "hash": "9cfcc3a721fa",
+        "lawEffective": "2025-10-23",
+        "lawNumber": "대통령령 제35436호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "공휴일규정",
+       "article": "제2조",
+       "quote": "노동절(5월 1일)",
+       "ref": "공휴일규정#제2조",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-05-11",
+        "versionStatus": "current",
+        "hash": "a1c0e84bd722",
+        "lawEffective": "2026-05-11",
+        "lawNumber": "대통령령 제36290호"
+       }
+      }
+     ]
+    }
+   ],
+   "appliesTo": {
+    "minEmployees": 5
+   }
+  },
+  {
+   "id": "tax.mealAllowanceNonTaxable",
+   "label": "식대 비과세 한도",
+   "category": "tax",
+   "unit": "원/월",
+   "check": "A7",
+   "usedIn": [
+    "08",
+    "10"
+   ],
+   "values": [
+    {
+     "value": 200000,
+     "effectiveFrom": "2023-01-01",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "소득세법",
+       "article": "제12조",
+       "quote": "20만원",
+       "ref": "소득세법#제12조",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-07-01",
+        "versionStatus": "current",
+        "hash": "138d36346761",
+        "lawEffective": "2026-07-01",
+        "lawNumber": "법률 제21221호"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "tax.dailyWorker",
+   "label": "일용근로자 원천징수",
+   "category": "tax",
+   "unit": "식",
+   "check": "A8",
+   "usedIn": [
+    "08"
+   ],
+   "values": [
+    {
+     "value": {
+      "deductionPerDay": 150000,
+      "rate": 0.06,
+      "taxCredit": 0.55
+     },
+     "effectiveFrom": "2019-01-01",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-04",
+     "verifiedBy": "지원",
+     "sources": [
+      {
+       "type": "law",
+       "law": "소득세법",
+       "article": "제47조",
+       "quote": "15만원",
+       "paragraph": 2,
+       "ref": "소득세법#제47조②",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-07-01",
+        "versionStatus": "current",
+        "hash": "01071484c8b1",
+        "lawEffective": "2026-07-01",
+        "lawNumber": "법률 제21221호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "소득세법",
+       "article": "제59조",
+       "quote": "100분의 55",
+       "paragraph": 3,
+       "ref": "소득세법#제59조③",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-07-01",
+        "versionStatus": "current",
+        "hash": "ad861c6bb9f6",
+        "lawEffective": "2026-07-01",
+        "lawNumber": "법률 제21221호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "소득세법",
+       "article": "제129조",
+       "quote": "일용근로자의 근로소득에 대해서는 100분의 6",
+       "paragraph": 1,
+       "ref": "소득세법#제129조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-07-01",
+        "versionStatus": "current",
+        "hash": "ff9559b35268",
+        "lawEffective": "2026-07-01",
+        "lawNumber": "법률 제21221호"
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
