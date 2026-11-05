@@ -97,7 +97,7 @@ export default function EmployeeDetail() {
     });
     toast('초대 링크를 만들었어요 (7일 유효, 일회용)');
   };
-  const inviteUrl = e.invite ? `${location.origin}/employee/join?invite=${e.invite.token}` : '';
+  const inviteUrl = e.invite ? `${location.origin}${import.meta.env.BASE_URL}employee/join?invite=${e.invite.token}` : '';
 
   return (
     <div className="max-w-5xl">

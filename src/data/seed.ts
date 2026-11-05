@@ -1,4 +1,4 @@
-// 가상 시드 데이터 — 실제 사업장·인물과 무관. "카페 샘터"는 시연용 가상 가게 이름이며 노무법인 샘터와 관계가 없다.
+// 가상 시드 데이터 — 실제 사업장·인물과 무관. "카페 샘터"는 기획 시안에서 쓴 시연용 가상 가게 이름이다.
 // 기준일(base)에 맞춰 날짜를 상대적으로 만들어, 언제 실행해도 시연 흐름(위험·임박·확인 필요)이 보이게 한다.
 import { addDays, addMonths, listDates, weekday, fromParts } from '../domain/dates';
 import { payrollPeriodFor, draftLines } from '../domain/payroll';

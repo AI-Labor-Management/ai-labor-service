@@ -32,7 +32,8 @@ export default function App() {
   return (
     <StoreProvider>
       <ToastProvider>
-        <BrowserRouter>
+        {/* GitHub Pages는 /ai-labor-service/ 아래에서 서비스되므로 빌드 base를 라우터 basename으로 쓴다 */}
+        <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '') || '/'}>
           <LoadGate>
             <Routes>
               <Route path="/" element={<Landing />} />

@@ -7,6 +7,8 @@
 - 법령 수치: 원본의 `053_rules.json`(44개 규칙)을 **그대로** `src/data/rules.json`으로 복사해 기준일로 읽습니다.
 - 다음 작업자(Codex)용 상세 인수인계: [`HANDOFF.md`](HANDOFF.md) · 기능별 상태표: [`FEATURES.md`](FEATURES.md)
 
+**바로 보기:** https://ai-labor-management.github.io/ai-labor-service/ — `/start`에서 "가상 시드로 둘러보기"를 누르면 예시 가게로 모든 화면을 볼 수 있어요. `main`에 push하면 GitHub Actions(`.github/workflows/deploy.yml`)가 테스트 후 다시 배포합니다. 공개 사이트에서도 입력한 내용은 방문자 본인 브라우저에만 저장되고 어디로도 전송되지 않습니다.
+
 > ⚠️ **로컬 데모입니다.** 실제 인증·사용자별 격리·서버 저장이 없고 데이터는 브라우저 `localStorage`에만 저장됩니다. 카카오·AI·법제처·노무법인 접수는 연결되지 않았으며, 실제로 보내지 않은 알림·상담을 "전송 완료"로 표시하지 않습니다. 실제 개인정보를 넣지 마세요.
 
 ## 필요 환경
