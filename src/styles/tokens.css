@@ -5,11 +5,11 @@
     'Malgun Gothic', system-ui, sans-serif;
   --color-brand: #2d6454;
   --color-brand-dark: #214c40;
-  --color-brand-soft: #eaf1eb;
-  --color-ink: #29332d;
-  --color-muted: #6d766f;
-  --color-line: #e2e5dc;
-  --color-canvas: #f7f7f0;
+  --color-brand-soft: #f0f1f2;
+  --color-ink: #2a2d32;
+  --color-muted: #737981;
+  --color-line: #e6e7ea;
+  --color-canvas: #f5f5f6;
   --color-risk: #b8444c;
   --color-risk-soft: #f8eded;
   --color-warn: #986229;
@@ -21,12 +21,12 @@
   --color-kakao: #fee500;
 }
 :root {
-  --surface: #fffefa;
-  --surface-raised: #fffefa;
-  --surface-hover: #f1f3eb;
-  --subtle: #f0f2ea;
-  --text-secondary: #535f56;
-  --shadow: 0 6px 24px #29332d0a;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-hover: #f4f4f5;
+  --subtle: #f1f1f3;
+  --text-secondary: #5b6067;
+  --shadow: 0 6px 24px #1f23290a;
   --header-height: 82px;
   --action: #2d6454;
   --action-hover: #214c40;
@@ -38,18 +38,18 @@
   --radius-dialog: 20px;
 }
 :root[data-theme='dark'] {
-  --surface: #202924;
-  --surface-raised: #29362e;
-  --surface-hover: #2c3b31;
-  --subtle: #2a362e;
-  --text-secondary: #becac0;
-  --color-brand: #a0cbb0;
-  --color-brand-dark: #b5d7c1;
-  --color-brand-soft: #2c4034;
-  --color-ink: #edf0e8;
-  --color-muted: #a8b6aa;
-  --color-line: #3b493e;
-  --color-canvas: #181f1b;
+  --surface: #23252a;
+  --surface-raised: #2b2e34;
+  --surface-hover: #30343b;
+  --subtle: #2d3036;
+  --text-secondary: #c4c7cd;
+  --color-brand: #8bb7ab;
+  --color-brand-dark: #b0cfc6;
+  --color-brand-soft: #30343a;
+  --color-ink: #eff0f2;
+  --color-muted: #aaafb8;
+  --color-line: #3b3f46;
+  --color-canvas: #191b20;
   --color-risk: #edabb0;
   --color-risk-soft: #422d32;
   --color-warn: #e5c08b;
@@ -61,7 +61,7 @@
   --shadow: 0 8px 32px #00000020;
   --action: #356d55;
   --action-hover: #407d63;
-  --action-ring: #a0cbb044;
+  --action-ring: #8bb7ab44;
   --accent: #ddb697;
   --accent-soft: #3d342d;
 }
