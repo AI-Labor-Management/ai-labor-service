@@ -2,13 +2,13 @@
 
 프론트엔드와 같은 데이터 모델(`src/domain/types.ts`의 `AppState`)과 같은 계산 엔진(`src/domain`)으로 서버를 만들고, 화면을 "서버 모드"로 연결했습니다(12장). 배포·운영 절차는 [`DEPLOY.md`](DEPLOY.md)를 보세요.
 
-> **현재 상태 (2026-11-06)**: 백엔드 배포·시험 완료, **프론트엔드 연결 완료**. 시작 화면에서 "로그인 없이 둘러보기"(기존 로컬 데모, 기본값) 또는 "로그인해서 서버에 저장"을 고릅니다. 시험 운영이라 가상 데이터만 쓰세요. 카카오·AI·법제처·비회원 실제 접수는 꺼져 있습니다. 공개 사이트에서 가입하려면 Auth URL·메일 설정이 필요합니다([`DEPLOY.md`](DEPLOY.md) 4장).
+> **현재 상태 (2026-11-06)**: 백엔드 배포·시험 완료, **프론트엔드 연결 완료**. 시작 화면에서 "로그인 없이 둘러보기"(기존 로컬 데모, 기본값) 또는 "로그인해서 서버에 저장"을 고릅니다. 시험 운영이라 가상 데이터만 쓰세요. 카카오·AI·법제처·비회원 실제 접수는 꺼져 있습니다. Auth URL은 설정했고 시험 기간이라 Confirm email은 꺼 두었습니다 — 실제 사용자를 받기 전에 SMTP를 연결하고 다시 켜세요([`DEPLOY.md`](DEPLOY.md) 0·4장).
 
 | 항목 | 값 |
 |---|---|
-| Supabase 프로젝트 | `nomu-service` (ref `htdnyekvbuncuweeqpmn`) |
-| 주소 | `https://htdnyekvbuncuweeqpmn.supabase.co` |
-| 리전 | `ap-southeast-2` (시드니) — **서울 리전 아님**. 운영 전 서울(`ap-northeast-2`) 이전 여부 결정 필요 |
+| Supabase 프로젝트 | `nomu-service-seoul` (ref `smbxhspzflnvncatdgjs`) |
+| 주소 | `https://smbxhspzflnvncatdgjs.supabase.co` |
+| 리전 | `ap-northeast-2` (서울). 2026-11-06 시드니 프로젝트(`htdnyekvbuncuweeqpmn`, 일시정지)에서 데이터 없이 옮김 |
 | 요금제 | Free |
 
 ## 1. 구성
@@ -182,7 +182,7 @@ E2E에서 발견해 고친 것: `respond_attendance_edit`가 잘못된 상태 �
 
 | # | 한계 | 다음 할 일 |
 |---|---|---|
-| 2 | 서울 리전 아님 (`ap-southeast-2`) | 운영 전 서울 프로젝트로 이전(마이그레이션·함수 그대로 재배포 가능) |
+| 2 | ~~서울 리전 아님~~ → 2026-11-06 서울 프로젝트로 이전 완료 | — |
 | 3 | 로그인 수단: 이메일만 (카카오 provider 미설정) | 카카오 앱 키 확보 후 Auth provider 추가 |
 | 4 | 위치 판정은 기기가 보낸 inside/outside(가상) | 카카오맵 좌표 + 서버 거리 판정 |
 | 5 | 카카오 알림·AI 상담·법제처 감지 미구현 | 설정 스위치는 준비됨 |

@@ -12,8 +12,8 @@ export interface Integration {
 }
 
 export const INTEGRATIONS: Integration[] = [
-  { id: 'auth', name: '로그인 (카카오 기본 · 이메일 보조)', status: 'waiting', what: '데모 역할 전환으로 대체. 실제 인증·사용자별 격리 없음', needs: 'Supabase Auth 프로젝트, 카카오 로그인 앱 키, 노무법인·관리자 2단계 인증', env: ['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY', 'VITE_KAKAO_JS_KEY'] },
-  { id: 'storage', name: '서버 저장 (Supabase · RLS)', status: 'demo', what: '브라우저 localStorage에 저장. 새로고침 후 복원, 다른 기기·브라우저와 공유 안 됨', needs: 'Supabase DB 스키마·RLS 정책, 서울 리전 확인', env: ['VITE_STORAGE_ADAPTER', 'VITE_SUPABASE_URL'] },
+  { id: 'auth', name: '로그인 (카카오 기본 · 이메일 보조)', status: 'waiting', what: '이메일 로그인·가입은 서버 모드에서 동작(Supabase Auth). 카카오 로그인·2단계 인증은 아직 연결 전', needs: '카카오 로그인 앱 키, 노무법인·관리자 2단계 인증, 메일 발송(SMTP)', env: ['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY', 'VITE_KAKAO_JS_KEY'] },
+  { id: 'storage', name: '서버 저장 (Supabase · RLS)', status: 'live', what: '시작 화면에서 "로그인해서 서버에 저장"을 고르면 서울 리전 Supabase에 계정별로 저장(역할별 RLS). 로그인 없이 둘러보기는 이 브라우저 localStorage', needs: '운영 전 개인정보 처리방침·보유 기간 확정', env: ['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY'] },
   { id: 'kakao-msg', name: '카카오톡 "나에게 보내기" 알림', status: 'waiting', what: '앱 안 알림만 실제로 쌓임. 카톡은 보내지 않음', needs: '카카오 메시지 API 동의, 서버 토큰 암호화 저장, 하루 1회 예약 실행', env: ['KAKAO_REST_KEY', 'CRON_SECRET'] },
   { id: 'ics', name: '캘린더 파일(.ics) 내보내기', status: 'live', what: '브라우저에서 파일을 만들어 내려받음 (외부 전송 없음)', needs: '—', env: [] },
   { id: 'gps', name: 'GPS 출퇴근 · 카카오맵', status: 'demo', what: '가상 위치(반경 안/밖 선택)로 기록. 실제 좌표를 읽지 않음', needs: '위치정보 법적 검토(신고·동의), 카카오맵 키·도메인 등록', env: ['VITE_KAKAO_JS_KEY'] },

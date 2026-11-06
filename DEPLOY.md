@@ -6,11 +6,13 @@
 
 | 항목 | 값 |
 |---|---|
-| 프로젝트 | `nomu-service` · ref `htdnyekvbuncuweeqpmn` · `ap-southeast-2` |
+| 프로젝트 | `nomu-service-seoul` · ref `smbxhspzflnvncatdgjs` · **`ap-northeast-2` (서울)**. 처음 쓰던 시드니 프로젝트 `nomu-service`(`htdnyekvbuncuweeqpmn`)는 가입자·데이터 0인 상태에서 2026-11-06 옮긴 뒤 일시정지 |
 | 마이그레이션 | `supabase/migrations/20261106000001` ~ `…0009` 9개 적용 |
-| 프론트엔드 | GitHub Pages 빌드에 `VITE_SUPABASE_URL`·`VITE_SUPABASE_ANON_KEY`(공개 값) 포함 → 시작 화면에서 서버 모드 선택 가능 |
-| Edge Functions | `api` v2 (verify_jwt on), `public-api` v1 (off), `cron-daily` v1 (off, 비밀 헤더 검사) |
-| 함수 코드 기준 커밋 | `api` = `986da8b18ea0fb3cbdbec9111fa5576a5c53ef76`, `public-api`·`cron-daily` = `3937c3a4f3f367f2ec61bfa833cd32d6f71b49ba` (jsDelivr 고정 URL, 아래 3-B. 두 함수는 그 뒤 코드가 바뀌지 않음) |
+| 프론트엔드 | GitHub Pages 빌드(`deploy.yml`)와 사람샘각(`AI-Labor-Management/saram-saemgak`의 `.env.production`)에 `VITE_SUPABASE_URL`·`VITE_SUPABASE_ANON_KEY`(공개 값) 포함 → 시작 화면에서 서버 모드 선택 가능 |
+| Edge Functions | `api` (verify_jwt on), `public-api` (off), `cron-daily` (off, 비밀 헤더 검사) — 서울 프로젝트 v1 |
+| 함수 코드 기준 커밋 | 세 함수 모두 `b88498a406f2e78fe6ff4480102c26760b53abd6` (jsDelivr 고정 URL, 아래 3-B. 사람샘각 공개 주소를 CORS 허용 목록에 넣은 커밋) |
+| Auth | Site URL `https://ai-labor-service-draft-sj.gold89765.chatgpt.site`, Redirect URLs: 그 주소 `/**`, `https://ai-labor-management.github.io/ai-labor-service/**`, `http://localhost:5173/**`. **Confirm email 꺼 둠 (시험 기간)** — 가입 즉시 로그인, SMTP 연결 후 다시 켜기 |
+| 서울 프로젝트 확인 | RLS 격리 49개, E2E 83개, 프론트 실서버 시험(사람샘각 `tests/live`) 9개, 가입 즉시 세션, 예약 실행 200 — 모두 통과 후 시험 계정 삭제 |
 | 예약 실행 | `labor-daily-alerts` `0 0 * * *` (09:00 KST) 활성 |
 | 데이터 | 비어 있음 (기본 노무법인 행 1개만). 시험 계정은 모두 지움 |
 
@@ -84,14 +86,14 @@ Deno.serve(handler);
 
 ### CORS
 
-`api`·`public-api`는 `https://ai-labor-management.github.io`, `http://localhost:5173`, `http://localhost:4173`만 허용합니다. 다른 주소를 더하려면 함수 비밀 값 `ALLOWED_ORIGINS`(쉼표 구분)를 넣습니다.
+`api`·`public-api`는 `https://ai-labor-management.github.io`, `https://ai-labor-service-draft-sj.gold89765.chatgpt.site`(사람샘각), `http://localhost:5173`, `http://localhost:4173`만 허용합니다. 다른 주소를 더하려면 함수 비밀 값 `ALLOWED_ORIGINS`(쉼표 구분)를 넣습니다.
 
 ## 4. Auth (공개 사이트에서 가입하려면 꼭 필요)
 
 대시보드 → Authentication → URL Configuration:
 
-- Site URL: `https://ai-labor-management.github.io/ai-labor-service/`
-- Redirect URLs: `https://ai-labor-management.github.io/ai-labor-service/**`, `http://localhost:5173/**`, `http://localhost:4173/**`
+- Site URL: `https://ai-labor-service-draft-sj.gold89765.chatgpt.site` (사람샘각 공개 사이트 — 지금 설정된 값)
+- Redirect URLs: `https://ai-labor-service-draft-sj.gold89765.chatgpt.site/**`, `https://ai-labor-management.github.io/ai-labor-service/**`, `http://localhost:5173/**` (지금 설정된 값. 미리보기 4173을 쓰려면 `http://localhost:4173/**` 추가)
 
 설정 전에는 가입 확인 메일의 링크가 기본값(localhost)으로 가요. 또 Supabase 기본 메일 발송은 **조직 팀원 주소에만** 보내고 시간당 몇 통으로 제한돼요. 누구나 가입하게 하려면 Authentication → Emails → SMTP Settings에 발송 서비스를 연결하거나, 시험 기간에만 Sign In / Providers → Email의 "Confirm email"을 끄세요(끄면 아무 주소로나 가입 가능 — 운영 전 다시 켜기).
 
