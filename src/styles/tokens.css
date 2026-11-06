@@ -52,6 +52,7 @@
   --print-brand: #354f72;
   --print-subtle: #f1f1f3;
   --focus-ring: #5579a8;
+  --logo-water: #3d8eaa;
   --dur-micro: 120ms;
   --dur-short: 220ms;
   --dur-flow: 380ms;
@@ -84,6 +85,7 @@
   --action-hover: #4c6c98;
   --action-ring: #b1c4df33;
   --focus-ring: #b1c4df;
+  --logo-water: #8cc6d5;
   --shadow: none;
   --shadow-dialog: 0 0 0 1px var(--color-line);
   --accent: #ddb697;

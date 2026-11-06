@@ -199,9 +199,26 @@ export function Icon({
 export function Brand({ compact = false }: { compact?: boolean }) {
   return (
     <span className="brand-lockup" aria-label={SERVICE_NAME}>
-      <svg className="brand-symbol" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-        <path d="M5 18C5 10.82 10.82 5 18 5h10v7H18a6 6 0 0 0-6 6v10H5V18Z" fill="currentColor" />
-        <path d="M35 22c0 7.18-5.82 13-13 13H12v-7h10a6 6 0 0 0 6-6V12h7v10Z" fill="currentColor" />
+      <svg className="brand-symbol" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+        <path
+          d="M24 3.5c-2.8 5.1-9.5 10.6-9.5 17a9.5 9.5 0 0 0 19 0c0-6.4-6.7-11.9-9.5-17Zm-2.5 10.7c-1.8 2.7-3.6 4.7-3.6 7.3a5.8 5.8 0 0 0 5.8 5.8c-2.7-2.3-3.4-4.7-2.4-7.5.6-1.7.8-3.7.2-5.6Z"
+          fill="currentColor"
+          fillRule="evenodd"
+          clipRule="evenodd"
+        />
+        <path
+          d="M15 32.6c2.5 1.1 5.6 1.7 9 1.7s6.5-.6 9-1.7"
+          stroke="currentColor"
+          strokeWidth="3.6"
+          strokeLinecap="round"
+        />
+        <path
+          className="brand-water"
+          d="M12 31c-5 1.4-8 3.5-8 5.8C4 40.8 13 44 24 44s20-3.2 20-7.2c0-2.3-3-4.4-8-5.8"
+          stroke="currentColor"
+          strokeWidth="3.6"
+          strokeLinecap="round"
+        />
       </svg>
       {!compact && (
         <span className="brand-wordmark" aria-hidden="true">

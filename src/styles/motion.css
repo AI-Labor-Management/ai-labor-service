@@ -2,6 +2,9 @@
 .brand-wordmark {
   line-height: 1;
 }
+.brand-water {
+  color: var(--logo-water);
+}
 .page-transition {
   animation: workspace-arrive 280ms var(--ease-out);
 }
