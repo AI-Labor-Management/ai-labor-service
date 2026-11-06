@@ -1,6 +1,8 @@
 // 공통 HTTP 처리: CORS, JSON 응답, 오류, 아주 작은 라우터
 const ALLOWED_ORIGINS = new Set([
   'https://ai-labor-management.github.io',
+  // 사람샘각 공개 사이트 (AI-Labor-Management/saram-saemgak, OpenAI Sites)
+  'https://ai-labor-service-draft-sj.gold89765.chatgpt.site',
   'http://localhost:5173',
   'http://localhost:4173',
 ]);

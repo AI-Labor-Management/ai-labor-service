@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/api/handler.ts (npm run build:functions)
-// sha256:006319b09283
+// sha256:8481a09ce283
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -5632,6 +5632,8 @@ var INSERT_ORDER = [
 // supabase/functions/_shared/http.ts
 var ALLOWED_ORIGINS = /* @__PURE__ */ new Set([
   "https://ai-labor-management.github.io",
+  // 사람샘각 공개 사이트 (AI-Labor-Management/saram-saemgak, OpenAI Sites)
+  "https://ai-labor-service-draft-sj.gold89765.chatgpt.site",
   "http://localhost:5173",
   "http://localhost:4173"
 ]);
