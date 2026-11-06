@@ -1,0 +1,19 @@
+# Supabase CLI 설정 (로컬 개발: supabase start / 배포: supabase db push, supabase functions deploy)
+project_id = "ai-labor-service"
+
+[api]
+schemas = ["public", "graphql_public"]
+
+[auth]
+site_url = "https://ai-labor-management.github.io/ai-labor-service/"
+additional_redirect_urls = ["http://localhost:5173", "http://localhost:4173"]
+
+[functions.api]
+verify_jwt = true
+
+[functions.public-api]
+verify_jwt = false
+
+[functions.cron-daily]
+# x-cron-secret 헤더를 Vault 값과 비교해 직접 인증한다
+verify_jwt = false
