@@ -104,8 +104,8 @@ tests/               Vitest
 | 5 | 바쁜 시기 B·C (채용 시기, 학생 시험 공백) 없음 | 근무 → 일정 | 학사일정 띠·알림 | 공휴일·사장님 바쁜 날만. 학사일정 데이터를 지어내지 않음 | — |
 | 6 | 보험 고지액 입력 후 확정 급여는 다시 계산되지 않음 | 급여 확정 → 보험 화면 고지액 입력 | 확정분은 그대로(의도) | 의도대로지만, 반영하려면 급여 [수정]으로 수동 조정해야 함 | `Payroll.tsx` |
 | 7 | 직원 화면 영어 전환이 일부 문구만 | 직원 B 화면 EN | 전체 영어 | 메뉴·주요 버튼·명세서 항목만 | `EmployeePages.tsx` |
-| 8 | 초대 토큰이 보안 토큰이 아님 | 직원 상세 → 초대 링크 | 서버 발급·해시 저장 | `Math.random` 8자, 링크는 문구 복사만 | `EmployeeDetail.tsx` |
-| 9 | 비회원 신청 하루 3회 제한 키가 데모용 해시 | 같은 번호로 4회 신청 | 서버 HMAC | FNV 해시(브라우저) | `domain/consult.ts` |
+| 8 | 초대 토큰이 보안 토큰이 아님 (화면) | 직원 상세 → 초대 링크 | 서버 발급·해시 저장 | 화면은 `Math.random` 8자. **서버 버전 완료**: RPC `create_invite`/`accept_invite`(32바이트, 해시 저장) — 프론트 연결 전 | `EmployeeDetail.tsx` |
+| 9 | 비회원 신청 하루 3회 제한 키가 데모용 해시 (화면) | 같은 번호로 4회 신청 | 서버 HMAC | 화면은 FNV 해시. **서버 버전 완료**: `submit_guest_consult`(Vault 키 HMAC, 번호 암호화) — 접수 스위치 꺼짐 | `domain/consult.ts` |
 | 10 | 입사일 수정 시 최초 근로조건 적용일을 입사일로 맞추는 휴리스틱 | 직원 상세 → 수정 → 입사일 변경 | 명시적 확인 | 사유가 "최초 등록"인 첫 조건을 자동 이동 | `EmployeeDetail.tsx` |
 | 11 | 번들 655KB(단일 청크) | `npm run build` | 라우트별 분할 | 경고 한도 800KB로 설정 | `vite.config.ts` |
 | 12 | 공식 서식 대조 전 계약서 양식 | 계약서 만들기 | 표준근로계약서 항목과 일치 | 시행령·기간제법 서면 명시 사항 기준의 초안(화면에 "참고용 초안" 표시). E-9 서식 링크 없음 | `DocMaker.tsx` |
@@ -130,8 +130,8 @@ tests/               Vitest
 
 | 항목 | 필요 | 붙일 곳 |
 |---|---|---|
-| 인증·서버 저장 | Supabase 프로젝트(서울 리전 확인), Auth(카카오 provider), 테이블·RLS (`19_데이터모델` 2·5장), 노무법인·관리자 2FA | `StorageAdapter` 구현 추가, `scopes.ts` 규칙을 RLS로 옮김 |
-| 카카오 | 앱 키, 메시지 API 동의, 서버 토큰 암호화 저장, 하루 1회 예약 실행(Vercel Cron) | `integrations.ts`, `pushNotification` 옆에 발송 기록(90일) |
+| 인증·서버 저장 | **백엔드 완료(2026-11-06)**: 테이블·RLS·RPC·Edge Functions·예약 실행 — [`BACKEND.md`](BACKEND.md). 남은 것: 프론트 연결, 서울 리전 이전(지금 `ap-southeast-2`), Auth 카카오 provider, 노무법인·관리자 2FA | `StorageAdapter`의 supabase 구현 (`GET /api/owner/state`로 읽기) |
+| 카카오 | 앱 키, 메시지 API 동의, 서버 토큰 암호화 저장. 하루 1회 예약 실행은 pg_cron으로 준비됨(카카오는 `not-connected` 기록만) | `supabase/functions/cron-daily/handler.ts`, `kakao_enabled` 설정 |
 | AI 상담 | 제공사 결정(서버 위치·학습 활용), 서버 함수, 일일 한도, 조문 검색 근거(기획의 `data/laws/` 조·항·호 변환본은 이번 묶음에 없음 — `069_index.json`과 법령 원문·추출 텍스트만 있음) | `Consult.tsx` FAQ 미검색 분기 |
 | 법제처 Open API | 인증키, 조문 해시 비교 작업 | `Admin.tsx` |
 | 공공데이터 | 특일정보·TourAPI 키, 학사일정 학기별 입력 | `data/holidays.ts`, 근무 일정 띠 |
@@ -140,7 +140,7 @@ tests/               Vitest
 
 ## 9. 후속 작업 제안 (우선순위)
 
-1. 서버 저장·인증(Supabase) — 지금 가장 큰 제한(6-1).
+1. 프론트엔드를 Supabase 백엔드에 연결 — 백엔드는 완료([`BACKEND.md`](BACKEND.md) 11장), 화면은 아직 localStorage(6-1).
 2. 상용 간이세액표 확보 후 소득세 계산(6-2), 공휴일 API(6-3).
 3. 노무사 답변 반영(5장 규칙), rules.json 재대조(11.26 직전: 1~4명 적용 확대, 2027 산재요율).
 4. 라우트별 코드 분할(6-11), 직원 화면 영어 전체 번역(6-7).

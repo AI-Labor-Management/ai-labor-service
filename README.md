@@ -6,10 +6,11 @@
 - 기준 기획: `BIX_노무서비스_기획안_2차_1104.docx`, `09_기획안_1104회의.md`, 기능별 설계 `07`~`22`.
 - 법령 수치: 원본의 `053_rules.json`(44개 규칙)을 **그대로** `src/data/rules.json`으로 복사해 기준일로 읽습니다.
 - 다음 작업자(Codex)용 상세 인수인계: [`HANDOFF.md`](HANDOFF.md) · 기능별 상태표: [`FEATURES.md`](FEATURES.md)
+- **백엔드(Supabase)**: 구조·API·권한 [`BACKEND.md`](BACKEND.md) · 배포·운영 [`DEPLOY.md`](DEPLOY.md)
 
 **바로 보기:** https://ai-labor-management.github.io/ai-labor-service/ — `/start`에서 "가상 시드로 둘러보기"를 누르면 예시 가게로 모든 화면을 볼 수 있어요. `main`에 push하면 GitHub Actions(`.github/workflows/deploy.yml`)가 테스트 후 다시 배포합니다. 공개 사이트에서도 입력한 내용은 방문자 본인 브라우저에만 저장되고 어디로도 전송되지 않습니다.
 
-> ⚠️ **로컬 데모입니다.** 실제 인증·사용자별 격리·서버 저장이 없고 데이터는 브라우저 `localStorage`에만 저장됩니다. 카카오·AI·법제처·노무법인 접수는 연결되지 않았으며, 실제로 보내지 않은 알림·상담을 "전송 완료"로 표시하지 않습니다. 실제 개인정보를 넣지 마세요.
+> ⚠️ **화면은 아직 로컬 데모입니다.** Supabase 백엔드(인증·RLS 격리·서버 저장·API·예약 알림)는 만들어 배포·시험까지 끝났지만 **프론트엔드는 아직 연결하지 않아** 화면 데이터는 브라우저 `localStorage`에만 저장됩니다. 카카오·AI·법제처·노무법인 접수는 연결되지 않았으며, 실제로 보내지 않은 알림·상담을 "전송 완료"로 표시하지 않습니다. 실제 개인정보를 넣지 마세요.
 
 ## 필요 환경
 
@@ -38,8 +39,9 @@ npm run dev
 | `npm run dev` | 개발 서버 (Vite, 5173 포트) |
 | `npm run build` | 타입 검사(`tsc -b`) + 프로덕션 빌드 → `dist/` |
 | `npm run preview` | 빌드 결과 미리보기 |
-| `npm test` | 단위 테스트 (Vitest, 66개) |
+| `npm test` | 단위 테스트 (Vitest, 75개 — 프론트 66 + 백엔드 변환 9) |
 | `npm run typecheck` | 타입 검사만 |
+| `npm run build:functions` | 계산 엔진·Edge Function 묶음 다시 만들기 (`src/domain`·`src/data`·`supabase/functions` 수정 후. [`DEPLOY.md`](DEPLOY.md)) |
 
 npm 11에서 `esbuild`, `@tailwindcss/oxide`의 install script 경고(`allow-scripts`)가 보일 수 있습니다. 두 패키지의 플랫폼 바이너리는 optionalDependencies로 설치되어 스크립트 실행 없이 동작합니다(Windows x64에서 확인).
 
@@ -49,13 +51,13 @@ npm 11에서 `esbuild`, `@tailwindcss/oxide`의 install script 경고(`allow-scr
 
 | 변수 | 용도 | 상태 |
 |---|---|---|
-| `VITE_STORAGE_ADAPTER` | `local`(기본) / `supabase` | supabase는 미구현 → 경고 후 local로 실행 |
-| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | 인증·DB·RLS | 미구현 |
+| `VITE_STORAGE_ADAPTER` | `local`(기본) / `supabase` | 백엔드는 준비됨, 프론트 supabase 어댑터는 미구현 → 경고 후 local로 실행 |
+| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | 인증·DB·RLS | 백엔드 배포됨 · 프론트 연결 전 ([`BACKEND.md`](BACKEND.md)) |
 | `VITE_KAKAO_JS_KEY`, `KAKAO_REST_KEY` | 카카오 로그인·나에게 보내기·카카오맵 | 연결 대기 |
 | `LLM_API_KEY` | AI 상담 (서버 함수에서만) | 연결 대기 (제공사 미정) |
 | `LAW_API_OC` | 법제처 Open API 법령 변경 감지 | 연결 대기 |
 | `HOLIDAY_API_KEY`, `TOUR_API_KEY` | 공휴일·지역 행사 | 연결 대기 (공휴일은 내장 목록) |
-| `CRON_SECRET` | 하루 1회 알림 묶음 발송 | 미구현 |
+| `CRON_SECRET` | 하루 1회 알림 묶음 발송 | 필요 없음 — 비밀 값은 Supabase Vault에서 생성·사용(pg_cron → `cron-daily`) |
 
 ## 가상 시드와 데모 역할
 
@@ -92,6 +94,12 @@ src/
   ui/          공통 부품(kit), 레이아웃·데모 띠, 일정 편집기, 임금명세서
   pages/       public(홍보·시작) owner(사장님 22화면) employee(직원) firm(노무법인) admin(관리자)
 tests/         Vitest 단위 테스트 (손계산 예제·경계값·날짜·조건 변경·스냅샷·역할 범위·복원)
+  backend/     DB 행 ↔ AppState 변환, 계산 엔진 타입 계약
+supabase/
+  migrations/  스키마 36개 표·RLS·무결성 트리거·RPC·예약 실행·권한 (8개)
+  functions/   Edge Functions: api(로그인) public-api(비로그인) cron-daily(예약) + _shared(계산 엔진 묶음·DB 변환)
+  tests/       rls_isolation.sql(49개), e2e_api.mjs(배포본 83개)
+scripts/       build-functions.mjs (계산 엔진·함수 묶기)
 ```
 
 자세한 데이터 흐름과 결정 이유는 `HANDOFF.md`를 보세요.
@@ -105,3 +113,13 @@ tests/         Vitest 단위 테스트 (손계산 예제·경계값·날짜·조
 | `npm run build` | 통과 (JS 655KB / gzip 197KB, 경고 한도 800KB로 설정) |
 | 브라우저 (Claude 앱 내장 Chromium) | 홍보·시작·사장님 27개 경로, 직원 5개, 노무법인, 관리자 화면 렌더 오류 없음. 375px 폭에서 가로 넘침 없음. 시나리오 확인 내용은 `HANDOFF.md` 7장 |
 | 미실시 | Safari/Firefox, 실제 휴대폰, 스크린리더, 인쇄 결과물 육안 확인, 장시간 사용·대용량 데이터 |
+
+### 백엔드 (2026-11-06)
+
+| 항목 | 결과 |
+|---|---|
+| `npm test` | 7개 파일 75개 통과 (백엔드 변환·타입 계약 포함) |
+| `deno check` (Edge Functions 3개) | 통과 |
+| RLS 격리 (`supabase/tests/rls_isolation.sql`) | 49개 통과 |
+| 배포본 E2E (`supabase/tests/e2e_api.mjs`, 실제 로그인 토큰) | 83개 통과 — 시드·급여 확정/수정·근로조건·일정·초대·출퇴근·연차·대타·노무법인 상담/철회·CORS·권한 |
+| 예약 실행 (pg_cron → cron-daily) | 200 · 알림 생성·중복 방지·비밀 값 검사 확인 |

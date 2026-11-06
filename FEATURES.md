@@ -61,4 +61,4 @@
 | 관리자 | 규칙 값·원문 대조 상태, 서식 링크 목록, 집계 | 구현(로컬, 조회 전용) | `pages/admin/Admin.tsx`, `pages/owner/Rules.tsx` | 데모 역할 → 관리자 |
 | 관리자 | 법령 변경 감지, 서식 링크 점검 실행, 접근 기록 | 연결 대기 / 미구현 | `Admin.tsx` | 비활성 버튼 |
 | 데이터 | localStorage 저장·새로고침 복원·JSON 내보내기/가져오기·초기화·시드 복원·저장 실패 재시도 | 구현(로컬) | `adapters/storage.ts`, `state/store.tsx`, `Settings.tsx` | 설정 → 데이터 |
-| 데이터 | 서버 저장(Supabase)·사용자별 격리(RLS)·보관 기간 자동 삭제 | 미구현 | — | — |
+| 데이터 | 서버 저장(Supabase)·사용자별 격리(RLS)·보관 기간 자동 삭제 | 백엔드 구현·배포·시험 완료 / 화면 연결 전 | `supabase/`, [`BACKEND.md`](BACKEND.md) | RLS 49개·E2E 83개 시험 |
