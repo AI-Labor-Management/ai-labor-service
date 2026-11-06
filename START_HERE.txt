@@ -1,0 +1,17 @@
+사람샘각 · 팀원 인수인계 (2026-11-06)
+
+1. HANDOFF.md부터 읽으세요. 기능별 현황은 FEATURES.md, 연결 계약은 docs/API_HANDOFF.md입니다.
+2. 화면만 보기: Node.js 20.19 이상 설치 후 START-WINDOWS.cmd를 실행하세요.
+   또는 이 폴더에서 node preview.mjs → http://127.0.0.1:4173
+   dist/index.html을 파일로 직접 열면 경로가 동작하지 않습니다.
+3. 코드 수정: npm ci → npm test → npm run build → npm run dev
+4. 개발 API:
+   터미널 A: npm run api:build → npm run api:start
+   터미널 B: npm run dev:api
+   http://127.0.0.1:5173 에서 가상 가게로 시작하세요.
+5. 실제 로그인·AI·Supabase는 연결 전입니다. 공개/정적 미리보기는 브라우저 저장 체험입니다.
+   개발 API의 가상 세션·파일 저장을 운영 인증/DB로 사용하지 마세요.
+6. 참고 스크린샷은 preview/ 폴더에 있습니다. SHA256SUMS.txt로 압축 해제 무결성을 확인할 수 있습니다.
+
+ZIP에는 소스·dist·dist-server·문서를 담고 node_modules, .git, .env, 토큰, 개발 데이터는 제외했습니다.
+GitHub와 Sites의 소스 이력은 별개입니다. 기존 공개 Site를 배포할 때 HANDOFF.md와 .openai/hosting.json을 확인하세요.

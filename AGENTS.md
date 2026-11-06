@@ -1,7 +1,9 @@
 # 작업 안내
 
 - 먼저 `README.md`, `HANDOFF.md`, `FEATURES.md`, `docs/UI_GUIDE.md`를 읽는다.
-- 이 프로젝트는 Vite/React 기반 독립형 로컬 데모다. 인증·사용자 격리·서버 저장·외부 전송은 아직 연결되지 않았다. 임시 UI를 실제 서비스가 연결된 것으로 표시하지 않는다.
+- 2026-11-06 개발용 Node API가 추가됐다. `docs/API_HANDOFF.md`를 읽고, 공개 local 체험과 개발 API/실제 provider 연결을 구분한다. API 변경 후 `npm run api:build`도 실행한다.
+- 구조/백업 검증은 `validateState.ts`, 저장 순서·실패는 `saveQueue.ts`, 이탈 보호는 `UnsavedChanges.tsx`를 유지한다. 개발 데이터 `.local-data`와 `dist-server`는 커밋하지 않는다.
+- 이 프로젝트는 Vite/React 기반 독립형 체험 앱이다. 기본 공개 모드는 브라우저 저장이며, 선택적인 개발용 Node API가 있다. 실제 인증·사용자 격리·운영 DB·외부 provider는 연결 전이다. 임시 UI를 실제 서비스가 연결된 것으로 표시하지 않는다.
 - 업무 계산과 날짜 규칙은 `src/domain`, 원본 법령 수치는 `src/data/rules.json`에 있다. UI 수정으로 계산 규칙을 바꾸지 않는다.
 - 새 색상과 공통 모서리 값은 `src/styles/tokens.css`에서 관리한다. 화면은 역할별 접근 범위를 유지한다.
 - 기존 데이터 스키마와 저장 키를 유지한다. 테마와 메뉴 선호는 `ai-labor-ui/*` 아래 별도로 저장한다.

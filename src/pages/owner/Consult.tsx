@@ -1,6 +1,7 @@
 // S13 상담: 자주 묻는 질문 → AI(연결 대기) → 노무 전문가 연결(고른 항목만, 동의 후, 철회 가능). 대화는 저장하지 않는다.
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
+import { choiceParam } from '../../domain/navigation';
 import { useStore, uid, nowIso } from '../../state/store';
 import { buildMemo, detectPII, EXPERT_TOPICS, needsExpert, searchFaq } from '../../domain/consult';
 import { FAQS, type Faq } from '../../data/faq';
@@ -9,6 +10,7 @@ import { addDays, fmtDate, WEEKDAY_KO, fmtDateTime, localDate } from '../../doma
 import type { ShareItem } from '../../domain/types';
 import { Badge, Basis, Button, Card, copyText, download, Field, inputCls, Notice, PageHeader, Tabs, useToast } from '../../ui/kit';
 import { INDUSTRY_LABEL, SCALE_LABEL } from '../../ui/labels';
+import { AiQuestion } from '../../ui/AiQuestion';
 
 type Tab = 'faq' | 'expert' | 'sent';
 
@@ -17,7 +19,7 @@ export default function Consult() {
   const toast = useToast();
   const [params, setParams] = useSearchParams();
   const topicQ = params.get('topic') ?? '';
-  const tab = (params.get('tab') as Tab) || (topicQ ? 'expert' : 'faq');
+  const tab = choiceParam(params.get('tab'), ['faq', 'expert', 'sent'] as const, topicQ ? 'expert' : 'faq');
   const setTab = (t: Tab) => setParams((p) => { p.set('tab', t); return p; }, { replace: true });
   const [q, setQ] = useState(topicQ ? `${topicQ} 관련해서 확인하고 싶어요` : '');
   const [asked, setAsked] = useState('');
@@ -120,6 +122,7 @@ export default function Consult() {
                   </div>
                 </Notice>
               )}
+              {!results.length && <AiQuestion question={asked} onExpert={() => setTab('expert')} />}
               {needsExpert(asked) && (
                 <Notice tone="risk" className="mt-3" title="분쟁·신고·판례 판단이 필요한 질문 같아요">
                   징계·해고 정당성은 서비스가 판단하지 않아요. 날짜·근무 시간·지급 내역 등 기록을 먼저 모아 두세요.
@@ -261,3 +264,4 @@ function FaqAnswer({ faq, base, onExpert }: { faq: Faq; base: string; onExpert: 
     </div>
   );
 }
+

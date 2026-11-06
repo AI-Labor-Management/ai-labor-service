@@ -1,16 +1,16 @@
 // 직원 화면 (S15~S18) — 본인 데이터만(employeeScope). 출퇴근(가상 위치·영수증), 내 일정·확정 시간, 대타, 연차(5명 이상), 임금명세서 수령 확인.
 import { useMemo, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router';
+import { Navigate, useNavigate, useSearchParams } from 'react-router';
 import { useStore, uid, nowIso, pushNotification } from '../../state/store';
 import { employeeScope } from '../../domain/scopes';
-import { classifyClock, dayPlan, isUnder5, weekDates } from '../../domain/work';
+import { classifyClock, conditionAt, dayPlan, isUnder5, weekDates } from '../../domain/work';
 import { leaveAccrual } from '../../domain/leave';
 import { demoLocate } from '../../adapters/integrations';
-import { addDays, fmtDate, fmtMD, fmtMDW, fmtYM, isHHMM, listDates, WEEKDAY_EN, WEEKDAY_KO, fmtDateTime, localDate, fmtMDT } from '../../domain/dates';
+import { addDays, fmtDate, fmtMD, fmtMDW, fmtYM, isHHMM, isISODate, listDates, WEEKDAY_EN, WEEKDAY_KO, fmtDateTime, localDate, fmtMDT } from '../../domain/dates';
 import type { Employee } from '../../domain/types';
 import { Badge, Button, Card, cx, Empty, Field, inputCls, inputBaseCls, Modal, Notice, useToast } from '../../ui/kit';
 import { StatementView } from '../../ui/Statement';
-import { schedText } from '../owner/EmployeeDetail';
+import { schedText } from '../../ui/scheduleText';
 
 function useMe() {
   const { state, session, base } = useStore();
@@ -59,9 +59,13 @@ export function EmpJoin() {
   const [step, setStep] = useState<'login' | 'confirm' | 'location' | 'done'>(emp?.account === 'joined' ? 'confirm' : 'login');
   const [memo, setMemo] = useState('');
   const [disputing, setDisputing] = useState(false);
+  const [params, setParams] = useSearchParams();
   if (!emp) return <Empty title="초대 정보를 찾을 수 없어요" />;
   if (emp.account === 'blocked') return <Notice tone="muted">퇴사 처리된 계정이에요.</Notice>;
-  const c = state.conditions.filter((x) => x.employeeId === emp.id && x.effectiveFrom <= addDays(base, 60)).sort((a, b) => (a.effectiveFrom < b.effectiveFrom ? 1 : -1))[0];
+  const mine = state.conditions.filter(x => x.employeeId === emp.id).sort((a,b) => a.effectiveFrom.localeCompare(b.effectiveFrom));
+  const pending = mine.filter(c => !emp.conditionAcks.some(a => a.conditionId === c.id && a.status === 'confirmed'));
+  const target = params.get('condition');
+  const c = target ? mine.find(c => c.id === target) : pending[0] ?? conditionAt(state.conditions, emp.id, base) ?? mine[0];
   const inviteValid = emp.account === 'joined' || (emp.invite && !emp.invite.used && emp.invite.expiresAt >= base);
   const finish = (status: 'confirmed' | 'disputed') => {
     if (status === 'disputed' && !memo.trim()) return;
@@ -70,12 +74,13 @@ export function EmpJoin() {
       const first = x.account !== 'joined';
       x.account = 'joined';
       if (x.invite) x.invite.used = true;
-      if (c) x.conditionAcks.push({ conditionId: c.id, status, memo: memo.trim(), at: nowIso(), resolvedAt: null });
+      if (c && (status === 'disputed' || !x.conditionAcks.some(a => a.conditionId === c.id && a.status === 'confirmed'))) x.conditionAcks.push({ conditionId: c.id, status, memo: memo.trim(), at: nowIso(), resolvedAt: null });
       pushNotification(d, 'owner', 'employeeJoined', status === 'confirmed' ? `${x.alias} ${first ? '가입·' : ''}근로조건 확인 완료` : `${x.alias} 근로조건에 "다른 점이 있어요": ${memo.trim()}`, `/owner/employees/${x.id}`);
     });
     setStep(state.workplace?.gpsEnabled && !emp.locationConsent ? 'location' : 'done');
   };
   if (!inviteValid) return <Notice tone="warn" title="초대 링크가 만료됐거나 이미 쓰였어요">사장님께 다시 보내 달라고 하세요 (재발급 가능).</Notice>;
+  if (!c) return <Notice tone="warn" title="확인할 근로조건을 찾지 못했어요">사장님께 근로조건 등록을 요청해 주세요.</Notice>;
   return (
     <div className="grid gap-4">
       {step === 'login' && (
@@ -92,9 +97,13 @@ export function EmpJoin() {
       )}
       {step === 'confirm' && c && (
         <Card title={t('근로조건 확인', 'Check your working conditions')}>
+          {mine.length > 1 && <Field label={t('확인할 조건', 'Working conditions')} htmlFor="join-condition"><select id="join-condition" className={inputCls} value={c.id} onChange={ev => { setParams({ condition: ev.target.value }, { replace: true }); setMemo(''); setDisputing(false); }}>
+            {mine.map(item => <option key={item.id} value={item.id}>{item.effectiveFrom} · {emp.conditionAcks.some(a => a.conditionId === item.id && a.status === 'confirmed') ? t('확인함','Confirmed') : t('확인 대기','To review')}</option>)}
+          </select></Field>}
+          <p className="my-3 text-sm font-semibold text-brand">{c.effectiveFrom > base ? t('앞으로 적용될 근로조건이에요.', 'These conditions take effect in the future.') : t('선택한 적용일의 근로조건이에요.', 'Conditions for the selected effective date.')}</p>
           <ul className="space-y-1 text-sm">
             <li>{t('입사일', 'Start date')}: {fmtDate(emp.hireDate)}</li>
-            <li>{t('근무 요일·시간', 'Schedule')}: {schedText(c)}</li>
+            <li>{t('근무 요일·시간', 'Schedule')}: {schedText(c, state.settings.employeeLang[emp.id] === 'en')}</li>
             <li>{t('시급', 'Hourly wage')}: {c.hourlyWage.toLocaleString('ko-KR')}원</li>
             <li>{t('적용일', 'Effective from')}: {fmtDate(c.effectiveFrom)}</li>
           </ul>
@@ -153,12 +162,12 @@ export function EmpHome() {
 function Receipt({ rec, en }: { rec: { recordNo: string; time: string; inside: boolean; distance: number; kind: '출근' | '퇴근'; reason: string }; en: boolean }) {
   return (
     <div className="rounded-2xl border border-line bg-white p-4">
-      <svg viewBox="0 0 200 110" className="h-28 w-full rounded-xl bg-[#eef3ec]" role="img" aria-label="가상 지도: 가게 반경과 내 위치">
-        <rect x="0" y="50" width="200" height="10" fill="#fff" />
-        <rect x="95" y="0" width="10" height="110" fill="#fff" />
-        <circle cx="100" cy="55" r="34" fill="rgba(29,88,102,0.12)" stroke="#1d5866" strokeDasharray="4 3" />
-        <circle cx="100" cy="55" r="4" fill="#1d5866" />
-        <circle cx={rec.inside ? 112 : 168} cy={rec.inside ? 48 : 20} r="5" fill={rec.inside ? '#2a7149' : '#b8322a'} />
+      <svg viewBox="0 0 200 110" className="h-28 w-full rounded-xl bg-canvas" role="img" aria-label={en ? 'Virtual map showing shop radius' : '가상 지도: 가게 반경과 내 위치'}>
+        <rect x="0" y="50" width="200" height="10" fill="var(--surface)" />
+        <rect x="95" y="0" width="10" height="110" fill="var(--surface)" />
+        <circle cx="100" cy="55" r="34" fill="var(--action)" fillOpacity=".12" stroke="var(--action)" strokeDasharray="4 3" />
+        <circle cx="100" cy="55" r="4" fill="var(--action)" />
+        <circle cx={rec.inside ? 112 : 168} cy={rec.inside ? 48 : 20} r="5" fill={rec.inside ? 'var(--color-ok)' : 'var(--color-risk)'} />
       </svg>
       <p className="mt-3 text-lg font-bold">
         {rec.time} {rec.kind} {en ? 'recorded' : '기록됨'}
@@ -177,6 +186,7 @@ function EmpHomeInner() {
   const { state, update, base } = useStore();
   const { emp, view, en, t } = useMe();
   const toast = useToast();
+  const nav = useNavigate();
   const [inside, setInside] = useState(true);
   const [time, setTime] = useState(nowHM());
   const [receipt, setReceipt] = useState<null | Parameters<typeof Receipt>[0]['rec']>(null);
@@ -190,6 +200,9 @@ function EmpHomeInner() {
 
   const clock = (kind: '출근' | '퇴근') => {
     if (!isHHMM(time)) return toast('시각 형식을 확인하세요', 'warn');
+    const existing = state.attendance.find(a => a.employeeId === emp.id && a.date === base);
+    if (kind === '출근' && existing) return toast(t('이미 출근 기록이 있어요.', 'You have already clocked in.'), 'warn');
+    if (kind === '퇴근' && (!existing || existing.original.clockOut)) return toast(t('출퇴근 기록을 다시 확인해 주세요.', 'Please check your clock-in record.'), 'warn');
     const loc = consent ? demoLocate(inside) : null;
     const gpsResult = loc ? loc.gps : 'denied';
     let recordNo = rec?.recordNo ?? '';
@@ -281,8 +294,8 @@ function EmpHomeInner() {
         {!view.notifications.length && <p className="text-sm text-muted">{t('알림이 없어요', 'No notifications')}</p>}
         <ul className="divide-y divide-line text-sm">
           {view.notifications.slice(0, 8).map((n) => (
-            <li key={n.id} className={cx('py-2', !n.readAt && 'font-semibold')} onClick={() => update((d) => { const x = d.notifications.find((y) => y.id === n.id); if (x && !x.readAt) x.readAt = nowIso(); })}>
-              {n.text} <span className="text-xs font-normal text-muted">{fmtMDT(n.createdAt)}</span>
+            <li key={n.id} className={cx('py-2', !n.readAt && 'font-semibold')}>
+              <button type="button" className="w-full text-left" onClick={() => { update((d) => { const x = d.notifications.find((y) => y.id === n.id); if (x && !x.readAt) x.readAt = nowIso(); }); if (n.link.startsWith('/employee')) nav(n.link); }}>{n.text} <span className="text-xs font-normal text-muted">{fmtMDT(n.createdAt)}</span></button>
             </li>
           ))}
         </ul>
@@ -488,9 +501,11 @@ function EmpLeaveInner() {
   const [date, setDate] = useState(addDays(base, 7));
   const [hours, setHours] = useState('');
   if (!emp || !view) return null;
-  if (isUnder5(state.workplace?.scale)) return <Notice tone="muted" title={t('해당 없음', 'Not applicable')}>1~4명 사업장은 연차 규정이 적용되지 않아요.</Notice>;
+    if (isUnder5(state.workplace?.scale)) return <Notice tone="muted" title={t('해당 없음', 'Not applicable')}>{t('1~4명 사업장은 연차 규정이 적용되지 않아요.', 'Statutory annual leave does not apply to shops with 1–4 employees.')}</Notice>;
   const a = leaveAccrual(state, emp as Employee, base);
   const submit = () => {
+    if (!isISODate(date)) return toast(t('날짜를 선택해 주세요', 'Choose a date'), 'warn');
+    if (hours && (!Number.isFinite(Number(hours)) || Number(hours) <= 0 || Number(hours) > 24)) return toast(t('신청 시간은 0보다 크고 24시간 이하여야 해요', 'Hours must be greater than 0 and no more than 24'), 'warn');
     if (date <= base) return toast('오늘 이후 날짜를 고르세요', 'warn');
     if (!dayPlan(state, emp, date).contract) return toast('그날은 근무일이 아니에요', 'warn');
     if (view.leaveRequests.some((l) => l.date === date && (l.status === 'requested' || l.status === 'approved'))) return toast('이미 신청한 날이에요', 'info');
@@ -576,3 +591,4 @@ function EmpSettingsInner() {
     </div>
   );
 }
+

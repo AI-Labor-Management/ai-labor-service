@@ -1,5 +1,5 @@
 // 계약서·명부 만들기: 등록값으로 양식을 채워 인쇄/PDF로 저장. 이름·상호·주소·대표자는 이 화면에서만 입력하고 저장하지 않는다.
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { useStore, uid, nowIso } from '../../state/store';
 import { conditionAt, conditionHistory, isUnder5, weeklyHours } from '../../domain/work';
@@ -10,6 +10,7 @@ import { fmtDate, WEEKDAY_EN, WEEKDAY_KO } from '../../domain/dates';
 import { resolveRule } from '../../domain/rules';
 import { Button, Card, Empty, Field, inputCls, LinkButton, Notice, PageHeader, useToast } from '../../ui/kit';
 import { AGE_LABEL, EMPLOYMENT_LABEL } from '../../ui/labels';
+import { UnsavedChanges } from '../../ui/UnsavedChanges';
 
 export default function DocMaker() {
   const { kind = 'contract', empId = '' } = useParams();
@@ -21,7 +22,10 @@ export default function DocMaker() {
   const [names, setNames] = useState({ worker: '', company: state.workplace?.name ?? '', owner: '', address: '', place: '' });
   const [en, setEn] = useState(!!e?.isForeign);
   const [ack, setAck] = useState(false);
+  const allowLeave = useRef(false);
+  const initialNames = useRef(JSON.stringify(names));
   if (!e) return <Empty title="직원을 찾을 수 없어요" action={<LinkButton to="/owner/documents">서류로</LinkButton>} />;
+  if (!['contract', 'roster'].includes(kind)) return <Empty title="지원하지 않는 서류예요" action={<LinkButton to="/owner/documents">서류로</LinkButton>} />;
   const hist = conditionHistory(state.conditions, e.id);
   const condId = params.get('cond');
   const c = (condId && hist.find((h) => h.id === condId)) || conditionAt(state.conditions, e.id, base) || hist[0];
@@ -35,6 +39,7 @@ export default function DocMaker() {
   const writtenTerms = resolveRule<{ all: string[]; under5: string[] }>('fixedTerm.writtenTerms', base);
 
   const markGiven = () => {
+    allowLeave.current = true;
     const key = kind === 'contract' ? `E1:${e.id}:${c.id}` : `E3:${e.id}`;
     update((d) => {
       d.docRecords = d.docRecords.filter((x) => x.key !== key);
@@ -46,6 +51,7 @@ export default function DocMaker() {
 
   return (
     <div className="max-w-3xl">
+      <UnsavedChanges when={JSON.stringify(names) !== initialNames.current} bypass={allowLeave} />
       <div className="no-print">
         <PageHeader
           title={kind === 'contract' ? `${isChange ? '변경 ' : ''}근로계약서 만들기 · ${e.alias}` : `근로자 명부 만들기 · ${e.alias}`}
@@ -208,3 +214,4 @@ export default function DocMaker() {
     </div>
   );
 }
+

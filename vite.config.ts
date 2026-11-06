@@ -3,13 +3,14 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  define: mode === 'api' ? { 'import.meta.env.VITE_STORAGE_ADAPTER': JSON.stringify('api') } : {},
   plugins: [react(), tailwindcss()],
-  server: { port: 5173, strictPort: false },
-  // rules.json(69KB)과 전체 화면이 한 번들에 들어가 600KB대. 라우트별 코드 분할은 후속 과제(HANDOFF.md).
-  build: { chunkSizeWarningLimit: 800 },
+  server: { port: 5173, strictPort: true, proxy: { '/api': { target: 'http://127.0.0.1:8787' } } },
+  // Routes share domain/UI modules; individual screens load only when needed.
+  build: { chunkSizeWarningLimit: 500 },
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts'],
   },
-});
+}));

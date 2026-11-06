@@ -1,6 +1,9 @@
 // 공통 UI 부품. 모든 버튼은 실제 동작 / 이유 있는 비활성(reason) / 연결 대기 중 하나여야 한다.
 import {
   createContext,
+  Children,
+  cloneElement,
+  isValidElement,
   useCallback,
   useContext,
   useId,
@@ -199,15 +202,35 @@ export function Field({
   children: ReactNode;
   htmlFor?: string;
 }) {
+  const generatedId = useId();
+  const descriptionId = `field-${generatedId}`;
+  const describedChildren = Children.map(children, (child) => {
+    if (
+      !htmlFor ||
+      !isValidElement<{ id?: string; 'aria-describedby'?: string; 'aria-invalid'?: boolean }>(child) ||
+      child.props.id !== htmlFor
+    )
+      return child;
+    return cloneElement(child, {
+      'aria-invalid': !!error,
+      'aria-describedby':
+        [child.props['aria-describedby'], hint || error ? descriptionId : null].filter(Boolean).join(' ') ||
+        undefined,
+    });
+  });
   return (
     <div className="flex flex-col gap-1">
       <label htmlFor={htmlFor} className="text-sm font-semibold">
         {label}
       </label>
-      {children}
-      {hint && !error && <span className="text-xs text-muted">{hint}</span>}
+      {describedChildren}
+      {hint && !error && (
+        <span id={descriptionId} className="text-xs text-muted">
+          {hint}
+        </span>
+      )}
       {error && (
-        <span role="alert" className="text-xs font-semibold text-risk">
+        <span id={descriptionId} role="alert" className="text-xs font-semibold text-risk">
           {error}
         </span>
       )}
@@ -238,6 +261,29 @@ export function Choice<T extends string>({
             type="button"
             role={multi ? 'checkbox' : 'radio'}
             aria-checked={on}
+            tabIndex={multi || on || (!value && options[0].value === o.value) ? 0 : -1}
+            onKeyDown={(ev) => {
+              if (
+                multi ||
+                !['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'Home', 'End'].includes(ev.key)
+              )
+                return;
+              ev.preventDefault();
+              const index = options.findIndex((item) => item.value === o.value);
+              const next =
+                ev.key === 'Home'
+                  ? 0
+                  : ev.key === 'End'
+                    ? options.length - 1
+                    : (index +
+                        (ev.key === 'ArrowRight' || ev.key === 'ArrowDown' ? 1 : -1) +
+                        options.length) %
+                      options.length;
+              onChange(options[next].value);
+              const buttons =
+                ev.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="radio"]');
+              buttons?.[next]?.focus();
+            }}
             onClick={() => onChange(o.value)}
             className={cx(
               'rounded-lg border px-3 py-2 text-sm font-semibold transition-colors',

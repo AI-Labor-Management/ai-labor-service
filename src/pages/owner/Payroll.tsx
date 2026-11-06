@@ -8,6 +8,7 @@ import { isUnder5 } from '../../domain/work';
 import type { AppState, PayrollLine, PayrollManual, ScaleBand } from '../../domain/types';
 import { Badge, Basis, Button, Card, cx, Empty, Field, inputCls, inputBaseCls, KV, LinkButton, Modal, Money, Notice, PageHeader, useToast } from '../../ui/kit';
 import { SCALE_LABEL } from '../../ui/labels';
+import { validMonth } from '../../domain/navigation';
 
 function defaultMonth(state: AppState, base: string): string {
   const wp = state.workplace!;
@@ -39,7 +40,7 @@ export default function Payroll() {
   const toast = useToast();
   const [params, setParams] = useSearchParams();
   const wp = state.workplace!;
-  const month = params.get('month') || defaultMonth(state, base);
+  const month = validMonth(params.get('month')) ? params.get('month')! : defaultMonth(state, base);
   const setMonth = (m: string) => setParams({ month: m }, { replace: true });
   const per = payrollPeriodFor(wp, month);
   const { lines, confirmed, payroll } = useMemo(() => payrollLines(state, month), [state, month]);
@@ -414,3 +415,4 @@ function LineCard({ line: l, under5, confirmed, manual, setManual, month, onEdit
     </Card>
   );
 }
+

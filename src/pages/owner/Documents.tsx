@@ -1,6 +1,7 @@
 // S11 서류 (F1): 체크리스트 | 요청 현황 | 서식 자료실. 파일은 받지 않고 상태·날짜·유효기간·보관 위치만 저장.
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
+import { choiceParam } from '../../domain/navigation';
 import { useStore, uid, nowIso } from '../../state/store';
 import { computeChecklist, type ChecklistRow } from '../../domain/checklist';
 import { CHECKLIST_ITEMS, EVENT_GUIDES } from '../../data/checklistItems';
@@ -508,7 +509,7 @@ function FormsTab() {
 
 export default function Documents() {
   const [params, setParams] = useSearchParams();
-  const tab = (params.get('tab') as Tab) || 'list';
+  const tab = choiceParam(params.get('tab'), ['list', 'requests', 'forms'] as const, 'list');
   const { base } = useStore();
   return (
     <div>
@@ -528,3 +529,4 @@ export default function Documents() {
     </div>
   );
 }
+

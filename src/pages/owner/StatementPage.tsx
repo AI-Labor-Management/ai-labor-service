@@ -5,15 +5,16 @@ import { payrollLines } from '../../domain/payroll';
 import { fmtYM } from '../../domain/dates';
 import { Badge, Button, Empty, LinkButton, PageHeader } from '../../ui/kit';
 import { StatementView } from '../../ui/Statement';
+import { validMonth } from '../../domain/navigation';
 
 export default function StatementPage() {
   const { month = '', empId = '' } = useParams();
   const { state } = useStore();
-  const { lines, confirmed, payroll } = payrollLines(state, month);
+  const { lines, confirmed, payroll } = payrollLines(state, validMonth(month) ? month : '2000-01');
   const line = lines.find((l) => l.employeeId === empId);
   const e = state.employees.find((x) => x.id === empId);
   const [en, setEn] = useState(!!e?.isForeign);
-  if (!line || !e) return <Empty title="명세서를 찾을 수 없어요" action={<LinkButton to="/owner/payroll">급여로</LinkButton>} />;
+  if (!validMonth(month) || !line || !e) return <Empty title="명세서를 찾을 수 없어요" action={<LinkButton to="/owner/payroll">급여로</LinkButton>} />;
   return (
     <div className="max-w-3xl">
       <div className="no-print">
@@ -36,3 +37,4 @@ export default function StatementPage() {
     </div>
   );
 }
+

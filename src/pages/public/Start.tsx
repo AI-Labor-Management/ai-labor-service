@@ -1,10 +1,11 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useStore } from '../../state/store';
 import { Modal, Notice } from '../../ui/kit';
 import { Icon } from '../../ui/Icon';
 import { SiteHeader } from '../../ui/SiteHeader';
 import { OWNER_MENU } from '../../ui/navigation';
+import { authenticate, authEnabled, ServiceError } from '../../adapters/api';
 
 export default function Start() {
   const { state, session, setSession, resetSeed, resetEmpty, base } = useStore();
@@ -18,6 +19,9 @@ export default function Start() {
   const [showPassword, setShowPassword] = useState(false);
   const [notice, setNotice] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [authBusy, setAuthBusy] = useState(false);
+  const authRequest = useRef<AbortController | null>(null);
+  useEffect(() => () => authRequest.current?.abort(), []);
   const hasData = !!state.workplace;
   const start = async (kind: 'seed' | 'empty', confirmed = false) => {
     if (hasData && !confirmed) {
@@ -34,8 +38,10 @@ export default function Start() {
     setSession({ role: 'owner', employeeId: null });
     nav(next);
   };
-  const previewAuth = (e: FormEvent<HTMLFormElement>) => {
+  const previewAuth = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (authBusy) return;
+    const form = e.currentTarget;
     const f = new FormData(e.currentTarget);
     const err: Record<string, string> = {};
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(f.get('email'))))
@@ -49,7 +55,39 @@ export default function Start() {
       e.currentTarget.querySelector<HTMLInputElement>(`[name="${Object.keys(err)[0]}"]`)?.focus();
       return;
     }
-    e.currentTarget.reset();
+    if (authEnabled) {
+      const controller = new AbortController();
+      authRequest.current = controller;
+      setAuthBusy(true);
+      setNotice('');
+      try {
+        const result = await authenticate(
+          {
+            action: signup ? 'signup' : 'login',
+            email: String(f.get('email')),
+            password: String(f.get('password')),
+          },
+          controller.signal,
+        );
+        if (controller.signal.aborted) return;
+        form.reset();
+        if (result.status === 'verification_required')
+          setNotice('이메일의 확인 링크를 열어 가입을 마쳐 주세요. 확인 전에는 로그인되지 않아요.');
+        else
+          setNotice(
+            '인증 제공사에서 응답을 받았어요. 서비스 계정과 사업장 연결을 완료한 후 이용할 수 있어요.',
+          );
+      } catch (error) {
+        if (!controller.signal.aborted)
+          setNotice(
+            error instanceof ServiceError ? error.message : '로그인을 처리하지 못했어요. 다시 시도해 주세요.',
+          );
+      } finally {
+        if (authRequest.current === controller) setAuthBusy(false);
+      }
+      return;
+    }
+    form.reset();
     setNotice(
       signup
         ? '회원가입 화면 시연이 끝났어요. 계정은 생성되지 않았고 입력한 값도 저장하지 않았어요. 아래에서 데모를 시작해 보세요.'
@@ -130,14 +168,23 @@ export default function Start() {
           <p className="auth-form-sub">
             {signup ? '우리 가게 관리를 시작할 준비를 해볼까요?' : '사장님의 가게, 오늘은 어떤 하루인가요?'}
             <br />
-            <span className="text-brand">화면 시연용이에요. 실제 이메일·비밀번호는 넣지 마세요.</span>
+            <span className="text-brand">
+              {authEnabled
+                ? '연결된 인증 서버에서 계정을 확인해요.'
+                : '화면 시연용이에요. 실제 이메일·비밀번호는 넣지 마세요.'}
+            </span>
           </p>
           {params.get('from') === 'diagnosis' && (
             <Notice className="mb-4" tone="brand" title="진단한 내용을 이어받아요">
               빈 사업장으로 시작하면 업종·직원 수를 미리 채워요.
             </Notice>
           )}
-          <form key={signup ? 'signup' : 'login'} onSubmit={previewAuth} noValidate>
+          <form
+            key={signup ? 'signup' : 'login'}
+            onSubmit={(e) => void previewAuth(e)}
+            noValidate
+            aria-busy={authBusy}
+          >
             <div className="auth-fields">
               <div className="auth-field">
                 <label htmlFor="auth-email">이메일</label>
@@ -213,7 +260,7 @@ export default function Start() {
             <div className="auth-options">
               <span>
                 <Icon name="lock" size={12} />
-                입력 정보는 저장·전송하지 않아요
+                {authEnabled ? '비밀번호는 이 화면에 보관하지 않아요' : '입력 정보는 저장·전송하지 않아요'}
               </span>
               {!signup && (
                 <button
@@ -224,11 +271,31 @@ export default function Start() {
                 </button>
               )}
             </div>
-            <button type="submit" className="ui-button primary auth-submit">
-              {signup ? '회원가입 화면 체험하기' : '로그인 화면 체험하기'}
+            <button type="submit" className="ui-button primary auth-submit" disabled={authBusy}>
+              {authBusy
+                ? '확인하고 있어요…'
+                : authEnabled
+                  ? signup
+                    ? '회원가입'
+                    : '로그인'
+                  : signup
+                    ? '회원가입 화면 체험하기'
+                    : '로그인 화면 체험하기'}
               <Icon name="arrow" size={17} />
             </button>
           </form>
+          {authBusy && (
+            <button
+              className="mt-3 text-sm text-muted underline"
+              onClick={() => {
+                authRequest.current?.abort();
+                setAuthBusy(false);
+                setNotice('요청을 취소했어요. 입력 정보는 저장하지 않았어요.');
+              }}
+            >
+              요청 취소
+            </button>
+          )}
           <div className="auth-divider">또는 간편하게</div>
           <button
             className="kakao-login"

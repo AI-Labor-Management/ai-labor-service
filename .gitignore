@@ -1,5 +1,7 @@
 node_modules
 dist
+dist-server
+.local-data/
 .env
 .env.local
 *.log

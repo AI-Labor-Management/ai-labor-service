@@ -1,6 +1,8 @@
 /* Motion reflects navigation, selection and real data. Static content stays usable. */
 .brand-wordmark {
   line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.035em;
 }
 .brand-water {
   color: var(--logo-water);
@@ -436,6 +438,53 @@ html[data-ui-transition='theme']::view-transition-new(root) {
     opacity: 0;
     transform: translateY(24px);
   }
+}
+/* The whole lockup responds, so the wordmark and symbol feel like one object. */
+.brand-symbol { overflow: visible; }
+.brand-spring { transform-origin: 24px 35px; }
+.brand-water:not(.brand-splash) { transform-origin: 24px 38px; }
+.brand-drop, .brand-ripple { opacity: 0; pointer-events: none; }
+.brand-ripple { transform-origin: 24px 38px; }
+:is(.brand-lockup:hover, a:focus-visible .brand-lockup, button:focus-visible .brand-lockup) .brand-spring {
+  animation: spring-breathe 1100ms cubic-bezier(.22,.7,.26,1) both;
+}
+:is(.brand-lockup:hover, a:focus-visible .brand-lockup, button:focus-visible .brand-lockup) .brand-water:not(.brand-splash) {
+  animation: spring-water 1100ms ease-out both;
+}
+:is(.brand-lockup:hover, a:focus-visible .brand-lockup, button:focus-visible .brand-lockup) .brand-drop-one {
+  animation: spring-drop-one 950ms 100ms cubic-bezier(.2,.65,.3,1) both;
+}
+:is(.brand-lockup:hover, a:focus-visible .brand-lockup, button:focus-visible .brand-lockup) .brand-drop-two {
+  animation: spring-drop-two 850ms 160ms cubic-bezier(.2,.65,.3,1) both;
+}
+:is(.brand-lockup:hover, a:focus-visible .brand-lockup, button:focus-visible .brand-lockup) .brand-ripple {
+  animation: spring-ripple 950ms 180ms ease-out both;
+}
+@keyframes spring-breathe {
+  0%, 100% { transform: none; }
+  28% { transform: translateY(-1.1px) scale(.98, 1.035); }
+  65% { transform: translateY(.3px) scale(1.01, .99); }
+}
+@keyframes spring-water {
+  0%, 100% { transform: none; }
+  35% { transform: scale(1.07, .94); }
+  70% { transform: scale(.985, 1.025); }
+}
+@keyframes spring-drop-one {
+  0% { opacity: 0; transform: translate(0, 1px) scale(.5); }
+  25% { opacity: .85; }
+  65% { opacity: .5; }
+  100% { opacity: 0; transform: translate(3px, -9px) scale(.35); }
+}
+@keyframes spring-drop-two {
+  0% { opacity: 0; transform: translate(0, 1px) scale(.5); }
+  30% { opacity: .7; }
+  100% { opacity: 0; transform: translate(-3px, -6px) scale(.3); }
+}
+@keyframes spring-ripple {
+  0% { opacity: 0; transform: scale(.72, .6); }
+  25% { opacity: .35; }
+  100% { opacity: 0; transform: scale(1.55, 1.35); }
 }
 @media (prefers-reduced-motion: reduce) {
   *,

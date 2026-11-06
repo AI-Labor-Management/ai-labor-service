@@ -1,9 +1,9 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { Suspense, useEffect, useState, type ReactNode } from 'react';
 import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router';
 import { useStore } from '../state/store';
 import { fmtDate } from '../domain/dates';
 import { computeTodos } from '../domain/todos';
-import { Button, cx, Notice } from './kit';
+import { Button, cx, Notice, download, Modal } from './kit';
 import { Brand, Icon } from './Icon';
 import { OWNER_MENU } from './navigation';
 import { GlobalSearch } from './Search';
@@ -11,12 +11,15 @@ import { readPreference, savePreference, ThemeToggle, usePreferences } from './p
 import type { DemoSession } from '../domain/types';
 import { useDialog } from './useDialog';
 import { transitionUI, useScrollReveal } from './motion';
+import { hasUnsavedForm, discardUnsavedForms } from './unsavedRegistry';
 export { SERVICE_NAME } from './brand';
 
 const SCALE_LABEL = { '1-4': '1~4명', '5-9': '5~9명', '10+': '10명 이상' } as const;
 
 export function DemoBar() {
-  const { state, session, setSession, base, saveError, retrySave, storageWarning } = useStore();
+  const [pendingRole, setPendingRole] = useState<string | null>(null);
+  const { state, session, setSession, base, saveError, saving, retrySave, storageWarning, adapter } =
+    useStore();
   const nav = useNavigate();
   const value = session
     ? session.role === 'employee'
@@ -24,6 +27,13 @@ export function DemoBar() {
       : session.role
     : '';
   const change = (v: string) => {
+    if (hasUnsavedForm()) {
+      setPendingRole(v);
+      return;
+    }
+    switchRole(v);
+  };
+  const switchRole = (v: string) => {
     let s: DemoSession | null = null;
     if (v === 'owner' || v === 'firm' || v === 'admin') s = { role: v, employeeId: null };
     else if (v.startsWith('employee:')) s = { role: 'employee', employeeId: v.slice(9) };
@@ -32,15 +42,47 @@ export function DemoBar() {
   };
   return (
     <div className="demo-bar no-print">
+      <Modal
+        open={pendingRole !== null}
+        onClose={() => setPendingRole(null)}
+        title="작성 중인 화면을 나갈까요?"
+        footer={
+          <>
+            <Button onClick={() => setPendingRole(null)}>계속 작성</Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                const next = pendingRole;
+                discardUnsavedForms();
+                setPendingRole(null);
+                if (next !== null) switchRole(next);
+              }}
+            >
+              저장하지 않고 역할 전환
+            </Button>
+          </>
+        }
+      >
+        <p>아직 저장하지 않은 입력은 사라져요. 역할을 바꾸기 전에 확인해 주세요.</p>
+      </Modal>
       <div className="demo-bar-inner">
         <span className="demo-tag">체험 모드</span>
         <span className="demo-description">
           <span className="demo-description-long">
-            브라우저에만 저장되는 체험 공간이에요. 실제 인증·외부 전송은 연결 전이에요.
+            {adapter.kind === 'api'
+              ? '이 PC의 개발용 서버에 저장해요. 실제 인증·외부 전송은 연결 전이에요.'
+              : '브라우저에만 저장되는 체험 공간이에요. 실제 인증·외부 전송은 연결 전이에요.'}
           </span>
-          <span className="demo-description-short">브라우저 저장 데모 (인증·전송 연결 전)</span>
+          <span className="demo-description-short">
+            {adapter.kind === 'api'
+              ? '개발용 서버 체험 (인증 연결 전)'
+              : '브라우저 저장 데모 (인증·전송 연결 전)'}
+          </span>
         </span>
         <span className="demo-date">기준일 {fmtDate(base)}</span>
+        <span className="save-status" role="status" aria-live="polite">
+          {saveError ? '저장 확인 필요' : saving ? '저장 중…' : '저장됨'}
+        </span>
         <label>
           <span>화면 둘러보기</span>
           <select
@@ -72,6 +114,18 @@ export function DemoBar() {
           <Button size="sm" variant="danger" onClick={retrySave}>
             다시 저장
           </Button>
+          <Button
+            size="sm"
+            onClick={() =>
+              download(
+                `saram-saemgak-unsaved-${base}.json`,
+                JSON.stringify(state, null, 2),
+                'application/json',
+              )
+            }
+          >
+            현재 내용 백업
+          </Button>
         </div>
       )}
     </div>
@@ -79,7 +133,8 @@ export function DemoBar() {
 }
 
 export function LoadGate({ children }: { children: ReactNode }) {
-  const { status, loadError, retryLoad, resetEmpty } = useStore();
+  const { status, loadError, retryLoad, resetEmpty, adapter } = useStore();
+  const [confirmReset, setConfirmReset] = useState(false);
   if (status === 'loading')
     return (
       <div className="loading-screen" aria-busy="true">
@@ -98,11 +153,36 @@ export function LoadGate({ children }: { children: ReactNode }) {
             <Button variant="primary" onClick={retryLoad}>
               다시 시도
             </Button>
-            <Button variant="danger" onClick={() => void resetEmpty()}>
+            <Button
+              variant="danger"
+              onClick={() => setConfirmReset(true)}
+              reason={adapter.kind !== 'local' ? '서버 연결과 저장소를 먼저 확인해 주세요' : undefined}
+            >
               저장 데이터 초기화
             </Button>
           </div>
         </Notice>
+        <Modal
+          open={confirmReset}
+          onClose={() => setConfirmReset(false)}
+          title="저장 데이터를 초기화할까요?"
+          footer={
+            <>
+              <Button onClick={() => setConfirmReset(false)}>취소</Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  setConfirmReset(false);
+                  void resetEmpty();
+                }}
+              >
+                초기화하고 새로 시작
+              </Button>
+            </>
+          }
+        >
+          <p className="text-sm">읽지 못한 데이터도 지워져요. 필요한 백업이 있는지 먼저 확인해 주세요.</p>
+        </Modal>
       </div>
     );
   return <>{children}</>;
@@ -288,7 +368,15 @@ export function OwnerLayout() {
           </div>
           <main ref={mainRef} id="main-content" className="workspace-main">
             <div className="page-transition" key={location.pathname}>
-              <Outlet />
+              <Suspense
+                fallback={
+                  <div className="route-loading" role="status">
+                    화면을 준비하고 있어요…
+                  </div>
+                }
+              >
+                <Outlet />
+              </Suspense>
             </div>
           </main>
           <footer className="app-footer no-print">
@@ -340,14 +428,28 @@ export function RoleLayout({
   title: ReactNode;
   tabs?: { to: string; label: string; end?: boolean }[];
 }) {
-  const { session } = useStore();
+  const { session, state } = useStore();
   const { openGuide } = usePreferences();
   const location = useLocation();
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [location.pathname]);
+  const inviteToken =
+    role === 'employee' && location.pathname === '/employee/join'
+      ? new URLSearchParams(location.search).get('invite')
+      : null;
+  if (inviteToken) return <Navigate to={`/invite/${encodeURIComponent(inviteToken)}`} replace />;
   if (!session) return <Navigate to="/start" replace />;
   if (session.role !== role) return <Navigate to={'/' + session.role} replace />;
+  const en =
+    role === 'employee' && !!session.employeeId && state.settings.employeeLang[session.employeeId] === 'en';
+  const englishMenu: Record<string, string> = {
+    홈: 'Home',
+    일정: 'Schedule',
+    급여: 'Pay',
+    연차: 'Leave',
+    설정: 'Settings',
+  };
   return (
     <div className="min-h-screen">
       <header className="role-header no-print">
@@ -369,7 +471,15 @@ export function RoleLayout({
       <div className={cx('mx-auto px-5 pt-7', role === 'employee' ? 'max-w-xl' : 'max-w-6xl')}>{title}</div>
       <main className={cx('mx-auto px-5 pb-28 pt-5', role === 'employee' ? 'max-w-xl' : 'max-w-6xl')}>
         <div className="page-transition" key={location.pathname}>
-          <Outlet />
+          <Suspense
+            fallback={
+              <div className="route-loading" role="status">
+                {en ? 'Preparing your screen…' : '화면을 준비하고 있어요…'}
+              </div>
+            }
+          >
+            <Outlet />
+          </Suspense>
         </div>
       </main>
       {tabs && (
@@ -383,7 +493,7 @@ export function RoleLayout({
                 className={({ isActive }) => (isActive ? 'active' : '')}
               >
                 <Icon name={(['home', 'calendar', 'wallet', 'clock', 'settings'] as const)[i]} size={20} />
-                <span>{m.label}</span>
+                <span>{en ? (englishMenu[m.label] ?? m.label) : m.label}</span>
               </NavLink>
             ))}
           </div>

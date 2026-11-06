@@ -1,11 +1,12 @@
 // S01 사업장 설정 — 진단 답 이어받기, 급여 지급일·몇 월분, GPS(가상), 규모 경고
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { PREFILL_KEY } from '../../domain/diagnosis';
 import { useStore, nowIso } from '../../state/store';
 import type { Industry, PayMonthBasis, ScaleBand, Workplace } from '../../domain/types';
 import { Button, Card, Choice, Field, inputCls, Notice, PageHeader, useToast } from '../../ui/kit';
 import { INDUSTRY_LABEL, SCALE_LABEL, SCALE_MAX } from '../../ui/labels';
+import { UnsavedChanges } from '../../ui/UnsavedChanges';
 
 function readPrefill(): Partial<Workplace> & { foreign?: boolean } {
   try {
@@ -44,6 +45,8 @@ export default function Setup() {
     },
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const allowLeave = useRef(false);
+  const initialForm = useRef(JSON.stringify(f));
   const activeCount = state.employees.filter((e) => !e.resignDate || e.resignDate >= base).length;
   const over = activeCount > SCALE_MAX[f.scale];
 
@@ -55,6 +58,7 @@ export default function Setup() {
     if (f.lateToleranceMin < 0 || f.lateToleranceMin > 60) e.tol = '0~60분';
     setErrors(e);
     if (Object.keys(e).length) return;
+    allowLeave.current = true;
     const scaleChanged = existing && existing.scale !== f.scale;
     update((d) => {
       d.workplace = { ...f, address: f.gpsEnabled ? f.address.trim() : '' };
@@ -70,6 +74,7 @@ export default function Setup() {
 
   return (
     <div className="max-w-3xl">
+      <UnsavedChanges when={JSON.stringify(f) !== initialForm.current} bypass={allowLeave} />
       <PageHeader title={existing ? '사업장 설정' : '사업장 설정 (처음 한 번)'} sub="같은 정보를 두 번 묻지 않아요. 여기 값이 서류·급여·보험·기한·홈에서 함께 쓰여요." />
       {!existing && prefill.industry && <Notice tone="brand" className="mb-4" title="자가진단 답을 미리 채웠어요">업종·규모{prefill.foreign ? '·외국인 직원 있음' : ''}을 확인하고 저장하세요.</Notice>}
       <div className="grid gap-4">
@@ -164,3 +169,4 @@ export default function Setup() {
     </div>
   );
 }
+

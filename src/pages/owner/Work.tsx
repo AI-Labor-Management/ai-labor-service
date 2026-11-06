@@ -1,6 +1,7 @@
 // S06·S07·S18 근무: 일정 → 대타 → 출퇴근 기록(수정 이력) → 연차. 사장님이 확정한 근무만 급여로 넘어간다.
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
+import { choiceParam } from '../../domain/navigation';
 import { useStore, uid, nowIso, pushNotification } from '../../state/store';
 import { addDays, fmtDate, fmtMD, fmtMDW, isHHMM, listDates, monthOf, startOfWeek, WEEKDAY_KO, fmtDateTime, localDate } from '../../domain/dates';
 import { currentTimes, dayPlan, isUnder5, netMinutes, weekWarnings } from '../../domain/work';
@@ -650,7 +651,7 @@ function LeaveTab() {
 export default function Work() {
   const [params, setParams] = useSearchParams();
   const { state } = useStore();
-  const tab = (params.get('tab') as Tab) || 'schedule';
+  const tab = choiceParam(params.get('tab'), ['schedule', 'attendance', 'subs', 'leave'] as const, 'schedule');
   const pend = state.attendance.filter((a) => a.status !== 'confirmed').length;
   return (
     <div>
@@ -672,4 +673,5 @@ export default function Work() {
     </div>
   );
 }
+
 
