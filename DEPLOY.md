@@ -11,7 +11,7 @@
 | 프론트엔드 | GitHub Pages 빌드(`deploy.yml`)와 사람샘각(`AI-Labor-Management/saram-saemgak`의 `.env.production`)에 `VITE_SUPABASE_URL`·`VITE_SUPABASE_ANON_KEY`(공개 값) 포함 → 시작 화면에서 서버 모드 선택 가능 |
 | Edge Functions | `api` (verify_jwt on), `public-api` (off), `cron-daily` (off, 비밀 헤더 검사) — 서울 프로젝트 v1 |
 | 함수 코드 기준 커밋 | 세 함수 모두 `b88498a406f2e78fe6ff4480102c26760b53abd6` (jsDelivr 고정 URL, 아래 3-B. 사람샘각 공개 주소를 CORS 허용 목록에 넣은 커밋) |
-| Auth | Site URL `https://ai-labor-management.github.io/saram-saemgak-site/` (사람샘각 최신 공개 체험, GitHub Pages), Redirect URLs: 그 주소 `/**`, `https://ai-labor-service-draft-sj.gold89765.chatgpt.site/**`, `https://ai-labor-management.github.io/ai-labor-service/**`, `http://localhost:5173/**`. **Confirm email 켜 둠** — 메일 발송: 네이버 SMTP `smtp.naver.com:465`, 보내는 사람 `사람샘각 <kip2301@naver.com>`(비밀번호는 대시보드에만). 가입 확인 메일 제목·본문 한국어 |
+| Auth | Site URL `https://ai-labor-management.github.io/saram-saemgak-site/` (사람샘각 최신 공개 체험, GitHub Pages), Redirect URLs: 그 주소 `/**`, `https://ai-labor-service-draft-sj.gold89765.chatgpt.site/**`, `https://ai-labor-management.github.io/ai-labor-service/**`, `http://localhost:5173/**`. **Confirm email 켜 둠** — 메일 발송: 네이버 SMTP `smtp.naver.com:465`, 보내는 사람 `사람샘각 <kip2301@naver.com>`(비밀번호는 대시보드에만 — 2단계 인증 계정이라 네이버 **애플리케이션 비밀번호** 필요, 일반 비밀번호는 535로 거절). 가입 확인 메일 제목·본문 한국어 |
 | 서울 프로젝트 확인 | RLS 격리 49개, E2E 83개, 프론트 실서버 시험(사람샘각 `tests/live`) 9개, 가입 즉시 세션, 예약 실행 200 — 모두 통과 후 시험 계정 삭제 |
 | 예약 실행 | `labor-daily-alerts` `0 0 * * *` (09:00 KST) 활성 |
 | 데이터 | 비어 있음 (기본 노무법인 행 1개만). 시험 계정은 모두 지움 |
