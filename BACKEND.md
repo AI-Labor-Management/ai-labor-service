@@ -1,8 +1,8 @@
 # 백엔드 (Supabase) — 구조·API·권한
 
-프론트엔드(`src/`)는 그대로 두고, 같은 데이터 모델(`src/domain/types.ts`의 `AppState`)과 같은 계산 엔진(`src/domain`)으로 서버를 만들었습니다. 배포·운영 절차는 [`DEPLOY.md`](DEPLOY.md)를 보세요.
+프론트엔드와 같은 데이터 모델(`src/domain/types.ts`의 `AppState`)과 같은 계산 엔진(`src/domain`)으로 서버를 만들고, 화면을 "서버 모드"로 연결했습니다(12장). 배포·운영 절차는 [`DEPLOY.md`](DEPLOY.md)를 보세요.
 
-> **현재 상태 (2026-11-06)**: 백엔드는 배포되어 있고 아래 시험을 모두 통과했습니다. **프론트엔드는 아직 연결 전**이라 공개 사이트는 계속 브라우저 저장(localStorage) 데모로 동작합니다. 실제 개인정보를 넣지 마세요. 카카오·AI·법제처·비회원 실제 접수는 꺼져 있습니다.
+> **현재 상태 (2026-11-06)**: 백엔드 배포·시험 완료, **프론트엔드 연결 완료**. 시작 화면에서 "로그인 없이 둘러보기"(기존 로컬 데모, 기본값) 또는 "로그인해서 서버에 저장"을 고릅니다. 시험 운영이라 가상 데이터만 쓰세요. 카카오·AI·법제처·비회원 실제 접수는 꺼져 있습니다. 공개 사이트에서 가입하려면 Auth URL·메일 설정이 필요합니다([`DEPLOY.md`](DEPLOY.md) 4장).
 
 | 항목 | 값 |
 |---|---|
@@ -99,7 +99,7 @@ Postgres
 | GET | `health` | 상태 (토큰 불필요) |
 | GET | `me` | 내 역할(사장님·직원·노무법인·관리자) |
 | POST | `owner/seed-demo` `{replace?, baseDate?}` | 가상 시드(카페 샘터·직원 A·B·C) 넣기. `replace:true`면 기존 데이터 전부 지우고 다시 |
-| GET | `owner/state` | 사업장 전체 `AppState` (프론트 연결용) |
+| GET | `owner/state` | 사업장 전체 `AppState` + 화면에 없는 DB id(`ids.workplaceId`, `ids.payrollIdByMonth`) — 서버 모드 화면이 읽음 |
 | GET | `owner/home?date=` | 할 일·영역별 수·위험·이번 달 예상·오늘 근무 |
 | GET | `owner/checklist?date=` | 서류 체크리스트 |
 | GET | `owner/deadlines?date=` / `owner/deadlines.ics` | 기한 목록 / 캘린더 파일 |
@@ -117,6 +117,7 @@ Postgres
 | POST | `owner/leave/decide` `{id, approve, reason?}` | 연차 승인·조정 요청 |
 | POST | `owner/consult` `{topic, question, shareItems[], employeeIds[], consent:true}` | 노무법인에 보내기(고른 항목만 스냅샷). 질문에 전화번호·주민번호 등이 있으면 거절 |
 | GET | `employee/me?employeeId=` | 직원 본인 화면 데이터(일정·근로조건·출퇴근·명세서·연차·대타·알림). 다른 직원 정보 없음 |
+| GET | `employee/state?employeeId=` | 서버 모드 직원 화면용 `AppState` — 본인 데이터만, 다른 직원은 대타 요청에 보이는 별칭만. 서류·보험·상담은 비움 |
 | POST | `employee/clock` `{kind: in\|out, gps?: inside\|outside}` | 출퇴근. **시각은 서버(KST)** — `client_clock_time_allowed`가 켜져야 `time`을 받음. 위치 판정은 지금 기기 값(가상) |
 
 ## 6. Edge Function `public-api` (로그인 없음)
@@ -167,7 +168,8 @@ Vault: `guest_phone_key`(pgcrypto 대칭 암호화·HMAC 키), `cron_secret`(cro
 
 | 시험 | 방법 | 결과 (2026-11-06) |
 |---|---|---|
-| 단위 (계산·변환) | `npm test` — `tests/backend/mapping.test.ts`(시드 → DB 행 → 다시 AppState가 할 일·기한·체크리스트·급여·위험에서 같음), `engine-api.test.ts`(타입 계약) | 75개 통과(프론트 66 + 백엔드 9) |
+| 단위 (계산·변환·동기화) | `npm test` — `tests/backend/mapping.test.ts`(시드 → DB 행 → 다시 AppState가 할 일·기한·체크리스트·급여·위험에서 같음), `engine-api.test.ts`(타입 계약), `tests/sync.test.ts`(화면 변경 → 서버 요청 계획) | 90개 통과 |
+| 화면 코드 ↔ 실서버 | `e2e_setup.sql` → `E2E_PASSWORD=… npx vitest run tests/live` → `e2e_cleanup.sql`. 프론트엔드의 실제 `server.ts`·`sync.ts`로 사장님·직원·노무법인 흐름을 보내고 다시 읽어 확인 | 7개 시나리오 통과 (설정·직원 추가/삭제·일정·서류·기한·위험 점검·출퇴근 확정/수정/직접 기록·급여 입력/확정/수정·대타·상담/철회·초대·직원 확인/위치 동의/출근(서버 시각)/명세서 열람·노무법인 읽음/보험 처리/의견) |
 | 타입 | `npm run typecheck`, `cd supabase/functions && npx deno check --config deno.json api/index.ts public-api/index.ts cron-daily/index.ts` | 통과 |
 | RLS 격리 | `supabase/tests/rls_isolation.sql`을 SQL 편집기에서 실행 → 마지막에 `RLS_TESTS_PASSED (49 checks)` 예외로 끝나며 **전부 되돌림** | 49개 통과 |
 | E2E (배포본) | `e2e_setup.sql` → `node supabase/tests/e2e_api.mjs` → `e2e_cleanup.sql` (DEPLOY.md 5장) | 83개 통과 |
@@ -180,7 +182,6 @@ E2E에서 발견해 고친 것: `respond_attendance_edit`가 잘못된 상태 �
 
 | # | 한계 | 다음 할 일 |
 |---|---|---|
-| 1 | **프론트엔드 미연결** — 화면은 아직 localStorage | `StorageAdapter`의 supabase 구현: 로그인 → `GET /api/owner/state`로 읽고, 단순 입력은 PostgREST, 계산·확정은 `api` |
 | 2 | 서울 리전 아님 (`ap-southeast-2`) | 운영 전 서울 프로젝트로 이전(마이그레이션·함수 그대로 재배포 가능) |
 | 3 | 로그인 수단: 이메일만 (카카오 provider 미설정) | 카카오 앱 키 확보 후 Auth provider 추가 |
 | 4 | 위치 판정은 기기가 보낸 inside/outside(가상) | 카카오맵 좌표 + 서버 거리 판정 |
@@ -189,3 +190,18 @@ E2E에서 발견해 고친 것: `respond_attendance_edit`가 잘못된 상태 �
 | 7 | 상용 소득세 자동 계산 없음 (프론트와 동일) | 간이세액표 확보 |
 | 8 | 노무법인·관리자 2FA 없음 | Supabase MFA(TOTP) 강제 |
 | 9 | 관리자 지정은 SQL로 (`insert into admins`) | 관리 화면 |
+| 10 | 공개 사이트 가입: Auth Site URL·Redirect URL 미설정, Supabase 기본 메일은 팀 주소에만 발송 | 대시보드에서 URL 설정 + SMTP 연결 (DEPLOY.md 4장) |
+| 11 | 서버 모드에서 근로조건 이력 수정(입사일 변경 시 첫 조건 이동 등)·JSON 가져오기는 안 됨 | 화면이 "저장하지 않은 변경"으로 알림. 필요하면 새 적용일 조건 추가 |
+| 12 | 서버 모드 저장 후 매번 사업장 전체를 다시 읽음 (작은 사업장 기준) | 데이터가 커지면 바뀐 표만 다시 읽기 |
+
+## 12. 프론트엔드 연결 (서버 모드)
+
+| 부분 | 파일 | 하는 일 |
+|---|---|---|
+| 방식 고르기 | `src/adapters/mode.ts` | `local`(이 브라우저만, 기본) / `server`. 빌드에 `VITE_SUPABASE_URL`·`VITE_SUPABASE_ANON_KEY`가 있을 때만 server를 고를 수 있음. 가입 확인 메일로 돌아오면 자동 server |
+| 서버 연결 | `src/adapters/server.ts` | supabase-js 로그인·가입, `api`·`rpc` 호출, 역할별 읽기(`loadForSession`: 사장님 `owner/state`, 직원 `employee/state`, 노무법인 RPC 3개, 관리자 `admin_stats`), 요청 실행(`runOps`) |
+| 동기화 | `src/adapters/sync.ts` | 화면은 지금처럼 `update()`만. 바뀌기 전/후 상태를 비교해 요청으로 바꿈 — 사장님: 표 쓰기(RLS) + 급여 확정·수정·직접 출퇴근 기록·상담은 `api`, 직원 삭제·상담 철회는 RPC / 직원: 본인 RPC(근로조건 확인·위치 동의·출퇴근·명세서·연차·대타·언어) / 노무법인: RPC + 검수 의견 |
+| 저장소 | `src/state/store.tsx` | 화면에 먼저 반영 → 0.35초 모아 보내기 → 서버 상태 다시 읽기 → 그 사이 변경은 다시 적용. 서버가 거절하면 띠에 사유를 보이고 서버 내용으로 되돌림. 보내기 전 창을 닫으면 경고 |
+| 화면 | `Start.tsx`(방식·로그인·역할), `Invite.tsx`(`/invite?token=` 초대 수락), `EmployeeDetail.tsx`(초대 링크 = `create_invite`), `EmployeePages.tsx`(출퇴근 시각 = 서버), `Admin.tsx`(서버 집계), `layouts.tsx`(서버 띠: 계정·역할 전환·저장 상태·로그아웃) | |
+
+새 항목 id는 모두 UUID(`uid()`)라 서버 표에 그대로 들어갑니다. 계정 상태·초대·확정 급여 스냅샷·명세서 교부·기록 번호처럼 서버만 정하는 값은 화면에서 바꿔도 보내지 않고, 다시 읽을 때 서버 값으로 맞춰집니다.

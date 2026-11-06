@@ -208,7 +208,7 @@ export default function Consult() {
               </span>
             </label>
             <Button className="mt-3" variant="primary" size="lg" onClick={send} disabled={busy} reason={!share.length ? '보낼 항목을 하나 이상 고르세요' : (share.includes('conditions') || share.includes('attendance')) && !empSel.length ? '직원을 고르세요' : !consent ? '노무법인 제공 동의가 필요해요' : undefined}>
-              보내기 (로컬 데모)
+              {mode === 'server' ? '협력 노무법인에 보내기' : '보내기 (로컬 데모)'}
             </Button>
           </Card>
         </div>
@@ -219,8 +219,8 @@ export default function Consult() {
           {state.consults.map((c) => (
             <Card key={c.id} title={c.topic} right={fmtDateTime(c.createdAt)}>
               <div className="flex flex-wrap items-center gap-2 text-sm">
-                {c.revokedAt ? <Badge tone="muted">공유 철회 {localDate(c.revokedAt)}</Badge> : <Badge tone="warn">로컬 데모 도착 · 실제 전송 아님</Badge>}
-                {c.status === 'firm-read' && !c.revokedAt && <Badge tone="info">노무법인 확인함 (데모)</Badge>}
+                {c.revokedAt ? <Badge tone="muted">공유 철회 {localDate(c.revokedAt)}</Badge> : mode === 'server' ? <Badge tone="ok">노무법인 요청함에 저장됨</Badge> : <Badge tone="warn">로컬 데모 도착 · 실제 전송 아님</Badge>}
+                {c.status === 'firm-read' && !c.revokedAt && <Badge tone="info">노무법인 확인함{mode === 'server' ? '' : ' (데모)'}</Badge>}
                 <span className="text-muted">공유 항목: {c.shareItems.map((s) => ({ memo: '정리 메모', workplace: '사업장 조건', conditions: '근로조건', attendance: '출퇴근 기록' })[s]).join(', ')}</span>
               </div>
               <p className="mt-2 text-sm">{c.question}</p>

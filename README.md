@@ -8,9 +8,9 @@
 - 다음 작업자(Codex)용 상세 인수인계: [`HANDOFF.md`](HANDOFF.md) · 기능별 상태표: [`FEATURES.md`](FEATURES.md)
 - **백엔드(Supabase)**: 구조·API·권한 [`BACKEND.md`](BACKEND.md) · 배포·운영 [`DEPLOY.md`](DEPLOY.md)
 
-**바로 보기:** https://ai-labor-management.github.io/ai-labor-service/ — `/start`에서 "가상 시드로 둘러보기"를 누르면 예시 가게로 모든 화면을 볼 수 있어요. `main`에 push하면 GitHub Actions(`.github/workflows/deploy.yml`)가 테스트 후 다시 배포합니다. 공개 사이트에서도 입력한 내용은 방문자 본인 브라우저에만 저장되고 어디로도 전송되지 않습니다.
+**바로 보기:** https://ai-labor-management.github.io/ai-labor-service/ — `/start`에서 "가상 시드로 둘러보기"를 누르면 예시 가게로 모든 화면을 볼 수 있어요. `main`에 push하면 GitHub Actions(`.github/workflows/deploy.yml`)가 테스트 후 다시 배포합니다. "로그인 없이 둘러보기"에서 입력한 내용은 방문자 본인 브라우저에만 저장되고 어디로도 전송되지 않습니다. "로그인해서 서버에 저장"을 고르면 로그인한 계정의 데이터가 Supabase 서버에 저장됩니다.
 
-> ⚠️ **화면은 아직 로컬 데모입니다.** Supabase 백엔드(인증·RLS 격리·서버 저장·API·예약 알림)는 만들어 배포·시험까지 끝났지만 **프론트엔드는 아직 연결하지 않아** 화면 데이터는 브라우저 `localStorage`에만 저장됩니다. 카카오·AI·법제처·노무법인 접수는 연결되지 않았으며, 실제로 보내지 않은 알림·상담을 "전송 완료"로 표시하지 않습니다. 실제 개인정보를 넣지 마세요.
+> ⚠️ **두 가지 방식으로 시작합니다.** 시작 화면에서 **로그인 없이 둘러보기**(기본 · 브라우저 `localStorage`에만 저장 · 데모 역할 전환) 또는 **로그인해서 서버에 저장**(Supabase 이메일 로그인 · 계정별 RLS 격리 · [`BACKEND.md`](BACKEND.md) 12장)을 고릅니다. 시험 운영이라 가상 데이터만 쓰세요. 카카오·AI·법제처·노무법인 접수는 연결되지 않았으며, 실제로 보내지 않은 알림·상담을 "전송 완료"로 표시하지 않습니다. 실제 개인정보를 넣지 마세요.
 
 ## 필요 환경
 
@@ -20,7 +20,7 @@
 | npm | 10 이상 (검증: 11.16.0) |
 | 브라우저 | 최신 Chrome/Edge/Safari (`structuredClone`, `<dialog>`, `crypto.randomUUID` 사용) |
 
-외부 계정·키 없이 실행됩니다. 웹 글꼴(Pretendard)만 jsDelivr CDN에서 받고, 오프라인이면 시스템 글꼴로 대체됩니다.
+로그인 없이 둘러보기는 외부 계정·키 없이 실행됩니다 (서버 모드는 아래 환경변수 필요). 웹 글꼴(Pretendard)만 jsDelivr CDN에서 받고, 오프라인이면 시스템 글꼴로 대체됩니다.
 
 ## 설치·실행
 
@@ -39,7 +39,7 @@ npm run dev
 | `npm run dev` | 개발 서버 (Vite, 5173 포트) |
 | `npm run build` | 타입 검사(`tsc -b`) + 프로덕션 빌드 → `dist/` |
 | `npm run preview` | 빌드 결과 미리보기 |
-| `npm test` | 단위 테스트 (Vitest, 75개 — 프론트 66 + 백엔드 변환 9) |
+| `npm test` | 단위 테스트 (Vitest, 90개 — 계산 66 + 백엔드 변환 9 + 서버 동기화 15). 실서버 시험 `tests/live`는 `E2E_PASSWORD`가 있을 때만 |
 | `npm run typecheck` | 타입 검사만 |
 | `npm run build:functions` | 계산 엔진·Edge Function 묶음 다시 만들기 (`src/domain`·`src/data`·`supabase/functions` 수정 후. [`DEPLOY.md`](DEPLOY.md)) |
 
@@ -47,12 +47,12 @@ npm 11에서 `esbuild`, `@tailwindcss/oxide`의 install script 경고(`allow-scr
 
 ## 환경변수
 
-`.env.example`을 참고하세요. **모두 비워 둔 채로 실행됩니다.** 현재 코드는 어떤 키도 외부로 보내지 않습니다.
+`.env.example`을 참고하세요. **모두 비워 둔 채로 실행됩니다**(로그인 없이 둘러보기만). Supabase 두 값을 넣으면 서버 모드를 고를 수 있어요. 공개 가능한 값만 쓰고, 서비스 역할 키는 넣지 마세요.
 
 | 변수 | 용도 | 상태 |
 |---|---|---|
-| `VITE_STORAGE_ADAPTER` | `local`(기본) / `supabase` | 백엔드는 준비됨, 프론트 supabase 어댑터는 미구현 → 경고 후 local로 실행 |
-| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | 인증·DB·RLS | 백엔드 배포됨 · 프론트 연결 전 ([`BACKEND.md`](BACKEND.md)) |
+| `VITE_STORAGE_ADAPTER` | 처음 방식: `local`(기본) / `supabase`(서버 모드로 시작) | 시작 화면에서 언제든 바꿀 수 있음 |
+| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | 서버 모드(로그인·DB·RLS). 공개 가능한 값(주소·publishable 키)만 | 연결됨 — 없으면 서버 모드 버튼이 숨겨짐. GitHub Pages 빌드에 포함 |
 | `VITE_KAKAO_JS_KEY`, `KAKAO_REST_KEY` | 카카오 로그인·나에게 보내기·카카오맵 | 연결 대기 |
 | `LLM_API_KEY` | AI 상담 (서버 함수에서만) | 연결 대기 (제공사 미정) |
 | `LAW_API_OC` | 법제처 Open API 법령 변경 감지 | 연결 대기 |
@@ -89,7 +89,7 @@ src/
   domain/      화면과 분리된 계산·날짜 로직 (React 의존 없음, 테스트 대상)
     dates.ts rules.ts work.ts hours.ts wage.ts payroll.ts insurance.ts severance.ts leave.ts
     deadlines.ts ics.ts checklist.ts risk.ts foreign.ts todos.ts consult.ts diagnosis.ts scopes.ts types.ts
-  adapters/    storage(localStorage 어댑터·스키마 마이그레이션), integrations(연동 상태·가상 위치)
+  adapters/    storage(localStorage), mode(로컬/서버 선택), server(Supabase 로그인·API·RPC·역할별 읽기), sync(변경 → 서버 요청), integrations
   state/       store.tsx (단일 AppState, update()로만 변경, 저장 실패 처리)
   ui/          공통 부품(kit), 레이아웃·데모 띠, 일정 편집기, 임금명세서
   pages/       public(홍보·시작) owner(사장님 22화면) employee(직원) firm(노무법인) admin(관리자)
@@ -98,7 +98,7 @@ tests/         Vitest 단위 테스트 (손계산 예제·경계값·날짜·조
 supabase/
   migrations/  스키마 36개 표·RLS·무결성 트리거·RPC·예약 실행·권한 (8개)
   functions/   Edge Functions: api(로그인) public-api(비로그인) cron-daily(예약) + _shared(계산 엔진 묶음·DB 변환)
-  tests/       rls_isolation.sql(49개), e2e_api.mjs(배포본 83개)
+  tests/       rls_isolation.sql(49개), e2e_api.mjs(배포본 83개), e2e_setup/cleanup.sql
 scripts/       build-functions.mjs (계산 엔진·함수 묶기)
 ```
 
@@ -123,3 +123,5 @@ scripts/       build-functions.mjs (계산 엔진·함수 묶기)
 | RLS 격리 (`supabase/tests/rls_isolation.sql`) | 49개 통과 |
 | 배포본 E2E (`supabase/tests/e2e_api.mjs`, 실제 로그인 토큰) | 83개 통과 — 시드·급여 확정/수정·근로조건·일정·초대·출퇴근·연차·대타·노무법인 상담/철회·CORS·권한 |
 | 예약 실행 (pg_cron → cron-daily) | 200 · 알림 생성·중복 방지·비밀 값 검사 확인 |
+| 화면 코드 ↔ 실서버 (`tests/live`) | 7개 시나리오 통과 — 사장님·직원·노무법인 흐름을 프론트엔드의 실제 동기화 코드로 보내고 다시 읽어 확인 |
+| 브라우저 | 로컬 모드 회귀(가상 시드 → 홈 13건), 서버 모드 시작·로그인 폼 검증·미로그인 시 보호 경로 → 시작 화면, 초대 페이지, 375px 넘침 없음. 로그인 이후 화면 클릭 확인은 미실시(테스트 비밀번호를 브라우저에 넣지 않음 — 위 실서버 시험으로 대신) |

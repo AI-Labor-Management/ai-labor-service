@@ -153,7 +153,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setLoadError(null);
       }
       try {
-        const { data } = await sb().auth.getSession();
+        const { data } = await (await sb()).auth.getSession();
         if (!data.session) {
           Object.assign(S, { me: null, session: null, ids: null, pending: [], base: createEmptyState() });
           show(S.base);
@@ -247,16 +247,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return;
     }
     void loadServer();
-    const { data } = sb().auth.onAuthStateChange((event, sess) => {
-      // 다른 계정으로 로그인했거나 로그아웃했을 때만 다시 읽는다 (토큰 갱신·탭 전환은 무시)
-      if (event === 'SIGNED_OUT' || (event === 'SIGNED_IN' && sess?.user.id !== srv.current.me?.userId)) setTimeout(() => void loadServer(), 0);
+    let unsubscribe: (() => void) | null = null;
+    let closed = false;
+    void sb().then((c) => {
+      if (closed) return;
+      const { data } = c.auth.onAuthStateChange((event, sess) => {
+        // 다른 계정으로 로그인했거나 로그아웃했을 때만 다시 읽는다 (토큰 갱신·탭 전환은 무시)
+        if (event === 'SIGNED_OUT' || (event === 'SIGNED_IN' && sess?.user.id !== srv.current.me?.userId)) setTimeout(() => void loadServer(), 0);
+      });
+      unsubscribe = () => data.subscription.unsubscribe();
     });
     const warn = (e: BeforeUnloadEvent) => {
       if (srv.current.pending.length || srv.current.inflight) e.preventDefault();
     };
     window.addEventListener('beforeunload', warn);
     return () => {
-      data.subscription.unsubscribe();
+      closed = true;
+      unsubscribe?.();
       window.removeEventListener('beforeunload', warn);
     };
   }, [mode, loadLocal, loadServer]);

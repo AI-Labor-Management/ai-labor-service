@@ -130,7 +130,7 @@ tests/               Vitest
 
 | 항목 | 필요 | 붙일 곳 |
 |---|---|---|
-| 인증·서버 저장 | **백엔드 완료(2026-11-06)**: 테이블·RLS·RPC·Edge Functions·예약 실행 — [`BACKEND.md`](BACKEND.md). 남은 것: 프론트 연결, 서울 리전 이전(지금 `ap-southeast-2`), Auth 카카오 provider, 노무법인·관리자 2FA | `StorageAdapter`의 supabase 구현 (`GET /api/owner/state`로 읽기) |
+| 인증·서버 저장 | **완료(2026-11-06)**: 백엔드 + 화면 연결(서버 모드) — [`BACKEND.md`](BACKEND.md). 남은 것: Auth URL·SMTP, 서울 리전 이전(지금 `ap-southeast-2`), 카카오 provider, 노무법인·관리자 2FA | `src/adapters/server.ts`·`sync.ts` |
 | 카카오 | 앱 키, 메시지 API 동의, 서버 토큰 암호화 저장. 하루 1회 예약 실행은 pg_cron으로 준비됨(카카오는 `not-connected` 기록만) | `supabase/functions/cron-daily/handler.ts`, `kakao_enabled` 설정 |
 | AI 상담 | 제공사 결정(서버 위치·학습 활용), 서버 함수, 일일 한도, 조문 검색 근거(기획의 `data/laws/` 조·항·호 변환본은 이번 묶음에 없음 — `069_index.json`과 법령 원문·추출 텍스트만 있음) | `Consult.tsx` FAQ 미검색 분기 |
 | 법제처 Open API | 인증키, 조문 해시 비교 작업 | `Admin.tsx` |
@@ -140,7 +140,7 @@ tests/               Vitest
 
 ## 9. 후속 작업 제안 (우선순위)
 
-1. 프론트엔드를 Supabase 백엔드에 연결 — 백엔드는 완료([`BACKEND.md`](BACKEND.md) 11장), 화면은 아직 localStorage(6-1).
+1. 공개 가입 준비 — Supabase Auth URL·SMTP 설정(DEPLOY.md 4장), 서울 리전 이전, 처리방침. 프론트엔드 연결은 완료([`BACKEND.md`](BACKEND.md) 12장, 시작 화면에서 서버 모드).
 2. 상용 간이세액표 확보 후 소득세 계산(6-2), 공휴일 API(6-3).
 3. 노무사 답변 반영(5장 규칙), rules.json 재대조(11.26 직전: 1~4명 적용 확대, 2027 산재요율).
 4. 라우트별 코드 분할(6-11), 직원 화면 영어 전체 번역(6-7).

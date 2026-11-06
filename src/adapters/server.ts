@@ -1,6 +1,6 @@
 // 서버(Supabase) 연결 — 로그인, Edge Function `api` 호출, RPC, 역할별 데이터 읽기.
 // 공개 가능한 값(프로젝트 주소·publishable 키)만 쓴다. 서비스 역할 키는 브라우저에 두지 않는다.
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { createEmptyState } from '../data/seed';
 import type { AppState, DemoSession, Employee, GuestConsult } from '../domain/types';
 import { WORKPLACE_SCOPED, type Op } from './sync';
@@ -12,10 +12,13 @@ const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 export const serverConfigured = !!(URL_ && KEY);
 export const serverUrl = URL_ ?? '';
 
-let client: SupabaseClient | null = null;
-export function sb(): SupabaseClient {
-  if (!serverConfigured) throw new ServerError('서버 주소가 설정되지 않았어요 (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY)');
-  client ??= createClient(URL_!, KEY!, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'ai-labor/auth' } });
+// supabase-js는 서버 모드에서만 내려받는다 (로그인 없이 둘러보기 번들에 넣지 않음)
+let client: Promise<SupabaseClient> | null = null;
+export function sb(): Promise<SupabaseClient> {
+  if (!serverConfigured) return Promise.reject(new ServerError('서버 주소가 설정되지 않았어요 (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY)'));
+  client ??= import('@supabase/supabase-js').then(({ createClient }) =>
+    createClient(URL_!, KEY!, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'ai-labor/auth' } }),
+  );
   return client;
 }
 
@@ -38,7 +41,7 @@ export function friendly(e: unknown): string {
 }
 
 async function accessToken(): Promise<string> {
-  const { data } = await sb().auth.getSession();
+  const { data } = await (await sb()).auth.getSession();
   if (!data.session) throw new ServerError('로그인이 필요해요', 401);
   return data.session.access_token;
 }
@@ -73,7 +76,7 @@ export const api = <T>(path: string, body?: unknown) => call<T>('api', path, bod
 export const publicApi = <T>(path: string, body?: unknown) => call<T>('public-api', path, body);
 
 export async function rpc<T>(name: string, args: Record<string, unknown> = {}): Promise<T> {
-  const { data, error } = await sb().rpc(name, args);
+  const { data, error } = await (await sb()).rpc(name, args);
   if (error) throw new ServerError(friendly(error));
   return data as T;
 }
@@ -93,19 +96,19 @@ export interface Me {
 export const fetchMe = () => api<Me>('me');
 
 export async function signIn(email: string, password: string) {
-  const { error } = await sb().auth.signInWithPassword({ email, password });
+  const { error } = await (await sb()).auth.signInWithPassword({ email, password });
   if (error) throw new ServerError(/Invalid login/i.test(error.message) ? '이메일 또는 비밀번호가 맞지 않아요' : /Email not confirmed/i.test(error.message) ? '메일의 확인 링크를 먼저 눌러 주세요' : error.message);
 }
 
 /** 가입. 이메일 확인이 켜져 있으면 세션 없이 돌아온다(needsConfirm) */
 export async function signUp(email: string, password: string, redirectPath = 'start'): Promise<{ needsConfirm: boolean }> {
-  const { data, error } = await sb().auth.signUp({ email, password, options: { emailRedirectTo: `${location.origin}${import.meta.env.BASE_URL}${redirectPath}` } });
+  const { data, error } = await (await sb()).auth.signUp({ email, password, options: { emailRedirectTo: `${location.origin}${import.meta.env.BASE_URL}${redirectPath}` } });
   if (error) throw new ServerError(/already registered/i.test(error.message) ? '이미 가입한 이메일이에요. 로그인하세요' : /Password should be/i.test(error.message) ? '비밀번호는 6자 이상이어야 해요' : error.message);
   return { needsConfirm: !data.session };
 }
 
 export async function signOut() {
-  await sb().auth.signOut();
+  await (await sb()).auth.signOut();
 }
 
 /** 역할 선택(로그인 계정이 가진 역할 중 하나). 없거나 맞지 않으면 기본값 */
@@ -189,7 +192,7 @@ async function loadFirm(me: Me, ids: ServerIds): Promise<Loaded> {
     rpc<InboxItem[]>('firm_consult_inbox'),
     rpc<GuestItem[]>('firm_guest_consults'),
     rpc<DelegatedItem[]>('firm_delegated_insurance'),
-    sb().from('review_comments').select('id, target, comment, at').order('at', { ascending: false }).limit(100),
+    sb().then((c) => c.from('review_comments').select('id, target, comment, at').order('at', { ascending: false }).limit(100)),
   ]);
   if (comments.error) throw new ServerError(friendly(comments.error));
   const s = createEmptyState();
@@ -280,6 +283,7 @@ export async function runOps(ops: Op[], workplaceId: string | null): Promise<voi
     const op = ops[i];
     const what = op.t === 'insert' || op.t === 'update' || op.t === 'delete' ? (LABEL[op.table] ?? op.table) : '';
     try {
+      const db = await sb();
       if (op.t === 'insert') {
         const rows = [...op.rows];
         while (i + 1 < ops.length) {
@@ -289,10 +293,10 @@ export async function runOps(ops: Op[], workplaceId: string | null): Promise<voi
           i++;
         }
         const scoped = WORKPLACE_SCOPED.has(op.table) ? rows.map((r) => ({ workplace_id: workplaceId, ...r })) : rows;
-        const { error } = await sb().from(op.table).insert(scoped);
+        const { error } = await db.from(op.table).insert(scoped);
         if (error) throw error;
       } else if (op.t === 'update' || op.t === 'delete') {
-        let q = op.t === 'update' ? sb().from(op.table).update(op.values) : sb().from(op.table).delete();
+        let q = op.t === 'update' ? db.from(op.table).update(op.values) : db.from(op.table).delete();
         if (WORKPLACE_SCOPED.has(op.table) && workplaceId) q = q.eq('workplace_id', workplaceId);
         for (const [k, v] of Object.entries(op.match)) q = v === null ? q.is(k, null) : q.eq(k, v as string);
         const { error } = await q;
