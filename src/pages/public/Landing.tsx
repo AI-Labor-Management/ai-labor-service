@@ -190,8 +190,9 @@ function DiagnosisCard() {
       </div>
       <div className="mt-2 h-1.5 rounded-full bg-canvas">
         <div
-          className="h-1.5 rounded-full bg-brand transition-all"
-          style={{ width: `${((step + 1) / steps.length) * 100}%` }}
+          className="h-1.5 rounded-full bg-brand origin-left"
+          aria-hidden="true"
+          style={{ transform: `scaleX(${(step + 1) / steps.length})`, transition: 'transform 220ms' }}
         />
       </div>
       <p className="mt-4 text-lg font-bold">{q.q}</p>
@@ -490,14 +491,10 @@ export default function Landing() {
       <main>
         <section className="landing-hero landing-container">
           <div className="landing-hero-copy reveal">
-            <span className="eyebrow">
-              <span className="status-dot" />
-              우리 가게를 위한 인사노무 관리
-            </span>
             <h1>
-              작은 가게의 큰 일들,
+              인사노무 관리,
               <br />
-              <span>차근차근 정리해요.</span>
+              놓치는 일 없이.
             </h1>
             <p>
               계약서부터 근무 일정, 급여와 4대보험까지.
@@ -522,7 +519,6 @@ export default function Landing() {
           <ProductPreview />
         </section>
         <section id="features" className="landing-section landing-container landing-divider">
-          <span className="eyebrow">가게 관리, 더 간단하게</span>
           <h2>
             여기저기 흩어졌던 일,
             <br />
@@ -546,10 +542,6 @@ export default function Landing() {
         <section id="diagnosis" className="diagnosis-section">
           <div className="landing-container landing-section diagnosis-grid">
             <div>
-              <span className="eyebrow">
-                <Icon name="spark" size={16} />
-                1분이면 충분해요
-              </span>
               <h2>
                 우리 가게,
                 <br />
@@ -581,7 +573,6 @@ export default function Landing() {
           </div>
         </section>
         <section className="landing-container landing-section">
-          <span className="eyebrow">작지만, 꼭 지키는 원칙</span>
           <h2>
             사장님이 안심하고
             <br />
@@ -614,7 +605,6 @@ export default function Landing() {
           </div>
         </section>
         <section id="faq" className="landing-container landing-section faq-section">
-          <span className="eyebrow">궁금한 점이 있으신가요?</span>
           <h2>자주 묻는 질문</h2>
           <div className="faq-list">
             {[

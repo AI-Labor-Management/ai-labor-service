@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router';
 import { useStore } from '../state/store';
 import { fmtDate } from '../domain/dates';
@@ -9,8 +9,9 @@ import { OWNER_MENU } from './navigation';
 import { GlobalSearch } from './Search';
 import { readPreference, savePreference, ThemeToggle, usePreferences } from './preferences';
 import type { DemoSession } from '../domain/types';
+import { useDialog } from './useDialog';
+export { SERVICE_NAME } from './brand';
 
-export const SERVICE_NAME = 'AI 인사노무 관리';
 const SCALE_LABEL = { '1-4': '1~4명', '5-9': '5~9명', '10+': '10명 이상' } as const;
 
 export function DemoBar() {
@@ -31,9 +32,12 @@ export function DemoBar() {
   return (
     <div className="demo-bar no-print">
       <div className="demo-bar-inner">
-        <span className="demo-tag">DEMO</span>
+        <span className="demo-tag">체험 모드</span>
         <span className="demo-description">
-          브라우저에만 저장되는 체험 공간이에요. 실제 인증·외부 전송은 연결 전이에요.
+          <span className="demo-description-long">
+            브라우저에만 저장되는 체험 공간이에요. 실제 인증·외부 전송은 연결 전이에요.
+          </span>
+          <span className="demo-description-short">브라우저 저장 데모 (인증·전송 연결 전)</span>
         </span>
         <span className="demo-date">기준일 {fmtDate(base)}</span>
         <label>
@@ -112,7 +116,7 @@ export function OwnerLayout() {
   );
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 1023px)').matches);
-  const mobileDialog = useRef<HTMLDialogElement>(null);
+  const mobileDialog = useDialog(mobileOpen, () => setMobileOpen(false), '.mobile-sidebar-content');
   const location = useLocation();
   useEffect(() => {
     const media = window.matchMedia('(max-width: 1023px)');
@@ -135,11 +139,6 @@ export function OwnerLayout() {
   useEffect(() => {
     savePreference('sidebar-side', side);
   }, [side]);
-  useEffect(() => {
-    const d = mobileDialog.current;
-    if (mobileOpen && d && !d.open) d.showModal();
-    if (!mobileOpen && d?.open) d.close();
-  }, [mobileOpen]);
   if (!session) return <Navigate to="/start" replace />;
   if (session.role !== 'owner') return <Navigate to={'/' + session.role} replace />;
   if (!state.workplace && location.pathname !== '/owner/setup') return <Navigate to="/owner/setup" replace />;
@@ -199,11 +198,11 @@ export function OwnerLayout() {
           title="사용 안내"
         >
           <span className="guide-bulb">
-            <Icon name="spark" size={21} />
+            <Icon name="help" size={21} />
           </span>
           <span className="sidebar-label">
-            <strong>처음 오셨나요?</strong>
-            <small>움직이는 가이드로 알아봐요</small>
+            <strong>서비스 사용 안내</strong>
+            <small>4단계로 알아보기</small>
           </span>
           <Icon name="chevron" size={14} className="sidebar-label" />
         </button>
@@ -224,7 +223,12 @@ export function OwnerLayout() {
     </>
   );
   return (
-    <div className="app-shell" data-collapsed={collapsed} data-side={side}>
+    <div
+      className="app-shell"
+      data-collapsed={collapsed}
+      data-side={side}
+      data-home={location.pathname === '/owner'}
+    >
       <a className="skip-link" href="#main-content">
         본문으로 바로가기
       </a>
@@ -239,7 +243,7 @@ export function OwnerLayout() {
           >
             <Icon name="menu" size={23} />
           </button>
-          <Link to="/" aria-label="AI 인사노무 관리 홈">
+          <Link to="/" aria-label="사람샘각 홈">
             <Brand />
           </Link>
         </div>
@@ -286,23 +290,18 @@ export function OwnerLayout() {
             </div>
           </main>
           <footer className="app-footer no-print">
-            <span>AI 인사노무 관리 · 가칭</span>
+            <span>사람샘각</span>
             <span>법령 기준일 {fmtDate(base)} · 참고용 안내</span>
             <button onClick={openGuide}>도움이 필요하신가요?</button>
           </footer>
         </div>
       </div>
       <dialog
-        ref={mobileDialog}
+        {...mobileDialog}
         id="mobile-sidebar"
         className="mobile-sidebar-dialog no-print"
         data-side={side}
-        onClose={() => setMobileOpen(false)}
-        onCancel={() => setMobileOpen(false)}
         aria-label="전체 메뉴"
-        onClick={(e) => {
-          if (e.target === e.currentTarget) setMobileOpen(false);
-        }}
       >
         <div className="mobile-sidebar-content">
           <div className="mobile-sidebar-top">
@@ -350,7 +349,7 @@ export function RoleLayout({
   return (
     <div className="min-h-screen">
       <header className="role-header no-print">
-        <Link to="/" aria-label="AI 인사노무 관리 홈">
+        <Link to="/" aria-label="사람샘각 홈">
           <Brand />
         </Link>
         <GlobalSearch />

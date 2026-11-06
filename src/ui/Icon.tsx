@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { SERVICE_NAME } from './brand';
 
 export type IconName =
   | 'home'
@@ -197,28 +198,15 @@ export function Icon({
 
 export function Brand({ compact = false }: { compact?: boolean }) {
   return (
-    <span className="brand-lockup">
-      <svg className="brand-symbol" viewBox="0 0 32 36" fill="none" aria-hidden="true">
-        <path
-          d="M7 3h17a3 3 0 0 1 3 3v24a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3Z"
-          fill="currentColor"
-          fillOpacity=".1"
-          stroke="currentColor"
-          strokeWidth="1.7"
-        />
-        <path
-          d="M10 3v30m5-18 3 3 5-6"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path d="M19 3v5l3-1.5L25 8V3" fill="currentColor" />
+    <span className="brand-lockup" aria-label={SERVICE_NAME}>
+      <svg className="brand-symbol" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+        <path d="M5 18C5 10.82 10.82 5 18 5h10v7H18a6 6 0 0 0-6 6v10H5V18Z" fill="currentColor" />
+        <path d="M35 22c0 7.18-5.82 13-13 13H12v-7h10a6 6 0 0 0 6-6V12h7v10Z" fill="currentColor" />
       </svg>
       {!compact && (
-        <span>
-          AI <span className="text-brand">인사노무</span>
-          <span className="brand-descriptor">우리 가게 관리의 시작</span>
+        <span className="brand-wordmark" aria-hidden="true">
+          사람샘각
+          <span className="brand-descriptor">인사노무 관리</span>
         </span>
       )}
     </span>

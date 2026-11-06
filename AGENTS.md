@@ -8,5 +8,7 @@
 - 검증은 `npm test`와 `npm run build`. 화면 변경은 밝은/어두운 모드와 모바일에서도 확인한다.
 - 기능 상태가 바뀌면 README·FEATURES·HANDOFF를 실제 동작과 맞춘다.
 - GitHub 저장소와 Sites 배포 저장소는 별개다. 변경을 GitHub 검토 브랜치/PR에도 전달해 두고, 배포만으로 GitHub가 갱신됐다고 말하지 않는다.
-- Sites에는 `.openai/hosting.json`의 기존 project_id를 사용한다. 기존 비공개 범위를 유지하고 새 Site를 중복 생성하지 않는다.
+- 서비스명은 사용자가 지정한 '사람샘각'이다. `src/ui/brand.ts`, `docs/BRAND.md`를 기준으로 삼는다.
+- Sites에는 `.openai/hosting.json`의 기존 project_id를 사용한다. 2026-11-06 사용자 요청으로 공개(public)로 전환했다. 현재 공개 범위를 유지하고 새 Site를 중복 생성하지 않는다.
+- 공통 모달은 `useDialog.ts`를 사용한다. 바깥 클릭·Escape·포커스 복귀·배경 스크롤 잠금을 유지하고 `tests/dialog.test.ts`를 통과시킨다.
 - `.env`, 토큰, 실제 직원 정보, localStorage 내보내기, node_modules, dist를 커밋하지 않는다.

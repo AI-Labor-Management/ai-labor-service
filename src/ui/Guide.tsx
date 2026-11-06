@@ -33,6 +33,11 @@ export function Guide() {
   const { guideOpen, closeGuide } = usePreferences();
   const [step, setStep] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [explicitPlayback, setExplicitPlayback] = useState(false);
+  const interacting = hovered || focused;
+  const pauseForInteraction = interacting && !explicitPlayback;
   const [reduced, setReduced] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -44,159 +49,178 @@ export function Guide() {
     if (guideOpen) {
       setStep(0);
       setPlaying(!reduced);
+      setExplicitPlayback(false);
     } else setPlaying(false);
   }, [guideOpen, reduced]);
   useEffect(() => {
-    if (!guideOpen || !playing || reduced) return;
+    if (!guideOpen || !playing || reduced || pauseForInteraction) return;
     const timer = window.setInterval(() => setStep((s) => (s + 1) % STEPS.length), 6500);
     return () => window.clearInterval(timer);
-  }, [guideOpen, playing, reduced, step]);
+  }, [guideOpen, playing, reduced, step, pauseForInteraction]);
   const changeStep = (v: number) => {
     setPlaying(false);
+    setExplicitPlayback(false);
     setStep(v);
   };
   const item = STEPS[step];
   return (
-    <Modal open={guideOpen} onClose={closeGuide} title="처음이어도, 쉽게 시작해요" wide>
-      <div className="guide-tabs">
-        {STEPS.map((s, i) => (
-          <button
-            key={s.label}
-            className={i === step ? 'active' : ''}
-            onClick={() => changeStep(i)}
-            aria-label={`${i + 1}단계 ${s.label}`}
-            aria-pressed={i === step}
-          >
-            <span>{i + 1}</span>
-            {s.label}
-          </button>
-        ))}
-      </div>
-      <div className={`guide-scene ${playing && !reduced ? 'is-playing' : ''}`} key={step} aria-hidden="true">
-        <div className="guide-mini-sidebar">
-          <Brand compact />
-          {STEPS.map((s, i) => (
-            <span key={s.label} className={i === step ? 'active' : ''}>
-              <Icon name={s.icon} size={18} />
-            </span>
-          ))}
-        </div>
-        <div className="guide-mini-content">
-          <span className="guide-eyebrow">{item.label}</span>
-          <div className="guide-skeleton" />
-          {step === 0 && (
-            <>
-              <div className="guide-demo-row">
-                <span className="guide-demo-icon">
-                  <Icon name="file" />
-                </span>
-                <span>근로계약서 확인</span>
-                <b>처리하기</b>
-              </div>
-              <div className="guide-demo-row muted">
-                <Icon name="calendar" />
-                <span>다가오는 기한 확인</span>
-              </div>
-            </>
-          )}
-          {step === 1 && (
-            <>
-              <div className="guide-input">
-                <span>직원 별칭</span>
-                <b className="guide-type">직원 A</b>
-              </div>
-              <div className="guide-input">
-                <span>입사일</span>
-                <b>2026. 11. 05</b>
-              </div>
-              <div className="guide-demo-cta">직원 등록하기</div>
-            </>
-          )}
-          {step === 2 && (
-            <>
-              <div className="guide-week">
-                {['월', '화', '수', '목', '금'].map((d, i) => (
-                  <span key={d} className={i === 3 ? 'today' : ''}>
-                    {d}
-                    <b>10–15</b>
-                  </span>
-                ))}
-              </div>
-              <div className="guide-demo-row">
-                <Icon name="clock" />
-                <span>출퇴근 기록 확인</span>
-                <b>확정</b>
-              </div>
-            </>
-          )}
-          {step === 3 && (
-            <>
-              <div className="guide-pay">
-                <span>이번 달 예상 지급액</span>
-                <b>
-                  1,280,000<small>원</small>
-                </b>
-              </div>
-              <div className="guide-demo-cta">확인 후 급여 확정하기</div>
-            </>
-          )}
-          <span className="guide-cursor">
-            <svg width="25" height="30" viewBox="0 0 25 30" fill="currentColor">
-              <path d="m2 2 20 16-10 1-4 9Z" stroke="white" strokeWidth="2" />
-            </svg>
-          </span>
-          <span className="guide-success">
-            <Icon name="check" size={15} />
-            {step === 0
-              ? '필요한 화면으로 이동'
-              : step === 1
-                ? '서류·보험·기한 함께 점검'
-                : step === 2
-                  ? '확정한 시간, 급여에 반영'
-                  : '명세서가 준비됐어요'}
-          </span>
-        </div>
-        <span className="guide-demo-label">사용 예시 · 가상 화면</span>
-      </div>
-      <div className="guide-copy" aria-live="polite">
-        <span>STEP 0{step + 1}</span>
-        <h3>{item.title}</h3>
-        <p>{item.desc}</p>
-      </div>
-      <div className="guide-controls">
-        <button
-          className="icon-button"
-          onClick={() => setPlaying(!playing)}
-          disabled={reduced}
-          aria-label={playing ? '안내 애니메이션 일시 정지' : '안내 애니메이션 재생'}
-          title={reduced ? '기기의 동작 줄이기 설정을 따르고 있어요' : undefined}
-        >
-          <Icon name={playing ? 'pause' : 'play'} size={17} />
-        </button>
-        <div className="guide-dots">
+    <Modal open={guideOpen} onClose={closeGuide} title="사람샘각 사용 안내" wide>
+      <div
+        className={pauseForInteraction ? 'guide-paused' : undefined}
+        onPointerEnter={() => setHovered(true)}
+        onPointerLeave={() => setHovered(false)}
+        onFocus={() => setFocused(true)}
+        onBlur={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget)) setFocused(false);
+        }}
+      >
+        <div className="guide-tabs">
           {STEPS.map((s, i) => (
             <button
               key={s.label}
               className={i === step ? 'active' : ''}
               onClick={() => changeStep(i)}
-              aria-label={`${i + 1}단계로 이동`}
-            />
+              aria-label={`${i + 1}단계 ${s.label}`}
+              aria-pressed={i === step}
+            >
+              <span>{i + 1}</span>
+              {s.label}
+            </button>
           ))}
         </div>
-        <button
-          className="ui-button secondary"
-          onClick={() => changeStep(Math.max(0, step - 1))}
-          disabled={step === 0}
+        <div
+          className={`guide-scene ${playing && !reduced ? 'is-playing' : ''}`}
+          key={step}
+          aria-hidden="true"
         >
-          이전
-        </button>
-        <button
-          className="ui-button primary"
-          onClick={() => (step === 3 ? closeGuide() : changeStep(step + 1))}
-        >
-          {step === 3 ? '시작할게요' : '다음'}
-          <Icon name="arrow" size={16} />
-        </button>
+          <div className="guide-mini-sidebar">
+            <Brand compact />
+            {STEPS.map((s, i) => (
+              <span key={s.label} className={i === step ? 'active' : ''}>
+                <Icon name={s.icon} size={18} />
+              </span>
+            ))}
+          </div>
+          <div className="guide-mini-content">
+            <span className="guide-eyebrow">{item.label}</span>
+            <div className="guide-skeleton" />
+            {step === 0 && (
+              <>
+                <div className="guide-demo-row">
+                  <span className="guide-demo-icon">
+                    <Icon name="file" />
+                  </span>
+                  <span>근로계약서 확인</span>
+                  <b>처리하기</b>
+                </div>
+                <div className="guide-demo-row muted">
+                  <Icon name="calendar" />
+                  <span>다가오는 기한 확인</span>
+                </div>
+              </>
+            )}
+            {step === 1 && (
+              <>
+                <div className="guide-input">
+                  <span>직원 별칭</span>
+                  <b className="guide-type">직원 A</b>
+                </div>
+                <div className="guide-input">
+                  <span>입사일</span>
+                  <b>2026. 11. 05</b>
+                </div>
+                <div className="guide-demo-cta">직원 등록하기</div>
+              </>
+            )}
+            {step === 2 && (
+              <>
+                <div className="guide-week">
+                  {['월', '화', '수', '목', '금'].map((d, i) => (
+                    <span key={d} className={i === 3 ? 'today' : ''}>
+                      {d}
+                      <b>10–15</b>
+                    </span>
+                  ))}
+                </div>
+                <div className="guide-demo-row">
+                  <Icon name="clock" />
+                  <span>출퇴근 기록 확인</span>
+                  <b>확정</b>
+                </div>
+              </>
+            )}
+            {step === 3 && (
+              <>
+                <div className="guide-pay">
+                  <span>이번 달 예상 지급액</span>
+                  <b>
+                    1,280,000<small>원</small>
+                  </b>
+                </div>
+                <div className="guide-demo-cta">확인 후 급여 확정하기</div>
+              </>
+            )}
+            <span className="guide-cursor">
+              <svg width="25" height="30" viewBox="0 0 25 30" fill="currentColor">
+                <path d="m2 2 20 16-10 1-4 9Z" stroke="white" strokeWidth="2" />
+              </svg>
+            </span>
+            <span className="guide-success">
+              <Icon name="check" size={15} />
+              {step === 0
+                ? '필요한 화면으로 이동'
+                : step === 1
+                  ? '서류·보험·기한 함께 점검'
+                  : step === 2
+                    ? '확정한 시간, 급여에 반영'
+                    : '명세서가 준비됐어요'}
+            </span>
+          </div>
+          <span className="guide-demo-label">사용 예시 · 가상 화면</span>
+        </div>
+        <div className="guide-copy" aria-live="polite">
+          <span>{step + 1}단계 / 4</span>
+          <h3>{item.title}</h3>
+          <p>{item.desc}</p>
+        </div>
+        <div className="guide-controls">
+          <button
+            className="icon-button"
+            onClick={() => {
+              setExplicitPlayback(!playing);
+              setPlaying(!playing);
+            }}
+            disabled={reduced}
+            aria-label={playing ? '안내 애니메이션 일시 정지' : '안내 애니메이션 재생'}
+            title={reduced ? '기기의 동작 줄이기 설정을 따르고 있어요' : undefined}
+          >
+            <Icon name={playing ? 'pause' : 'play'} size={17} />
+          </button>
+          <div className="guide-dots">
+            {STEPS.map((s, i) => (
+              <button
+                key={s.label}
+                className={i === step ? 'active' : ''}
+                onClick={() => changeStep(i)}
+                aria-label={`${i + 1}단계로 이동`}
+              />
+            ))}
+          </div>
+          <button
+            className="ui-button secondary"
+            onClick={() => changeStep(Math.max(0, step - 1))}
+            disabled={step === 0}
+          >
+            이전
+          </button>
+          <button
+            className="ui-button primary"
+            onClick={() => (step === 3 ? closeGuide() : changeStep(step + 1))}
+          >
+            {step === 3 ? '시작할게요' : '다음'}
+            <Icon name="arrow" size={16} />
+          </button>
+        </div>
       </div>
     </Modal>
   );

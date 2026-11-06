@@ -3,9 +3,7 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useId,
-  useRef,
   useState,
   type ButtonHTMLAttributes,
   type ReactNode,
@@ -14,6 +12,8 @@ import { Link } from 'react-router';
 import { resolveRule, sourceLabel, STATUS_LABEL } from '../domain/rules';
 import type { IntegrationStatus } from '../adapters/integrations';
 import { STATUS_TEXT } from '../adapters/integrations';
+import { Icon } from './Icon';
+import { useDialog } from './useDialog';
 
 export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 
@@ -252,7 +252,7 @@ export function Choice<T extends string>({
 }
 
 export function Money({ value, className }: { value: number | null | undefined; className?: string }) {
-  if (value === null || value === undefined) return <span className={cx('text-muted', className)}>—</span>;
+  if (value === null || value === undefined) return <span className={cx('text-muted', className)}>미정</span>;
   return <span className={cx('num', className)}>{Math.round(value).toLocaleString('ko-KR')}원</span>;
 }
 
@@ -401,7 +401,27 @@ export function Tabs<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div role="tablist" className="mb-4 flex gap-1 overflow-x-auto border-b border-line">
+    <div
+      role="tablist"
+      aria-label="보기 선택"
+      className="mb-4 flex gap-1 overflow-x-auto border-b border-line"
+      onKeyDown={(e) => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+        const buttons = Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+        const current = buttons.indexOf(document.activeElement as HTMLButtonElement);
+        if (current < 0) return;
+        e.preventDefault();
+        const index =
+          e.key === 'Home'
+            ? 0
+            : e.key === 'End'
+              ? buttons.length - 1
+              : (current + (e.key === 'ArrowRight' ? 1 : -1) + buttons.length) % buttons.length;
+        buttons[index]?.focus();
+        const item = tabs.filter((t) => !t.hidden)[index];
+        if (item) onChange(item.value);
+      }}
+    >
       {tabs
         .filter((t) => !t.hidden)
         .map((t) => (
@@ -410,6 +430,7 @@ export function Tabs<T extends string>({
             role="tab"
             type="button"
             aria-selected={value === t.value}
+            tabIndex={value === t.value ? 0 : -1}
             onClick={() => onChange(t.value)}
             className={cx(
               '-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold',
@@ -430,6 +451,7 @@ export function Modal({
   children,
   footer,
   wide,
+  className,
 }: {
   open: boolean;
   onClose: () => void;
@@ -437,50 +459,26 @@ export function Modal({
   children: ReactNode;
   footer?: ReactNode;
   wide?: boolean;
+  className?: string;
 }) {
-  const ref = useRef<HTMLDialogElement>(null);
+  const dialog = useDialog(open, onClose);
   const titleId = useId();
-  useEffect(() => {
-    const d = ref.current;
-    if (!d) return;
-    if (open && !d.open) d.showModal();
-    if (!open && d.open) d.close();
-  }, [open]);
   return (
     <dialog
-      ref={ref}
+      {...dialog}
       aria-labelledby={titleId}
-      onClose={onClose}
-      onCancel={(e) => {
-        e.preventDefault();
-        onClose();
-      }}
-      className={cx(
-        'm-auto w-[calc(100%-2rem)] rounded-2xl border border-line bg-white p-0 text-ink shadow-xl',
-        wide ? 'max-w-2xl' : 'max-w-lg',
-      )}
+      className={cx('modal-surface', wide && 'modal-wide', className)}
     >
-      {open && (
-        <div className="flex max-h-[85vh] flex-col">
-          <div className="flex items-center justify-between border-b border-line px-5 py-3">
-            <h2 id={titleId} className="text-base font-bold">
-              {title}
-            </h2>
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-md px-2 py-1 text-muted hover:bg-canvas"
-              aria-label="닫기"
-            >
-              ✕
-            </button>
-          </div>
-          <div className="overflow-y-auto px-5 py-4">{children}</div>
-          {footer && (
-            <div className="flex flex-wrap justify-end gap-2 border-t border-line px-5 py-3">{footer}</div>
-          )}
+      <div className="modal-layout">
+        <div className="modal-heading">
+          <h2 id={titleId}>{title}</h2>
+          <button type="button" onClick={onClose} className="icon-button modal-close" aria-label="닫기">
+            <Icon name="close" size={19} />
+          </button>
         </div>
-      )}
+        <div className="modal-body">{children}</div>
+        {footer && <div className="modal-footer">{footer}</div>}
+      </div>
     </dialog>
   );
 }

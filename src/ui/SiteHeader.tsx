@@ -10,7 +10,7 @@ export function SiteHeader() {
   return (
     <header className="public-header no-print">
       <div className="public-header-main">
-        <Link to="/" aria-label="AI 인사노무 관리 홈">
+        <Link to="/" aria-label="사람샘각 홈">
           <Brand />
         </Link>
         <GlobalSearch />
@@ -38,10 +38,7 @@ export function SiteHeader() {
             <Icon name="arrow" size={15} />
           </Link>
         )}
-        <span className="public-nav-note">
-          <span className="status-dot" />
-          우리 가게를 위한 인사노무 도우미
-        </span>
+        <span className="public-nav-note">우리 가게를 위한 인사노무 도우미</span>
       </nav>
     </header>
   );

@@ -1,3 +1,7 @@
+/* Hallmark · v2.0.0 · redesign: full · scope: app · shape: app screen · theme: brand · genre: modern-minimal · modes: light+dark · surface: absolute · signature: task queue · posture: restrained · motion: calm */
+/* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V3 · weakest: V, retained the familiar navigation so regular tasks stay predictable */
+/* Hallmark · finish-review: subagent · 1 finding · 1 resolved · mobile public navigation now fits at 375px · render-tier: unavailable, supported-browser verification used */
+/* Hallmark · dropped onCancel={(e), onClose={onClose}, onClick={() => setOpen(true)}, onKeyDown={(e) => { if (e.key === 'ArrowDown') · Inline implementations moved to useDialog and IME-safe search navigation; the behaviors remain and are regression tested */
 @import 'tailwindcss';
 @import './styles/tokens.css';
 
@@ -53,7 +57,7 @@
     min-width: 0;
   }
   dialog::backdrop {
-    background: #101a2c75;
+    background: var(--scrim);
     backdrop-filter: blur(5px);
   }
   svg {
@@ -75,16 +79,16 @@
   background-color: var(--surface-raised);
 }
 [data-theme='dark'] .bg-ink {
-  background-color: #121a15;
+  background-color: var(--color-canvas);
 }
 [data-theme='dark'] .text-white {
-  color: #fff;
+  color: var(--on-action);
 }
 [data-theme='dark'] .bg-brand.text-white {
   background: var(--action);
 }
 [data-theme='dark'] .text-\[\#191600\] {
-  color: #191600;
+  color: var(--kakao-ink);
 }
 [data-theme='dark'] input,
 [data-theme='dark'] select,
@@ -98,7 +102,7 @@
 .brand-lockup {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   font-size: 21px;
   font-weight: 700;
   letter-spacing: -0.035em;
@@ -111,7 +115,7 @@
   font-size: 10px;
   font-weight: 500;
   letter-spacing: -0.01em;
-  margin-top: 5px;
+  margin-top: 4px;
 }
 .brand-symbol {
   width: 32px;
@@ -143,10 +147,13 @@
 }
 .icon-button:disabled {
   opacity: 0.35;
+  cursor: not-allowed;
+  color: var(--color-muted);
+  background: var(--subtle);
 }
 .ui-button {
   min-height: 44px;
-  padding: 11px 18px;
+  padding: 12px 20px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -163,7 +170,7 @@
 }
 .ui-button.primary {
   background: var(--action);
-  color: #fff;
+  color: var(--on-action);
 }
 .ui-button.primary:hover {
   background: var(--action-hover);
@@ -182,6 +189,9 @@
 }
 .ui-button:disabled {
   opacity: 0.4;
+  cursor: not-allowed;
+  color: var(--color-muted);
+  background: var(--subtle);
 }
 .kit-button {
   min-height: 36px;
@@ -193,7 +203,7 @@
 .surface-card {
   border-color: var(--color-line);
   border-radius: var(--radius-card);
-  box-shadow: 0 3px 12px #1c355004;
+  box-shadow: 0 3px 12px var(--shadow-control-color);
 }
 .surface-card > div:first-child > h2 {
   font-size: 17px;
@@ -203,7 +213,7 @@
   letter-spacing: -0.045em;
 }
 .page-header {
-  padding: 6px 0 10px;
+  padding: 8px 0 12px;
 }
 input.rounded-lg,
 select.rounded-lg,
@@ -213,13 +223,13 @@ textarea.rounded-lg {
 }
 dialog:not(.mobile-sidebar-dialog) {
   border-radius: var(--radius-dialog);
-  box-shadow: 0 24px 100px #0004;
+  box-shadow: 0 24px 100px var(--shadow-dialog-color);
 }
 dialog[open] {
   animation: dialog-in 0.24s ease-out;
 }
 dialog > .flex > div:first-child {
-  padding: 22px 24px 16px;
+  padding: 24px 24px 16px;
   border-bottom-color: var(--color-line);
 }
 dialog > .flex > .overflow-y-auto {
@@ -240,7 +250,7 @@ dialog > .flex > .overflow-y-auto {
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   flex-shrink: 0;
 }
 .header-login {
@@ -258,7 +268,7 @@ dialog > .flex > .overflow-y-auto {
   min-width: 0;
   width: min(540px, 100%);
   border-radius: 14px;
-  padding: 14px 17px;
+  padding: 16px 16px;
   background: var(--subtle);
   color: var(--color-muted);
   text-align: left;
@@ -280,7 +290,7 @@ dialog > .flex > .overflow-y-auto {
   background: var(--surface);
   border: 1px solid var(--color-line);
   border-radius: 5px;
-  padding: 1px 5px;
+  padding: 0px 4px;
   font-size: 10px;
   font-family: inherit;
   white-space: nowrap;
@@ -292,7 +302,7 @@ dialog > .flex > .overflow-y-auto {
   gap: 12px;
   border: 2px solid var(--action);
   border-radius: 14px;
-  padding: 14px 16px;
+  padding: 16px 16px;
   color: var(--color-brand);
 }
 .search-input-wrap input {
@@ -303,20 +313,20 @@ dialog > .flex > .overflow-y-auto {
   background: transparent;
 }
 .search-caption {
-  margin: 22px 4px 10px;
+  margin: 24px 4px 12px;
   font-size: 12px;
   color: var(--color-muted);
 }
 .search-results {
   display: grid;
-  gap: 3px;
+  gap: 4px;
 }
 .search-result {
   display: flex;
   align-items: center;
   gap: 12px;
   width: 100%;
-  padding: 11px 12px;
+  padding: 12px 12px;
   border-radius: 12px;
   text-align: left;
 }
@@ -336,7 +346,7 @@ dialog > .flex > .overflow-y-auto {
   display: block;
   color: var(--color-muted);
   font-size: 11px;
-  margin-top: 3px;
+  margin-top: 4px;
 }
 .search-icon {
   width: 38px;
@@ -360,7 +370,7 @@ dialog > .flex > .overflow-y-auto {
   display: flex;
   align-items: center;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   padding: 40px 0;
   font-size: 13px;
   color: var(--color-muted);
@@ -375,7 +385,7 @@ dialog > .flex > .overflow-y-auto {
   display: flex;
   align-items: center;
   gap: 32px;
-  padding: 14px 30px 14px 22px;
+  padding: 16px 32px 16px 24px;
   border-bottom: 1px solid var(--color-line);
   background: var(--surface);
   position: sticky;
@@ -385,7 +395,7 @@ dialog > .flex > .overflow-y-auto {
 .app-brand {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
   width: 222px;
   flex-shrink: 0;
 }
@@ -395,11 +405,11 @@ dialog > .flex > .overflow-y-auto {
 .profile-button {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
   color: var(--text-secondary);
   font-size: 13px;
-  padding-left: 10px;
-  margin-left: 5px;
+  padding-left: 12px;
+  margin-left: 4px;
   border-left: 1px solid var(--color-line);
 }
 .profile-avatar {
@@ -422,7 +432,7 @@ dialog > .flex > .overflow-y-auto {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #f04452;
+  background: var(--color-risk);
   border: 1px solid var(--surface);
 }
 .shell-body {
@@ -437,20 +447,18 @@ dialog > .flex > .overflow-y-auto {
   flex: 0 0 242px;
   background: var(--surface);
   border-right: 1px solid var(--color-line);
-  padding: 24px 16px 18px;
+  padding: 24px 16px 20px;
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
   overflow-y: auto;
-  transition:
-    width 0.3s cubic-bezier(0.22, 1, 0.36, 1),
-    flex-basis 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: background-color var(--dur-short);
 }
 .workspace-switch {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 10px;
+  gap: 12px;
+  padding: 12px 12px;
   background: var(--subtle);
   border-radius: 15px;
   min-height: 66px;
@@ -483,7 +491,7 @@ dialog > .flex > .overflow-y-auto {
   flex-shrink: 0;
 }
 .sidebar-section {
-  margin: 28px 14px 12px;
+  margin: 28px 16px 12px;
   font-size: 10px;
   font-weight: 600;
   color: var(--color-muted);
@@ -500,7 +508,7 @@ dialog > .flex > .overflow-y-auto {
   align-items: center;
   gap: 12px;
   border-radius: 12px;
-  padding: 13px 14px;
+  padding: 12px 16px;
   color: var(--text-secondary);
   font-size: 14px;
   min-height: 46px;
@@ -529,11 +537,11 @@ dialog > .flex > .overflow-y-auto {
   font-size: 10px;
   background: var(--surface);
   border-radius: 6px;
-  padding: 2px 6px;
+  padding: 4px 8px;
   color: var(--color-brand);
 }
 .sidebar-settings {
-  margin-top: 14px;
+  margin-top: 16px;
 }
 .sidebar-bottom {
   margin-top: auto;
@@ -543,10 +551,10 @@ dialog > .flex > .overflow-y-auto {
 .sidebar-guide {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
   width: 100%;
   border-radius: 15px;
-  padding: 15px 11px;
+  padding: 16px 12px;
   background: var(--color-brand-soft);
   text-align: left;
 }
@@ -571,8 +579,8 @@ dialog > .flex > .overflow-y-auto {
 .sidebar-position {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 13px;
+  gap: 12px;
+  padding: 12px 12px;
   color: var(--color-muted);
   font-size: 11px;
   border-radius: 10px;
@@ -594,10 +602,10 @@ dialog > .flex > .overflow-y-auto {
   min-height: 52px;
 }
 .app-shell[data-collapsed='true'] .app-sidebar .sidebar-nav {
-  margin-top: 25px;
+  margin-top: 24px;
 }
 .app-shell[data-collapsed='true'] .app-sidebar .sidebar-link {
-  padding-inline: 17px;
+  padding-inline: 16px;
 }
 .app-shell[data-collapsed='true'] .app-sidebar .sidebar-guide {
   justify-content: center;
@@ -624,34 +632,34 @@ dialog > .flex > .overflow-y-auto {
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 10px 32px;
+  padding: 12px 32px;
   border-bottom: 1px solid var(--color-line);
   background: var(--surface);
 }
 .demo-tag {
   font-size: 9px;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   color: var(--color-brand);
   background: var(--color-brand-soft);
   border-radius: 4px;
-  padding: 2px 5px;
+  padding: 4px 4px;
 }
 .demo-description {
   flex: 1;
 }
 .demo-date {
-  padding-inline: 6px;
+  padding-inline: 8px;
 }
 .demo-bar label {
   display: flex;
-  gap: 7px;
+  gap: 8px;
   align-items: center;
 }
 .demo-bar select {
   background: var(--subtle);
   border-radius: 6px;
-  padding: 3px 7px;
+  padding: 4px 8px;
   color: var(--text-secondary);
   outline-offset: 0;
 }
@@ -659,8 +667,8 @@ dialog > .flex > .overflow-y-auto {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 25px auto 16px;
-  padding: 0 34px;
+  margin: 24px auto 16px;
+  padding: 0 36px;
   max-width: 1450px;
   color: var(--color-muted);
   font-size: 11px;
@@ -670,7 +678,7 @@ dialog > .flex > .overflow-y-auto {
   color: var(--text-secondary);
 }
 .workspace-main {
-  padding: 0 34px 36px;
+  padding: 0 36px 36px;
   max-width: 1450px;
   margin: 0 auto;
   min-height: calc(100dvh - 250px);
@@ -678,8 +686,8 @@ dialog > .flex > .overflow-y-auto {
 .app-footer {
   display: flex;
   flex-wrap: wrap;
-  gap: 15px;
-  padding: 20px 34px 26px;
+  gap: 16px;
+  padding: 20px 36px 28px;
   font-size: 10px;
   color: var(--color-muted);
 }
@@ -723,9 +731,9 @@ dialog > .flex > .overflow-y-auto {
 .role-header {
   display: flex;
   align-items: center;
-  gap: 30px;
+  gap: 32px;
   justify-content: space-between;
-  padding: 18px max(24px, calc((100vw - 1180px) / 2));
+  padding: 20px max(24px, calc((100vw - 1180px) / 2));
   background: var(--surface);
   border-bottom: 1px solid var(--color-line);
 }
@@ -748,8 +756,8 @@ dialog > .flex > .overflow-y-auto {
   display: flex;
   align-items: center;
   flex-direction: column;
-  gap: 5px;
-  padding: 14px 0;
+  gap: 4px;
+  padding: 16px 0;
   color: var(--color-muted);
   font-size: 11px;
 }
@@ -763,13 +771,13 @@ dialog > .flex > .overflow-y-auto {
   align-items: flex-end;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 18px;
-  margin: 0 0 26px;
+  gap: 20px;
+  margin: 0 0 28px;
 }
 .dashboard-heading .date-label {
   font-size: 12px;
   color: var(--color-muted);
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 .dashboard-heading h1 {
   font-size: clamp(26px, 2.3vw, 32px);
@@ -778,12 +786,12 @@ dialog > .flex > .overflow-y-auto {
   letter-spacing: -0.055em;
 }
 .dashboard-heading h1 span {
-  color: var(--color-brand);
+  color: inherit;
 }
 .dashboard-heading p {
   color: var(--color-muted);
   font-size: 13px;
-  margin-top: 10px;
+  margin-top: 12px;
 }
 .dashboard-heading-actions {
   display: flex;
@@ -804,7 +812,7 @@ dialog > .flex > .overflow-y-auto {
   background: var(--surface);
   border: 0;
   border-radius: 0;
-  padding: 23px 25px;
+  padding: 24px 24px;
   display: flex;
   flex-direction: column;
   min-height: 154px;
@@ -813,7 +821,7 @@ dialog > .flex > .overflow-y-auto {
 .stat-card-title {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   font-size: 13px;
   color: var(--text-secondary);
   font-weight: 550;
@@ -827,18 +835,18 @@ dialog > .flex > .overflow-y-auto {
   font-weight: 750;
   line-height: 1.2;
   letter-spacing: -0.045em;
-  margin: 18px 0 11px;
+  margin: 20px 0 12px;
   font-variant-numeric: tabular-nums;
 }
 .stat-value small {
   font-size: 16px;
-  margin-left: 3px;
+  margin-left: 4px;
   font-weight: 500;
 }
 .stat-card-bottom {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   margin-top: auto;
   font-size: 11px;
   color: var(--color-muted);
@@ -860,7 +868,7 @@ dialog > .flex > .overflow-y-auto {
   font-size: 10px;
   background: var(--surface);
   border-radius: 5px;
-  padding: 2px 6px;
+  padding: 4px 8px;
 }
 .mini-progress {
   height: 5px;
@@ -868,7 +876,7 @@ dialog > .flex > .overflow-y-auto {
   background: var(--subtle);
   overflow: hidden;
   display: flex;
-  gap: 3px;
+  gap: 4px;
   margin-top: 16px;
 }
 .mini-progress span {
@@ -877,12 +885,12 @@ dialog > .flex > .overflow-y-auto {
   background: var(--action);
 }
 .mini-progress span:nth-child(2) {
-  background: #8fc0ff;
+  background: var(--color-line);
 }
 .dashboard-columns {
   display: grid;
   grid-template-columns: minmax(0, 1.8fr) minmax(280px, 1fr);
-  gap: 22px;
+  gap: 24px;
   align-items: start;
 }
 .dashboard-columns > * {
@@ -892,25 +900,25 @@ dialog > .flex > .overflow-y-auto {
   background: var(--surface);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
-  padding: 25px;
+  padding: 24px;
 }
 .panel-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
   margin-bottom: 20px;
 }
 .panel-heading h2 {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
   font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.04em;
 }
 .panel-heading h2 > span {
-  color: var(--color-brand);
+  color: inherit;
   font-size: 15px;
 }
 .panel-heading > a,
@@ -923,15 +931,15 @@ dialog > .flex > .overflow-y-auto {
 }
 .todo-filters {
   display: flex;
-  gap: 6px;
-  padding-bottom: 9px;
-  margin-bottom: 5px;
+  gap: 8px;
+  padding-bottom: 8px;
+  margin-bottom: 4px;
   overflow-x: auto;
 }
 .todo-filters button {
   background: var(--subtle);
   color: var(--color-muted);
-  padding: 7px 12px;
+  padding: 8px 12px;
   border-radius: 8px;
   font-size: 11px;
   white-space: nowrap;
@@ -945,7 +953,7 @@ dialog > .flex > .overflow-y-auto {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 17px 0;
+  padding: 16px 0;
   border-bottom: 1px solid var(--color-line);
 }
 .todo-row-icon {
@@ -980,8 +988,8 @@ dialog > .flex > .overflow-y-auto {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 5px;
+  gap: 8px;
+  margin-bottom: 4px;
   font-size: 10px;
   color: var(--color-muted);
 }
@@ -1002,7 +1010,7 @@ dialog > .flex > .overflow-y-auto {
   gap: 4px;
   white-space: nowrap;
   border-radius: 8px;
-  padding: 9px 8px;
+  padding: 8px 8px;
 }
 .todo-row > a:hover {
   background: var(--subtle);
@@ -1012,9 +1020,9 @@ dialog > .flex > .overflow-y-auto {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   width: 100%;
-  padding: 17px 0 0;
+  padding: 16px 0 0;
   font-size: 12px;
   color: var(--color-muted);
 }
@@ -1024,7 +1032,7 @@ dialog > .flex > .overflow-y-auto {
   gap: 12px;
   background: var(--color-brand-soft);
   border-radius: 13px;
-  padding: 15px;
+  padding: 16px;
   margin-top: 20px;
 }
 .onboarding-strip > svg {
@@ -1047,7 +1055,7 @@ dialog > .flex > .overflow-y-auto {
 }
 .dashboard-side {
   display: grid;
-  gap: 22px;
+  gap: 24px;
 }
 .calendar-header {
   display: flex;
@@ -1062,7 +1070,7 @@ dialog > .flex > .overflow-y-auto {
 .calendar-header > div {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
 }
 .calendar-header .icon-button {
   width: 26px;
@@ -1072,13 +1080,13 @@ dialog > .flex > .overflow-y-auto {
 .mini-calendar {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 3px 2px;
+  gap: 4px 4px;
   text-align: center;
 }
 .calendar-weekday {
   color: var(--color-muted);
   font-size: 10px;
-  padding-bottom: 10px;
+  padding-bottom: 12px;
 }
 .mini-calendar button {
   display: grid;
@@ -1101,7 +1109,7 @@ dialog > .flex > .overflow-y-auto {
 }
 .mini-calendar button.selected {
   background: var(--action);
-  color: #fff;
+  color: var(--on-action);
 }
 .mini-calendar button.has-deadline::after {
   content: '';
@@ -1114,15 +1122,15 @@ dialog > .flex > .overflow-y-auto {
 }
 .calendar-events {
   display: grid;
-  gap: 15px;
+  gap: 16px;
   margin-top: 20px;
-  padding-top: 18px;
+  padding-top: 20px;
   border-top: 1px solid var(--color-line);
 }
 .calendar-event {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 .calendar-event > i {
   display: block;
@@ -1154,11 +1162,11 @@ dialog > .flex > .overflow-y-auto {
   background: var(--color-warn-soft);
   color: var(--color-warn);
   border-radius: 5px;
-  padding: 3px 5px;
+  padding: 4px 4px;
   font-weight: 600;
 }
 .guide-callout {
-  padding: 23px;
+  padding: 24px;
   border-radius: var(--radius-card);
   background: var(--color-brand-soft);
   position: relative;
@@ -1187,13 +1195,13 @@ dialog > .flex > .overflow-y-auto {
   font-size: 16px;
   line-height: 1.5;
   font-weight: 700;
-  margin-top: 6px;
+  margin-top: 8px;
 }
 .guide-callout button {
   margin-top: 16px;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   color: var(--color-brand);
   font-size: 11px;
   font-weight: 650;
@@ -1202,15 +1210,15 @@ dialog > .flex > .overflow-y-auto {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
-  margin-top: 22px;
+  margin-top: 24px;
 }
 .quick-action {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 18px 6px;
+  gap: 12px;
+  padding: 20px 8px;
   border: 1px solid var(--color-line);
   background: var(--surface);
   border-radius: 16px;
@@ -1246,7 +1254,7 @@ dialog > .flex > .overflow-y-auto {
   background: var(--color-warn-soft);
 }
 .schedule-panel {
-  margin-top: 22px;
+  margin-top: 24px;
 }
 .week-table {
   min-width: 670px;
@@ -1258,7 +1266,7 @@ dialog > .flex > .overflow-y-auto {
   color: var(--color-muted);
   font-size: 10px;
   font-weight: 500;
-  padding: 10px 7px 15px;
+  padding: 12px 8px 16px;
 }
 .week-table th:first-child,
 .week-table td:first-child {
@@ -1269,14 +1277,14 @@ dialog > .flex > .overflow-y-auto {
 }
 .week-table td {
   border-top: 1px solid var(--color-line);
-  padding: 15px 7px;
+  padding: 16px 8px;
 }
 .week-table .shift-time {
   display: inline-block;
   background: var(--color-brand-soft);
   color: var(--color-brand);
   border-radius: 7px;
-  padding: 7px 9px;
+  padding: 8px 8px;
   white-space: nowrap;
 }
 .employee-cell {
@@ -1307,7 +1315,7 @@ dialog > .flex > .overflow-y-auto {
 .today-worker {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   padding: 12px 0;
 }
 .today-worker > span:nth-child(2) {
@@ -1326,15 +1334,15 @@ dialog > .flex > .overflow-y-auto {
   font-size: 10px;
   background: var(--subtle);
   color: var(--color-muted);
-  padding: 4px 7px;
+  padding: 4px 8px;
   border-radius: 6px;
   font-weight: 500;
 }
 .notification-list li {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 15px 0;
+  gap: 12px;
+  padding: 16px 0;
   border-top: 1px solid var(--color-line);
   font-size: 12px;
 }
@@ -1349,14 +1357,14 @@ dialog > .flex > .overflow-y-auto {
   height: 6px;
   border-radius: 50%;
   background: var(--color-brand);
-  margin-top: 6px;
+  margin-top: 8px;
   flex-shrink: 0;
 }
 .empty-copy {
   color: var(--color-muted);
   font-size: 12px;
   line-height: 1.8;
-  padding: 14px 0;
+  padding: 16px 0;
 }
 .checkup-progress {
   width: 70px;
@@ -1379,7 +1387,7 @@ dialog > .flex > .overflow-y-auto {
 .checkup-summary {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 20px;
 }
 .checkup-summary p {
   font-size: 12px;
@@ -1390,17 +1398,17 @@ dialog > .flex > .overflow-y-auto {
 .public-header {
   background: var(--surface);
   border-bottom: 1px solid var(--color-line);
-  position: sticky;
-  top: 0;
+  position: relative;
+  top: var(--public-header-top);
   z-index: 30;
 }
 .public-header-main {
   display: flex;
   align-items: center;
-  gap: 45px;
+  gap: 44px;
   max-width: 1280px;
   margin: auto;
-  padding: 22px 30px;
+  padding: 24px 32px;
 }
 .public-header-main .global-search {
   flex: 1;
@@ -1413,7 +1421,7 @@ dialog > .flex > .overflow-y-auto {
 .public-nav {
   max-width: 1280px;
   margin: auto;
-  padding: 15px 30px;
+  padding: 16px 32px;
   border-top: 1px solid var(--color-line);
   display: flex;
   align-items: center;
@@ -1428,14 +1436,14 @@ dialog > .flex > .overflow-y-auto {
 .nav-app-link {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   color: var(--color-brand);
 }
 .public-nav-note {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-weight: 400;
   color: var(--color-muted);
   font-size: 11px;
@@ -1473,7 +1481,7 @@ dialog > .flex > .overflow-y-auto {
 .eyebrow {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   color: var(--color-brand);
   font-size: 12px;
   font-weight: 650;
@@ -1484,10 +1492,10 @@ dialog > .flex > .overflow-y-auto {
   font-weight: 700;
   line-height: 1.35;
   letter-spacing: -0.04em;
-  margin-top: 21px;
+  margin-top: 20px;
 }
 .landing-hero h1 span {
-  color: var(--color-brand);
+  color: inherit;
 }
 .landing-hero-copy > p {
   margin-top: 24px;
@@ -1497,22 +1505,22 @@ dialog > .flex > .overflow-y-auto {
 }
 .hero-actions {
   display: flex;
-  gap: 10px;
-  margin-top: 29px;
+  gap: 12px;
+  margin-top: 28px;
 }
 .hero-actions .ui-button {
   min-height: 52px;
-  padding-inline: 22px;
+  padding-inline: 24px;
   font-size: 14px;
   border-radius: 14px;
 }
 .hero-caption {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   color: var(--color-muted);
   font-size: 11px;
-  margin-top: 15px;
+  margin-top: 16px;
 }
 .hero-art {
   position: relative;
@@ -1542,12 +1550,12 @@ dialog > .flex > .overflow-y-auto {
   border-radius: 12px;
   padding: 28px;
   transform: rotate(-1deg);
-  box-shadow: 0 14px 36px #29332d12;
+  box-shadow: 0 14px 36px var(--action-ring);
 }
 .preview-top {
   display: flex;
   gap: 4px;
-  margin-bottom: 22px;
+  margin-bottom: 24px;
   align-items: center;
 }
 .preview-top > i {
@@ -1565,7 +1573,7 @@ dialog > .flex > .overflow-y-auto {
   font-size: 18px;
   font-weight: 750;
   line-height: 1.5;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 .preview-heading small {
   display: block;
@@ -1576,12 +1584,12 @@ dialog > .flex > .overflow-y-auto {
 .preview-stats {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 12px;
 }
 .preview-stats > div {
   background: var(--subtle);
   border-radius: 12px;
-  padding: 15px;
+  padding: 16px;
 }
 .preview-stats > div:first-child {
   background: var(--color-brand-soft);
@@ -1594,18 +1602,18 @@ dialog > .flex > .overflow-y-auto {
 .preview-stats b {
   display: block;
   font-size: 19px;
-  margin-top: 9px;
+  margin-top: 8px;
   color: var(--color-brand);
 }
 .preview-list-title {
   font-size: 11px;
   font-weight: 650;
-  margin: 20px 0 3px;
+  margin: 20px 0 4px;
 }
 .preview-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   border-bottom: 1px solid var(--color-line);
   padding: 12px 0;
   font-size: 10px;
@@ -1623,7 +1631,7 @@ dialog > .flex > .overflow-y-auto {
   margin-left: auto;
   background: var(--color-warn-soft);
   color: var(--color-warn);
-  padding: 3px 6px;
+  padding: 4px 8px;
   border-radius: 5px;
   font-size: 8px;
 }
@@ -1631,30 +1639,30 @@ dialog > .flex > .overflow-y-auto {
   border-top: 1px solid var(--color-line);
 }
 .landing-section {
-  padding-top: 70px;
-  padding-bottom: 70px;
+  padding-top: 72px;
+  padding-bottom: 72px;
 }
 .landing-section h2 {
   font-size: clamp(27px, 3vw, 36px);
   line-height: 1.4;
   font-weight: 750;
   letter-spacing: -0.055em;
-  margin-top: 13px;
+  margin-top: 12px;
 }
 .section-description {
   font-size: 14px;
   color: var(--color-muted);
   line-height: 1.8;
-  margin-top: 14px;
+  margin-top: 16px;
 }
 .feature-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
-  margin-top: 35px;
+  margin-top: 36px;
 }
 .feature-tile {
-  padding: 27px;
+  padding: 28px;
   border-radius: 21px;
   background: var(--color-canvas);
   transition: transform 0.2s;
@@ -1670,7 +1678,7 @@ dialog > .flex > .overflow-y-auto {
   border-radius: 14px;
   background: var(--color-brand-soft);
   color: var(--color-brand);
-  margin-bottom: 19px;
+  margin-bottom: 20px;
 }
 .feature-tile h3 {
   font-size: 16px;
@@ -1680,7 +1688,7 @@ dialog > .flex > .overflow-y-auto {
   font-size: 12px;
   line-height: 1.8;
   color: var(--color-muted);
-  margin-top: 10px;
+  margin-top: 12px;
 }
 .diagnosis-section {
   background: var(--color-canvas);
@@ -1688,7 +1696,7 @@ dialog > .flex > .overflow-y-auto {
 .diagnosis-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 70px;
+  gap: 72px;
   align-items: center;
 }
 .diagnosis-box {
@@ -1707,21 +1715,21 @@ dialog > .flex > .overflow-y-auto {
 .diagnosis-box [role='radio'],
 .diagnosis-box [role='checkbox'] {
   text-align: left;
-  padding: 14px 17px;
+  padding: 16px 16px;
   min-height: 48px;
   border-radius: 13px;
 }
 .diagnosis-checks {
   display: grid;
-  gap: 15px;
-  margin-top: 26px;
+  gap: 16px;
+  margin-top: 28px;
   color: var(--text-secondary);
   font-size: 13px;
 }
 .diagnosis-checks > span {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
 }
 .diagnosis-checks svg {
   color: var(--color-brand);
@@ -1730,14 +1738,14 @@ dialog > .flex > .overflow-y-auto {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 40px;
-  padding: 35px 0;
+  padding: 36px 0;
   margin-top: 20px;
   border-bottom: 1px solid var(--color-line);
 }
 .principle-row h3 {
   font-size: 16px;
   font-weight: 650;
-  margin: 14px 0 10px;
+  margin: 16px 0 12px;
 }
 .principle-row p {
   font-size: 12px;
@@ -1752,11 +1760,11 @@ dialog > .flex > .overflow-y-auto {
   margin: auto;
 }
 .faq-list {
-  margin-top: 27px;
+  margin-top: 28px;
 }
 .faq-list details {
   border-bottom: 1px solid var(--color-line);
-  padding: 23px 0;
+  padding: 24px 0;
 }
 .faq-list summary {
   list-style: none;
@@ -1779,12 +1787,12 @@ dialog > .flex > .overflow-y-auto {
   font-size: 13px;
   line-height: 1.9;
   color: var(--color-muted);
-  margin-top: 17px;
+  margin-top: 16px;
   animation: fade-in 0.2s;
 }
 .landing-cta {
   border-radius: 27px;
-  padding: 45px;
+  padding: 44px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1801,8 +1809,8 @@ dialog > .flex > .overflow-y-auto {
   font-size: 13px;
 }
 .landing-footer {
-  padding-top: 35px;
-  padding-bottom: 35px;
+  padding-top: 36px;
+  padding-bottom: 36px;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -1832,8 +1840,8 @@ dialog > .flex > .overflow-y-auto {
   grid-template-columns: 1fr 1fr;
   max-width: 1120px;
   margin: auto;
-  padding: 55px 30px 65px;
-  gap: 90px;
+  padding: 56px 32px 64px;
+  gap: 92px;
   align-items: start;
 }
 .auth-story {
@@ -1845,14 +1853,14 @@ dialog > .flex > .overflow-y-auto {
   font-size: 38px;
   font-weight: 750;
   line-height: 1.4;
-  margin-top: 18px;
+  margin-top: 20px;
   letter-spacing: -0.055em;
 }
 .auth-story h1 span {
-  color: var(--color-brand);
+  color: inherit;
 }
 .auth-story > p {
-  margin-top: 18px;
+  margin-top: 20px;
   font-size: 14px;
   line-height: 1.8;
   color: var(--color-muted);
@@ -1860,8 +1868,8 @@ dialog > .flex > .overflow-y-auto {
 .auth-art {
   background: var(--color-brand-soft);
   border-radius: 30px;
-  padding: 30px;
-  margin-top: 33px;
+  padding: 32px;
+  margin-top: 32px;
 }
 .auth-art-title {
   display: flex;
@@ -1869,13 +1877,13 @@ dialog > .flex > .overflow-y-auto {
   justify-content: space-between;
   font-size: 14px;
   font-weight: 600;
-  margin-bottom: 22px;
+  margin-bottom: 24px;
 }
 .auth-art-title > span {
   font-size: 10px;
   color: var(--color-brand);
   background: var(--surface);
-  padding: 3px 7px;
+  padding: 4px 8px;
   border-radius: 5px;
 }
 .auth-art-step {
@@ -1883,7 +1891,7 @@ dialog > .flex > .overflow-y-auto {
   align-items: center;
   gap: 12px;
   font-size: 12px;
-  padding: 13px 0;
+  padding: 12px 0;
 }
 .auth-art-step > span {
   width: 35px;
@@ -1920,7 +1928,7 @@ dialog > .flex > .overflow-y-auto {
   margin-bottom: 28px;
 }
 .auth-tabs a {
-  padding: 15px 0;
+  padding: 16px 0;
   margin-right: 28px;
   font-size: 18px;
   font-weight: 650;
@@ -1937,14 +1945,14 @@ dialog > .flex > .overflow-y-auto {
   letter-spacing: -0.045em;
 }
 .auth-form-sub {
-  margin: 9px 0 24px;
+  margin: 8px 0 24px;
   color: var(--color-muted);
   font-size: 12px;
   line-height: 1.8;
 }
 .auth-fields {
   display: grid;
-  gap: 18px;
+  gap: 20px;
 }
 .auth-field > label {
   display: block;
@@ -1956,7 +1964,7 @@ dialog > .flex > .overflow-y-auto {
 .auth-input {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   border: 1px solid var(--color-line);
   border-radius: 12px;
   padding: 0 16px;
@@ -1988,12 +1996,12 @@ dialog > .flex > .overflow-y-auto {
   justify-content: space-between;
   font-size: 11px;
   color: var(--color-muted);
-  margin: 18px 0;
+  margin: 20px 0;
 }
 .auth-options > span {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
 }
 .auth-options > button:hover {
   color: var(--color-brand);
@@ -2007,10 +2015,10 @@ dialog > .flex > .overflow-y-auto {
 .auth-divider {
   display: flex;
   align-items: center;
-  gap: 13px;
+  gap: 12px;
   color: var(--color-muted);
   font-size: 10px;
-  margin: 22px 0;
+  margin: 24px 0;
 }
 .auth-divider::before,
 .auth-divider::after {
@@ -2024,24 +2032,24 @@ dialog > .flex > .overflow-y-auto {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 9px;
+  gap: 8px;
   border-radius: 13px;
   min-height: 51px;
   font-size: 13px;
-  background: #fee500;
-  color: #271f00;
+  background: var(--color-kakao);
+  color: var(--kakao-ink);
   font-weight: 600;
 }
 .kakao-login > span {
   font-weight: 400;
   font-size: 9px;
-  padding: 3px 5px;
+  padding: 4px 4px;
   border-radius: 4px;
-  background: #c5b1003b;
+  background: var(--kakao-ring);
 }
 .auth-notice {
-  padding: 13px 15px;
-  margin-top: 17px;
+  padding: 12px 16px;
+  margin-top: 16px;
   border-radius: 12px;
   background: var(--color-brand-soft);
   color: var(--color-info);
@@ -2049,7 +2057,7 @@ dialog > .flex > .overflow-y-auto {
   line-height: 1.8;
 }
 .auth-error {
-  margin-top: 7px;
+  margin-top: 8px;
   font-size: 11px;
   color: var(--color-risk);
 }
@@ -2058,12 +2066,12 @@ dialog > .flex > .overflow-y-auto {
   background: var(--color-canvas);
   padding: 20px;
   border-radius: 16px;
-  margin-top: 25px;
+  margin-top: 24px;
 }
 .demo-entry-title {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   font-size: 13px;
   font-weight: 650;
 }
@@ -2073,7 +2081,7 @@ dialog > .flex > .overflow-y-auto {
 .demo-entry > p {
   font-size: 11px;
   color: var(--color-muted);
-  margin: 8px 0 15px;
+  margin: 8px 0 16px;
   line-height: 1.8;
 }
 .demo-entry > .ui-button {
@@ -2081,23 +2089,23 @@ dialog > .flex > .overflow-y-auto {
   background: var(--surface);
   border: 1px solid var(--color-line);
   color: var(--color-brand);
-  margin-top: 7px;
+  margin-top: 8px;
 }
 .demo-entry > .ui-button.primary {
   background: var(--action);
-  color: #fff;
+  color: var(--on-action);
   border-color: transparent;
 }
 .auth-extra {
-  margin-top: 26px;
+  margin-top: 28px;
   font-size: 11px;
 }
 .auth-extra summary {
   color: var(--color-muted);
-  padding: 10px 0;
+  padding: 12px 0;
 }
 .auth-extra-content {
-  padding: 15px 0;
+  padding: 16px 0;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -2111,25 +2119,25 @@ dialog > .flex > .overflow-y-auto {
   font-size: 10px;
   color: var(--color-muted);
   text-align: center;
-  margin-top: 23px;
+  margin-top: 24px;
   line-height: 1.8;
 }
 
 .guide-tabs {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 7px;
+  gap: 8px;
   margin-bottom: 20px;
 }
 .guide-tabs button {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   justify-content: center;
   border-radius: 10px;
   background: var(--subtle);
   font-size: 10px;
-  padding: 10px 4px;
+  padding: 12px 4px;
   color: var(--color-muted);
 }
 .guide-tabs button span {
@@ -2148,7 +2156,7 @@ dialog > .flex > .overflow-y-auto {
 }
 .guide-tabs button.active span {
   background: var(--action);
-  color: #fff;
+  color: var(--on-action);
 }
 .guide-scene {
   background: var(--color-canvas);
@@ -2156,7 +2164,7 @@ dialog > .flex > .overflow-y-auto {
   border-radius: 18px;
   height: 270px;
   display: flex;
-  padding: 15px 22px 24px 16px;
+  padding: 16px 24px 24px 16px;
   gap: 20px;
   position: relative;
   overflow: hidden;
@@ -2167,10 +2175,10 @@ dialog > .flex > .overflow-y-auto {
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  padding-top: 7px;
+  padding-top: 8px;
 }
 .guide-mini-sidebar > .brand-lockup {
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 .guide-mini-sidebar .brand-symbol {
   width: 21px;
@@ -2192,7 +2200,7 @@ dialog > .flex > .overflow-y-auto {
   min-width: 0;
   flex: 1;
   position: relative;
-  padding: 13px 0;
+  padding: 12px 0;
 }
 .guide-eyebrow {
   font-size: 12px;
@@ -2203,13 +2211,13 @@ dialog > .flex > .overflow-y-auto {
   background: var(--color-line);
   width: 35%;
   border-radius: 4px;
-  margin: 10px 0 20px;
+  margin: 12px 0 20px;
 }
 .guide-demo-row {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 13px;
+  gap: 8px;
+  padding: 12px;
   background: var(--surface);
   border: 1px solid var(--color-line);
   border-radius: 12px;
@@ -2220,7 +2228,7 @@ dialog > .flex > .overflow-y-auto {
   flex: 1;
 }
 .guide-demo-row > b {
-  padding: 7px 9px;
+  padding: 8px 8px;
   background: var(--color-brand-soft);
   color: var(--color-brand);
   font-size: 9px;
@@ -2252,10 +2260,10 @@ dialog > .flex > .overflow-y-auto {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   background: var(--color-ok-soft);
   color: var(--color-ok);
-  padding: 10px;
+  padding: 12px;
   font-size: 10px;
   border-radius: 10px;
   opacity: 0;
@@ -2276,8 +2284,8 @@ dialog > .flex > .overflow-y-auto {
   justify-content: space-between;
   background: var(--surface);
   border-radius: 8px;
-  margin: 7px 0;
-  padding: 9px 12px;
+  margin: 8px 0;
+  padding: 8px 12px;
   font-size: 10px;
 }
 .guide-input span {
@@ -2288,8 +2296,8 @@ dialog > .flex > .overflow-y-auto {
 }
 .guide-demo-cta {
   background: var(--action);
-  color: #fff;
-  padding: 10px 15px;
+  color: var(--on-action);
+  padding: 12px 16px;
   text-align: center;
   font-size: 10px;
   border-radius: 8px;
@@ -2297,14 +2305,14 @@ dialog > .flex > .overflow-y-auto {
 }
 .guide-week {
   display: flex;
-  gap: 6px;
-  margin-bottom: 15px;
+  gap: 8px;
+  margin-bottom: 16px;
 }
 .guide-week > span {
   background: var(--surface);
   border: 1px solid var(--color-line);
   border-radius: 8px;
-  padding: 10px 3px;
+  padding: 12px 4px;
   text-align: center;
   font-size: 9px;
   flex: 1;
@@ -2313,7 +2321,7 @@ dialog > .flex > .overflow-y-auto {
 .guide-week b {
   display: block;
   font-size: 9px;
-  margin-top: 10px;
+  margin-top: 12px;
 }
 .guide-week .today {
   background: var(--color-brand-soft);
@@ -2323,7 +2331,7 @@ dialog > .flex > .overflow-y-auto {
 .guide-pay {
   background: var(--surface);
   border-radius: 12px;
-  padding: 18px;
+  padding: 20px;
 }
 .guide-pay > span {
   font-size: 10px;
@@ -2333,26 +2341,26 @@ dialog > .flex > .overflow-y-auto {
   display: block;
   font-size: 25px;
   font-weight: 750;
-  margin-top: 6px;
+  margin-top: 8px;
 }
 .guide-pay small {
   font-size: 13px;
-  margin-left: 3px;
+  margin-left: 4px;
   font-weight: 500;
 }
 .guide-copy {
-  margin: 23px 0;
+  margin: 24px 0;
 }
 .guide-copy > span {
   color: var(--color-brand);
   font-weight: 650;
-  letter-spacing: 0.07em;
+  letter-spacing: 0;
   font-size: 10px;
 }
 .guide-copy h3 {
   font-size: 21px;
   font-weight: 700;
-  margin: 8px 0 9px;
+  margin: 8px 0 8px;
 }
 .guide-copy p {
   font-size: 13px;
@@ -2368,14 +2376,14 @@ dialog > .flex > .overflow-y-auto {
   margin-right: auto;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 .guide-dots > button {
   width: 7px;
   height: 7px;
   border-radius: 5px;
   background: var(--color-line);
-  transition: width 0.2s;
+  transition: background-color var(--dur-short);
 }
 .guide-dots > button.active {
   width: 20px;
@@ -2501,10 +2509,10 @@ dialog > .flex > .overflow-y-auto {
   }
   .stat-card {
     min-height: 185px;
-    padding: 27px 30px;
+    padding: 28px 32px;
   }
   .dashboard-panel {
-    padding: 29px;
+    padding: 28px;
   }
   .todo-row {
     padding: 20px 0;
@@ -2513,7 +2521,7 @@ dialog > .flex > .overflow-y-auto {
 @media (max-width: 1199px) {
   .app-header {
     gap: 20px;
-    padding-inline: 18px;
+    padding-inline: 20px;
   }
   .app-brand {
     width: 210px;
@@ -2525,16 +2533,16 @@ dialog > .flex > .overflow-y-auto {
     padding-inline: 12px;
   }
   .workspace-main {
-    padding-inline: 25px;
+    padding-inline: 24px;
   }
   .breadcrumb {
-    padding-inline: 25px;
+    padding-inline: 24px;
   }
   .demo-date {
     display: none;
   }
   .demo-bar-inner {
-    padding-inline: 25px;
+    padding-inline: 24px;
   }
   .stat-grid {
     gap: 12px;
@@ -2547,16 +2555,16 @@ dialog > .flex > .overflow-y-auto {
     grid-template-columns: minmax(0, 1.6fr) minmax(255px, 1fr);
   }
   .dashboard-panel {
-    padding: 21px;
+    padding: 20px;
   }
   .public-header-main {
-    gap: 25px;
+    gap: 24px;
   }
   .public-nav-note {
     display: none;
   }
   .auth-layout {
-    gap: 65px;
+    gap: 64px;
   }
 }
 @media (max-width: 1023px) {
@@ -2573,7 +2581,7 @@ dialog > .flex > .overflow-y-auto {
     max-width: none;
   }
   .workspace-main {
-    padding-bottom: 30px;
+    padding-bottom: 32px;
   }
   .app-footer {
     padding-bottom: 100px;
@@ -2593,10 +2601,10 @@ dialog > .flex > .overflow-y-auto {
     display: flex;
     align-items: center;
     flex-direction: column;
-    gap: 5px;
+    gap: 4px;
     color: var(--color-muted);
     font-size: 10px;
-    padding: 13px 0;
+    padding: 12px 0;
   }
   .mobile-bottom-nav a.active {
     color: var(--color-brand);
@@ -2611,7 +2619,7 @@ dialog > .flex > .overflow-y-auto {
   .public-header-main {
     flex-wrap: wrap;
     gap: 16px;
-    padding: 17px 24px;
+    padding: 16px 24px;
   }
   .public-header-main > a {
     margin-right: auto;
@@ -2626,8 +2634,8 @@ dialog > .flex > .overflow-y-auto {
     padding-inline: 24px;
   }
   .landing-hero {
-    padding-top: 42px;
-    padding-bottom: 50px;
+    padding-top: 44px;
+    padding-bottom: 52px;
   }
   .landing-hero h1 {
     font-size: 36px;
@@ -2636,7 +2644,7 @@ dialog > .flex > .overflow-y-auto {
     min-height: 350px;
   }
   .product-preview {
-    padding: 17px;
+    padding: 16px;
   }
   .landing-hero-copy > p {
     font-size: 14px;
@@ -2650,7 +2658,7 @@ dialog > .flex > .overflow-y-auto {
   }
   .auth-layout {
     gap: 40px;
-    padding-top: 35px;
+    padding-top: 36px;
   }
   .auth-story {
     top: 220px;
@@ -2664,12 +2672,12 @@ dialog > .flex > .overflow-y-auto {
     --header-height: 68px;
   }
   .app-header {
-    padding: 11px 15px;
+    padding: 12px 16px;
     gap: 12px;
     flex-wrap: wrap;
   }
   .app-brand {
-    gap: 6px;
+    gap: 8px;
     margin-right: auto;
   }
   .brand-lockup {
@@ -2686,7 +2694,7 @@ dialog > .flex > .overflow-y-auto {
   .app-header .global-search {
     order: 3;
     width: 100%;
-    padding-block: 11px;
+    padding-block: 12px;
     border-radius: 11px;
     font-size: 12px;
   }
@@ -2694,10 +2702,10 @@ dialog > .flex > .overflow-y-auto {
     position: relative;
   }
   .app-header .header-actions {
-    gap: 1px;
+    gap: 0px;
   }
   .profile-button {
-    padding-left: 6px;
+    padding-left: 8px;
     margin-left: 0;
   }
   .profile-button > span:not(.profile-avatar),
@@ -2714,8 +2722,8 @@ dialog > .flex > .overflow-y-auto {
     height: 30px;
   }
   .demo-bar-inner {
-    padding: 9px 18px;
-    gap: 6px;
+    padding: 8px 20px;
+    gap: 8px;
   }
   .demo-description {
     flex-basis: calc(100% - 50px);
@@ -2724,7 +2732,7 @@ dialog > .flex > .overflow-y-auto {
     margin-left: auto;
     position: absolute;
     right: 18px;
-    margin-top: 38px;
+    margin-top: 40px;
     font-size: 10px;
     z-index: 1;
   }
@@ -2737,13 +2745,13 @@ dialog > .flex > .overflow-y-auto {
     border: 1px solid var(--color-line);
   }
   .breadcrumb {
-    margin-top: 19px;
-    margin-bottom: 22px;
+    margin-top: 20px;
+    margin-bottom: 24px;
     padding-inline: 20px;
     font-size: 10px;
   }
   .workspace-main {
-    padding-inline: 18px;
+    padding-inline: 20px;
   }
   .dashboard-heading {
     margin-bottom: 20px;
@@ -2764,15 +2772,15 @@ dialog > .flex > .overflow-y-auto {
     flex: 1;
     font-size: 12px;
     min-height: 42px;
-    padding: 11px 10px;
+    padding: 12px 12px;
   }
   .stat-grid {
     grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    gap: 12px;
     margin-bottom: 16px;
   }
   .stat-card {
-    padding: 18px;
+    padding: 20px;
     min-height: 144px;
     border-radius: 18px;
   }
@@ -2794,7 +2802,7 @@ dialog > .flex > .overflow-y-auto {
   }
   .stat-value {
     font-size: 29px;
-    margin: 13px 0 10px;
+    margin: 12px 0 12px;
   }
   .stat-card-title {
     font-size: 11px;
@@ -2827,11 +2835,11 @@ dialog > .flex > .overflow-y-auto {
     font-size: 17px;
   }
   .panel-heading {
-    margin-bottom: 17px;
+    margin-bottom: 16px;
   }
   .todo-row {
-    gap: 10px;
-    padding: 17px 0;
+    gap: 12px;
+    padding: 16px 0;
   }
   .todo-row-icon {
     width: 34px;
@@ -2847,7 +2855,7 @@ dialog > .flex > .overflow-y-auto {
   }
   .todo-row > a {
     font-size: 0;
-    padding: 7px 0 7px 6px;
+    padding: 8px 0 8px 8px;
   }
   .todo-row > a > svg {
     width: 17px;
@@ -2869,14 +2877,14 @@ dialog > .flex > .overflow-y-auto {
     font-size: 10px;
   }
   .quick-actions {
-    gap: 7px;
-    margin-top: 15px;
+    gap: 8px;
+    margin-top: 16px;
   }
   .quick-action {
-    padding: 14px 3px;
+    padding: 16px 4px;
     font-size: 9px;
     border-radius: 13px;
-    gap: 7px;
+    gap: 8px;
   }
   .calendar-panel {
     margin-top: 0;
@@ -2896,7 +2904,7 @@ dialog > .flex > .overflow-y-auto {
     font-size: 12px;
   }
   .app-footer {
-    padding: 23px 20px 100px;
+    padding: 24px 20px 100px;
     gap: 8px;
     font-size: 9px;
   }
@@ -2905,31 +2913,31 @@ dialog > .flex > .overflow-y-auto {
   }
   .public-header-main {
     padding: 16px 20px;
-    gap: 14px;
+    gap: 16px;
   }
   .public-header-main .header-actions {
-    gap: 2px;
+    gap: 4px;
   }
   .public-header-main .header-actions > .icon-button:first-child {
     display: none;
   }
   .header-login {
     font-size: 11px;
-    padding: 10px 7px;
+    padding: 12px 8px;
   }
   .header-signup {
     font-size: 11px;
     min-height: 34px;
-    padding: 9px 11px;
+    padding: 8px 12px;
     border-radius: 9px;
   }
   .public-header-main .global-search {
-    padding: 11px 15px;
+    padding: 12px 16px;
     font-size: 12px;
   }
   .public-nav {
-    padding: 13px 20px;
-    gap: 23px;
+    padding: 12px 20px;
+    gap: 24px;
     overflow-x: auto;
     font-size: 11px;
     white-space: nowrap;
@@ -2945,13 +2953,13 @@ dialog > .flex > .overflow-y-auto {
   }
   .landing-hero {
     grid-template-columns: 1fr;
-    padding-top: 38px;
-    gap: 30px;
-    padding-bottom: 38px;
+    padding-top: 40px;
+    gap: 32px;
+    padding-bottom: 40px;
   }
   .landing-hero h1 {
     font-size: 35px;
-    margin-top: 18px;
+    margin-top: 20px;
   }
   .eyebrow {
     font-size: 11px;
@@ -2962,12 +2970,12 @@ dialog > .flex > .overflow-y-auto {
     margin-top: 20px;
   }
   .hero-actions {
-    margin-top: 23px;
+    margin-top: 24px;
   }
   .hero-actions .ui-button {
     flex: 1;
     min-height: 49px;
-    padding-inline: 14px;
+    padding-inline: 16px;
     font-size: 12px;
   }
   .hero-caption {
@@ -2975,7 +2983,7 @@ dialog > .flex > .overflow-y-auto {
   }
   .hero-art {
     min-height: 365px;
-    margin: 0 2px;
+    margin: 0 4px;
   }
   .product-preview {
     max-width: 91%;
@@ -2992,8 +3000,8 @@ dialog > .flex > .overflow-y-auto {
     border-radius: 17px;
   }
   .landing-section {
-    padding-top: 47px;
-    padding-bottom: 47px;
+    padding-top: 48px;
+    padding-bottom: 48px;
   }
   .landing-section h2 {
     font-size: 29px;
@@ -3003,15 +3011,15 @@ dialog > .flex > .overflow-y-auto {
   }
   .feature-grid {
     grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-top: 26px;
+    gap: 12px;
+    margin-top: 28px;
   }
   .feature-tile {
     padding: 20px 16px;
     border-radius: 17px;
   }
   .feature-tile > span {
-    margin-bottom: 14px;
+    margin-bottom: 16px;
     width: 36px;
     height: 36px;
     border-radius: 11px;
@@ -3024,7 +3032,7 @@ dialog > .flex > .overflow-y-auto {
   }
   .diagnosis-grid {
     grid-template-columns: 1fr;
-    gap: 30px;
+    gap: 32px;
   }
   .diagnosis-box {
     padding: 24px;
@@ -3032,7 +3040,7 @@ dialog > .flex > .overflow-y-auto {
   }
   .principle-row {
     grid-template-columns: 1fr;
-    gap: 25px;
+    gap: 24px;
   }
   .principle-row > div {
     display: grid;
@@ -3053,7 +3061,7 @@ dialog > .flex > .overflow-y-auto {
     font-size: 12px;
   }
   .landing-cta {
-    padding: 29px 24px;
+    padding: 28px 24px;
     flex-direction: column;
     align-items: flex-start;
     border-radius: var(--radius-card);
@@ -3071,8 +3079,8 @@ dialog > .flex > .overflow-y-auto {
   }
   .auth-layout {
     grid-template-columns: 1fr;
-    padding: 28px 24px 50px;
-    gap: 25px;
+    padding: 28px 24px 52px;
+    gap: 24px;
   }
   .auth-story {
     position: static;
@@ -3084,7 +3092,7 @@ dialog > .flex > .overflow-y-auto {
   }
   .auth-story > p {
     font-size: 12px;
-    margin-top: 13px;
+    margin-top: 12px;
   }
   .auth-art {
     display: none;
@@ -3109,23 +3117,23 @@ dialog > .flex > .overflow-y-auto {
   }
   .guide-tabs button {
     font-size: 9px;
-    gap: 3px;
-    padding: 9px 2px;
+    gap: 4px;
+    padding: 8px 4px;
     flex-direction: column;
   }
   .guide-scene {
     gap: 12px;
-    padding: 12px 14px 24px 12px;
+    padding: 12px 16px 24px 12px;
     height: 256px;
   }
   .guide-demo-row {
-    padding: 9px;
+    padding: 8px;
     font-size: 8px;
-    gap: 5px;
+    gap: 4px;
   }
   .guide-demo-row > b {
     font-size: 8px;
-    padding: 6px;
+    padding: 8px;
   }
   .guide-demo-icon > svg {
     width: 16px;
@@ -3138,17 +3146,17 @@ dialog > .flex > .overflow-y-auto {
   }
   .guide-controls .ui-button {
     font-size: 12px;
-    padding: 10px 13px;
+    padding: 12px 12px;
   }
   dialog > .flex > div:first-child {
-    padding: 18px 20px 14px;
+    padding: 20px 20px 16px;
   }
   dialog > .flex > .overflow-y-auto {
-    padding: 17px 20px 22px;
+    padding: 16px 20px 24px;
   }
   .role-header {
-    padding: 15px 18px;
-    gap: 14px;
+    padding: 16px 20px;
+    gap: 16px;
     flex-wrap: wrap;
   }
   .role-header .global-search {
@@ -3162,7 +3170,7 @@ dialog > .flex > .overflow-y-auto {
   }
   .role-header > .header-actions > a {
     font-size: 10px;
-    padding: 9px 11px;
+    padding: 8px 12px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -3188,17 +3196,17 @@ dialog > .flex > .overflow-y-auto {
   }
   :root,
   :root[data-theme='dark'] {
-    --surface: #fff;
-    --color-ink: #29332d;
-    --color-muted: #6b7684;
-    --color-line: #ddd;
-    --color-canvas: #fff;
-    --color-brand: var(--action-hover);
-    --color-brand-soft: #edf3eb;
+    --surface: var(--print-surface);
+    --color-ink: var(--print-ink);
+    --color-muted: var(--print-muted);
+    --color-line: var(--print-line);
+    --color-canvas: var(--print-surface);
+    --color-brand: var(--print-brand);
+    --color-brand-soft: var(--print-subtle);
   }
   body {
-    background: white;
-    color: #29332d;
+    background: var(--print-surface);
+    color: var(--print-ink);
   }
   .print-area {
     box-shadow: none !important;
@@ -3221,14 +3229,14 @@ dialog > .flex > .overflow-y-auto {
 .notebook-context {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
+  gap: 8px;
   padding-bottom: 20px;
   border-bottom: 1px solid var(--color-line);
   margin-bottom: 20px;
 }
 .notebook-context span {
   font-size: 10px;
-  padding: 5px 8px;
+  padding: 4px 8px;
   border-radius: 5px;
   background: var(--subtle);
   color: var(--text-secondary);
@@ -3236,8 +3244,8 @@ dialog > .flex > .overflow-y-auto {
 .notebook-footer {
   display: flex;
   align-items: center;
-  gap: 9px;
-  margin-top: 22px;
+  gap: 8px;
+  margin-top: 24px;
   color: var(--color-muted);
   font-size: 10px;
   line-height: 1.8;
@@ -3261,15 +3269,14 @@ dialog > .flex > .overflow-y-auto {
 }
 @media (max-width: 767px) {
   .notebook-context {
-    padding-bottom: 14px;
+    padding-bottom: 16px;
     margin-bottom: 12px;
   }
   .product-preview {
-    padding: 21px;
+    padding: 20px;
   }
   .preview-row {
-    padding-block: 14px;
+    padding-block: 16px;
     font-size: 10px;
   }
 }
-

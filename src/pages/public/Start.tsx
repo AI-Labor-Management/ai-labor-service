@@ -45,7 +45,10 @@ export default function Start() {
     if (signup && f.get('password') !== f.get('confirmPassword'))
       err.confirmPassword = '비밀번호가 일치하지 않아요.';
     setErrors(err);
-    if (Object.keys(err).length) return;
+    if (Object.keys(err).length) {
+      e.currentTarget.querySelector<HTMLInputElement>(`[name="${Object.keys(err)[0]}"]`)?.focus();
+      return;
+    }
     e.currentTarget.reset();
     setNotice(
       signup
@@ -62,14 +65,10 @@ export default function Start() {
       <SiteHeader />
       <div className="auth-layout">
         <section className="auth-story reveal">
-          <span className="eyebrow">
-            <Icon name="spark" size={16} />
-            계약부터 급여까지, 가게의 기록
-          </span>
           <h1>
-            우리 가게의 인사노무,
+            사람샘각과 함께,
             <br />
-            <span>한 권의 업무노트처럼.</span>
+            가게의 일에 집중하세요.
           </h1>
           <p>
             직원 등록부터 급여와 서류까지.
