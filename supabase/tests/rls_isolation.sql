@@ -117,8 +117,20 @@ begin
   begin perform public.mark_statement_viewed((select s.id from public.statement_deliveries s where s.employee_id = e_a2)); exception when others then failed := true; end;
   if not failed then raise exception 'FAIL: 직원이 남의 명세서 수령 확인을 남김'; end if; checks := checks + 1;
 
-  -- ── 노무법인: 고른 항목만, 철회하면 내용 없음 ──
-  perform set_config('request.jwt.claims', json_build_object('sub', firm_user, 'role', 'authenticated')::text, true);
+  -- ── 노무법인·관리자: 2단계 인증 전(aal1)에는 아무것도 못 봄 (2026-11-07) ──
+  perform set_config('request.jwt.claims', json_build_object('sub', firm_user, 'role', 'authenticated', 'aal', 'aal1')::text, true);
+  select count(*) into n from public.consult_requests; if n <> 0 then raise exception 'FAIL: 2단계 인증 전 노무법인이 상담 요청을 봄 (%)', n; end if; checks := checks + 1;
+  v := public.firm_consult_inbox(); if jsonb_array_length(v) <> 0 then raise exception 'FAIL: 2단계 인증 전 요청함 %', jsonb_array_length(v); end if; checks := checks + 1;
+  failed := false;
+  begin perform public.firm_mark_insurance_done(e_a1, 'acquisition'); exception when others then failed := true; end;
+  if not failed then raise exception 'FAIL: 2단계 인증 전 노무법인이 보험을 처리함'; end if; checks := checks + 1;
+  perform set_config('request.jwt.claims', json_build_object('sub', admin_user, 'role', 'authenticated', 'aal', 'aal1')::text, true);
+  failed := false;
+  begin v := public.admin_stats(); exception when others then failed := true; end;
+  if not failed then raise exception 'FAIL: 2단계 인증 전 관리자 집계를 봄'; end if; checks := checks + 1;
+
+  -- ── 노무법인: 고른 항목만, 철회하면 내용 없음 (2단계 인증 후) ──
+  perform set_config('request.jwt.claims', json_build_object('sub', firm_user, 'role', 'authenticated', 'aal', 'aal2')::text, true);
   select count(*) into n from public.consult_requests; if n <> 1 then raise exception 'FAIL: 노무법인이 철회된 요청 내용을 봄 (%)', n; end if; checks := checks + 1;
   v := public.firm_consult_inbox();
   if jsonb_array_length(v) <> 2 then raise exception 'FAIL: 요청함 개수 %', jsonb_array_length(v); end if; checks := checks + 1;
@@ -132,8 +144,8 @@ begin
   begin perform public.firm_mark_insurance_done(e_a2, 'acquisition'); exception when others then failed := true; end;
   if not failed then raise exception 'FAIL: 맡기지 않은 직원 보험을 노무법인이 처리함'; end if; checks := checks + 1;
 
-  -- ── 관리자: 집계만 ──
-  perform set_config('request.jwt.claims', json_build_object('sub', admin_user, 'role', 'authenticated')::text, true);
+  -- ── 관리자: 집계만 (2단계 인증 후) ──
+  perform set_config('request.jwt.claims', json_build_object('sub', admin_user, 'role', 'authenticated', 'aal', 'aal2')::text, true);
   v := public.admin_stats(); if (v ->> 'workplaces')::int < 2 then raise exception 'FAIL: admin_stats %', v; end if; checks := checks + 1;
   select count(*) into n from public.employees; if n <> 0 then raise exception 'FAIL: 관리자가 직원 개인 데이터를 봄'; end if; checks := checks + 1;
   select count(*) into n from public.workplaces; if n <> 0 then raise exception 'FAIL: 관리자가 사업장 행을 봄'; end if; checks := checks + 1;

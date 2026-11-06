@@ -2,7 +2,8 @@
 // 준비: supabase/tests/e2e_setup.sql 실행 → 나온 비밀번호를 E2E_PASSWORD로
 // 실행: SUPABASE_URL=https://<ref>.supabase.co SB_KEY=<publishable key> E2E_PASSWORD=<...> node supabase/tests/e2e_api.mjs
 // 정리: supabase/tests/e2e_cleanup.sql
-// 주의: 계정 3개(e2e-owner/employee/firm@example.test)의 데이터를 지우고 다시 만든다. 운영 프로젝트에서 실행하지 마세요.
+// 주의: 계정 3개(e2e-owner/employee/firm@example.test, 탈퇴 시험용 e2e-delete는 사람샘각 실서버 시험이 씀)의 데이터를 지우고 다시 만든다. 운영 프로젝트에서 실행하지 마세요.
+import { createHmac } from 'node:crypto';
 const BASE = process.env.SUPABASE_URL;
 const KEY = process.env.SB_KEY;
 const PW = process.env.E2E_PASSWORD;
@@ -24,6 +25,34 @@ async function signIn(email) {
   if (!j.access_token) throw new Error(`로그인 실패 ${email}: ${JSON.stringify(j)}`);
   return j.access_token;
 }
+// ── 2단계 인증(TOTP): 노무법인·관리자는 aal2 세션에서만 그 역할의 데이터를 본다 ──
+function base32(s) {
+  const a = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits = '';
+  for (const ch of s.replace(/=+$/, '').toUpperCase()) { const v = a.indexOf(ch); if (v >= 0) bits += v.toString(2).padStart(5, '0'); }
+  const out = [];
+  for (let i = 0; i + 8 <= bits.length; i += 8) out.push(parseInt(bits.slice(i, i + 8), 2));
+  return Buffer.from(out);
+}
+function totp(secret, at = Date.now()) {
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(at / 30000)));
+  const h = createHmac('sha1', base32(secret)).update(counter).digest();
+  const o = h[h.length - 1] & 15;
+  const n = (((h[o] & 127) << 24) | (h[o + 1] << 16) | (h[o + 2] << 8) | h[o + 3]) % 1e6;
+  return String(n).padStart(6, '0');
+}
+/** 인증 앱 등록 → 확인 코드 → aal2 접근 토큰 */
+async function mfaUpgrade(token) {
+  const post = (path, body) => fetch(`${BASE}/auth/v1/${path}`, { method: 'POST', headers: { apikey: KEY, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body ?? {}) }).then(async (r) => ({ status: r.status, body: await r.json() }));
+  const en = await post('factors', { factor_type: 'totp', friendly_name: `e2e-${Date.now()}` });
+  if (!en.body.id) throw new Error('2단계 인증 등록 실패 ' + JSON.stringify(en.body));
+  const ch = await post(`factors/${en.body.id}/challenge`);
+  const ve = await post(`factors/${en.body.id}/verify`, { challenge_id: ch.body.id, code: totp(en.body.totp.secret) });
+  if (!ve.body.access_token) throw new Error('2단계 인증 확인 실패 ' + JSON.stringify(ve.body));
+  return ve.body.access_token;
+}
+
 async function call(fn, path, token, { method = 'GET', body, raw = false, origin } = {}) {
   const headers = { apikey: KEY };
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -49,8 +78,10 @@ const rpc = (name, token, args = {}) => rest(`rpc/${name}`, token, { method: 'PO
 
 const owner = await signIn('e2e-owner@example.test');
 const emp = await signIn('e2e-employee@example.test');
-const firm = await signIn('e2e-firm@example.test');
+const firmAal1 = await signIn('e2e-firm@example.test');
 ok(true, '세 계정 로그인 (사장님·직원·노무법인)');
+const firm = await mfaUpgrade(firmAal1);
+ok(JSON.parse(Buffer.from(firm.split('.')[1], 'base64url').toString()).aal === 'aal2', '노무법인 2단계 인증 등록·확인 → aal2 세션');
 await rpc('delete_my_workplace', owner); // 이전 실행 정리
 
 // ── 인증·경로 ──
@@ -257,6 +288,10 @@ ok(r.status === 400, '동의 없으면 400', r.status);
 r = await api('owner/consult', owner, { method: 'POST', body: { topic: '근로시간', question: '연장근로 계산이 맞는지 봐주세요.', shareItems: ['memo', 'workplace', 'conditions'], employeeIds: [eA.id], consent: true } });
 ok(r.status === 201 && r.body.id, 'POST /owner/consult 노무법인에 보내기', r.body);
 const consultId = r.body.id;
+r = await rpc('firm_consult_inbox', firmAal1);
+ok(r.status === 200 && Array.isArray(r.body) && r.body.length === 0, '2단계 인증 전(aal1) 노무법인 요청함은 비어 있음', r.body);
+r = await rpc('firm_delegated_insurance', firmAal1);
+ok(r.status === 200 && Array.isArray(r.body) && r.body.length === 0, '2단계 인증 전(aal1) 보험 맡김 목록도 비어 있음', r.body);
 r = await rpc('firm_consult_inbox', firm);
 const mine = Array.isArray(r.body) ? r.body.find((x) => x.id === consultId) : null;
 ok(r.status === 200 && mine && mine.snapshot?.conditions?.length === 1, '노무법인 요청함에 도착 (스냅샷 포함)', mine ?? r.body);
