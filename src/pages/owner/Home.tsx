@@ -12,6 +12,8 @@ import { addMonthsYM, fmtDate, fmtMD, fmtMDW, monthOf, WEEKDAY_KO, fmtMDT } from
 import { Badge, Empty, won } from '../../ui/kit';
 import { Icon, type IconName } from '../../ui/Icon';
 import { usePreferences } from '../../ui/preferences';
+import { AnimatedNumber, useListMotion, useSelectionIndicator } from '../../ui/motion';
+import { TaskPreview } from '../../ui/TaskPreview';
 
 const AREA_ICON: Record<TodoArea, IconName> = {
   서류: 'file',
@@ -69,7 +71,7 @@ function MonthCalendar({ base, deadlines }: { base: string; deadlines: Deadline[
           </button>
         </div>
       </div>
-      <div className="mini-calendar">
+      <div className="mini-calendar flow-swap" key={'calendar:' + ym}>
         {WEEKDAY_KO.map((day) => (
           <span className="calendar-weekday" key={day}>
             {day}
@@ -99,7 +101,11 @@ function MonthCalendar({ base, deadlines }: { base: string; deadlines: Deadline[
           );
         })}
       </div>
-      <div className="calendar-events" aria-live="polite">
+      <div
+        className="calendar-events flow-swap"
+        key={'events:' + ym + ':' + (selected ?? '')}
+        aria-live="polite"
+      >
         {selected && (
           <div className="flex justify-between text-[10px] text-muted">
             <span>{fmtMD(selected)} 일정</span>
@@ -135,6 +141,8 @@ export default function OwnerHome() {
   const filter: TodoLevel | 'all' =
     filterParam === 'risk' || filterParam === 'soon' || filterParam === 'check' ? filterParam : 'all';
   const [all, setAll] = useState(false);
+  const [previewState, setPreviewState] = useState<{ id: string; open: boolean } | null>(null);
+  const selection = useSelectionIndicator(filter);
   const todos = useMemo(() => computeTodos(state, base), [state, base]);
   const deadlines = useMemo(() => computeDeadlines(state, base), [state, base]);
   const risk = evaluateRisk(state, base);
@@ -161,6 +169,8 @@ export default function OwnerHome() {
   const notes = state.notifications.filter((n) => n.to === 'owner');
   const filtered = todos.filter((t) => filter === 'all' || t.level === filter);
   const shown = all ? filtered : filtered.slice(0, 4);
+  const listRef = useListMotion(`${filter}:${all}:${shown.map((t) => t.id).join(',')}`);
+  const preview = todos.find((t) => t.id === previewState?.id) ?? null;
   const riskTodos = todos.filter((t) => t.level === 'risk').length;
   const soonTodos = todos.filter((t) => t.level === 'soon').length;
   const pendingAttendance = state.attendance.filter((a) => a.status !== 'confirmed').length;
@@ -193,7 +203,7 @@ export default function OwnerHome() {
             오늘 챙길 일<Icon name="chevron" size={15} />
           </div>
           <div className="stat-value">
-            {todos.length}
+            <AnimatedNumber value={todos.length} />
             <small>건</small>
           </div>
           <div className="stat-card-bottom">
@@ -207,7 +217,7 @@ export default function OwnerHome() {
             {Number(month.slice(5))}월 예상 인건비<span className="status-chip">지급액 기준</span>
           </div>
           <div className="stat-value">
-            {gross.toLocaleString('ko-KR')}
+            <AnimatedNumber value={gross} />
             <small>원</small>
           </div>
           <div className="stat-card-bottom">
@@ -225,7 +235,7 @@ export default function OwnerHome() {
             <Icon name="people" size={18} />
           </div>
           <div className="stat-value">
-            {today.length}
+            <AnimatedNumber value={today.length} />
             <small>명</small>
           </div>
           <div className="stat-card-bottom">
@@ -242,9 +252,10 @@ export default function OwnerHome() {
               <h2>
                 오늘 처리할 일 <span>{todos.length}</span>
               </h2>
-              <span className="text-[10px] text-muted">중요한 일부터 차근차근</span>
+              <span className="task-preview-help">눌러서 미리보기</span>
             </div>
-            <div className="todo-filters" aria-label="할 일 필터">
+            <div ref={selection.ref} className="todo-filters selection-tabs" aria-label="할 일 필터">
+              {selection.indicator}
               {(
                 [
                   { key: 'all', label: '전체', count: todos.length },
@@ -278,30 +289,37 @@ export default function OwnerHome() {
               ))}
             </div>
             <div aria-live="polite">
-              <ul>
+              <ul ref={listRef}>
                 {shown.map((t) => (
-                  <li className="todo-row" key={t.id}>
-                    <span className={'todo-row-icon ' + t.level}>
-                      <Icon name={AREA_ICON[t.area]} size={20} />
-                    </span>
-                    <div className="todo-row-content">
-                      <div className="todo-meta">
-                        <span className={'priority ' + t.level}>
-                          {t.level === 'risk' ? '우선 확인' : t.badge}
+                  <li className="todo-row" key={t.id} data-motion-key={t.id}>
+                    <button
+                      className="todo-preview-trigger"
+                      aria-label={t.title + ' 미리보기'}
+                      aria-haspopup="dialog"
+                      onClick={() => setPreviewState({ id: t.id, open: true })}
+                    >
+                      <span className={'todo-row-icon ' + t.level}>
+                        <Icon name={AREA_ICON[t.area]} size={20} />
+                      </span>
+                      <span className="todo-row-content">
+                        <span className="todo-meta">
+                          <span className={'priority ' + t.level}>
+                            {t.level === 'risk' ? '우선 확인' : t.badge}
+                          </span>
+                          <span>·</span>
+                          <span>{t.area}</span>
+                          {t.date && (
+                            <>
+                              <span>·</span>
+                              <span>{fmtMD(t.date)}</span>
+                            </>
+                          )}
                         </span>
-                        <span>·</span>
-                        <span>{t.area}</span>
-                        {t.date && (
-                          <>
-                            <span>·</span>
-                            <span>{fmtMD(t.date)}</span>
-                          </>
-                        )}
-                      </div>
-                      <h3>{t.title}</h3>
-                    </div>
+                        <span className="todo-title">{t.title}</span>
+                      </span>
+                    </button>
                     <Link to={t.link} aria-label={t.title + ' 처리하기'}>
-                      처리하기
+                      바로 처리
                       <Icon name="chevron" size={13} />
                     </Link>
                   </li>
@@ -561,6 +579,12 @@ export default function OwnerHome() {
           </section>
         </div>
       </div>
+      <TaskPreview
+        open={!!previewState?.open}
+        todo={preview}
+        employee={state.employees.find((e) => e.id === preview?.employeeId)?.alias}
+        onClose={() => setPreviewState((p) => p && { ...p, open: false })}
+      />
     </div>
   );
 }

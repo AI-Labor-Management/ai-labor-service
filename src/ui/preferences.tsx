@@ -1,5 +1,6 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useLayoutEffect, useState, type ReactNode } from 'react';
 import { Icon } from './Icon';
+import { transitionUI } from './motion';
 
 type Theme = 'light' | 'dark';
 const Preferences = createContext({
@@ -32,7 +33,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
       : 'light',
   );
   const [guideOpen, setGuideOpen] = useState(false);
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.documentElement.dataset.theme = theme;
     document.documentElement.style.colorScheme = theme;
     savePreference('theme', theme);
@@ -41,7 +42,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     <Preferences.Provider
       value={{
         theme,
-        toggleTheme: () => setTheme((t) => (t === 'dark' ? 'light' : 'dark')),
+        toggleTheme: () => transitionUI(() => setTheme((t) => (t === 'dark' ? 'light' : 'dark')), 'theme'),
         guideOpen,
         openGuide: () => setGuideOpen(true),
         closeGuide: () => setGuideOpen(false),

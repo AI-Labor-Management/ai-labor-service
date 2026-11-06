@@ -14,6 +14,7 @@ import type { IntegrationStatus } from '../adapters/integrations';
 import { STATUS_TEXT } from '../adapters/integrations';
 import { Icon } from './Icon';
 import { useDialog } from './useDialog';
+import { useSelectionIndicator } from './motion';
 
 export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 
@@ -400,11 +401,13 @@ export function Tabs<T extends string>({
   value: T;
   onChange: (v: T) => void;
 }) {
+  const selection = useSelectionIndicator(value, '[role="tab"][aria-selected="true"]');
   return (
     <div
+      ref={selection.ref}
       role="tablist"
       aria-label="보기 선택"
-      className="mb-4 flex gap-1 overflow-x-auto border-b border-line"
+      className="selection-tabs common-tabs mb-4 flex gap-1 overflow-x-auto border-b border-line"
       onKeyDown={(e) => {
         if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
         const buttons = Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
@@ -422,6 +425,7 @@ export function Tabs<T extends string>({
         if (item) onChange(item.value);
       }}
     >
+      {selection.indicator}
       {tabs
         .filter((t) => !t.hidden)
         .map((t) => (

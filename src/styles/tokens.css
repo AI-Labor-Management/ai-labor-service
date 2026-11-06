@@ -54,6 +54,7 @@
   --focus-ring: #5579a8;
   --dur-micro: 120ms;
   --dur-short: 220ms;
+  --dur-flow: 380ms;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
   --public-header-top: 0px;

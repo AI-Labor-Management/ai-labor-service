@@ -206,7 +206,6 @@ export function Brand({ compact = false }: { compact?: boolean }) {
       {!compact && (
         <span className="brand-wordmark" aria-hidden="true">
           사람샘각
-          <span className="brand-descriptor">인사노무 관리</span>
         </span>
       )}
     </span>

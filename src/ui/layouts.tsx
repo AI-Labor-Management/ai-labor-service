@@ -10,6 +10,7 @@ import { GlobalSearch } from './Search';
 import { readPreference, savePreference, ThemeToggle, usePreferences } from './preferences';
 import type { DemoSession } from '../domain/types';
 import { useDialog } from './useDialog';
+import { transitionUI, useScrollReveal } from './motion';
 export { SERVICE_NAME } from './brand';
 
 const SCALE_LABEL = { '1-4': '1~4명', '5-9': '5~9명', '10+': '10명 이상' } as const;
@@ -118,6 +119,7 @@ export function OwnerLayout() {
   const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 1023px)').matches);
   const mobileDialog = useDialog(mobileOpen, () => setMobileOpen(false), '.mobile-sidebar-content');
   const location = useLocation();
+  const mainRef = useScrollReveal(location.pathname);
   useEffect(() => {
     const media = window.matchMedia('(max-width: 1023px)');
     const change = () => {
@@ -152,7 +154,7 @@ export function OwnerLayout() {
   );
   const toggle = () => {
     if (isMobile) setMobileOpen((s) => !s);
-    else setCollapsed((s) => !s);
+    else transitionUI(() => setCollapsed((s) => !s));
   };
   const menuContent = (mobile = false) => (
     <>
@@ -208,7 +210,7 @@ export function OwnerLayout() {
         </button>
         <button
           className="sidebar-position"
-          onClick={() => setSide((s) => (s === 'left' ? 'right' : 'left'))}
+          onClick={() => transitionUI(() => setSide((s) => (s === 'left' ? 'right' : 'left')))}
           title={side === 'left' ? '메뉴 오른쪽에 배치' : '메뉴 왼쪽에 배치'}
           aria-label={side === 'left' ? '메뉴 오른쪽에 배치' : '메뉴 왼쪽에 배치'}
         >
@@ -284,7 +286,7 @@ export function OwnerLayout() {
             <Icon name="chevron" size={12} />
             <strong>{activeMenu?.label || '사업장 관리'}</strong>
           </div>
-          <main id="main-content" className="workspace-main">
+          <main ref={mainRef} id="main-content" className="workspace-main">
             <div className="page-transition" key={location.pathname}>
               <Outlet />
             </div>
