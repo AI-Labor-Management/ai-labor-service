@@ -172,7 +172,7 @@ Vault: `guest_phone_key`(pgcrypto 대칭 암호화·HMAC 키), `cron_secret`(cro
 | 단위 (계산·변환·동기화) | `npm test` — `tests/backend/mapping.test.ts`(시드 → DB 행 → 다시 AppState가 할 일·기한·체크리스트·급여·위험에서 같음), `engine-api.test.ts`(타입 계약), `tests/sync.test.ts`(화면 변경 → 서버 요청 계획) | 90개 통과 |
 | 화면 코드 ↔ 실서버 | `e2e_setup.sql` → `E2E_PASSWORD=… npx vitest run tests/live` → `e2e_cleanup.sql`. 프론트엔드의 실제 `server.ts`·`sync.ts`로 사장님·직원·노무법인 흐름을 보내고 다시 읽어 확인 | 7개 시나리오 통과 (설정·직원 추가/삭제·일정·서류·기한·위험 점검·출퇴근 확정/수정/직접 기록·급여 입력/확정/수정·대타·상담/철회·초대·직원 확인/위치 동의/출근(서버 시각)/명세서 열람·노무법인 읽음/보험 처리/의견) |
 | 타입 | `npm run typecheck`, `cd supabase/functions && npx deno check --config deno.json api/index.ts public-api/index.ts cron-daily/index.ts` | 통과 |
-| RLS 격리 | `supabase/tests/rls_isolation.sql`을 SQL 편집기에서 실행 → 마지막에 `RLS_TESTS_PASSED (49 checks)` 예외로 끝나며 **전부 되돌림** | 49개 통과 |
+| RLS 격리 | `supabase/tests/rls_isolation.sql`을 SQL 편집기에서 실행 → 마지막에 `RLS_TESTS_PASSED (53 checks)` 예외로 끝나며 **전부 되돌림** | 53개 통과 (aal1 노무법인·관리자 차단 포함) |
 | E2E (배포본) | `e2e_setup.sql` → `node supabase/tests/e2e_api.mjs` → `e2e_cleanup.sql` (DEPLOY.md 5장) | 83개 통과 |
 | 예약 실행 | `select app.call_cron_daily();` 후 `net._http_response` | 200, 급여일 D-3 알림 1건 생성, 같은 날 두 번째 실행은 중복 건너뜀, 비밀 값 없으면 401 |
 | Supabase advisors | 보안·성능 | 남은 항목은 의도된 것: `guest_consults` 정책 없음(RPC로만), SECURITY DEFINER RPC 실행 가능(함수 안 권한 확인), 빈 DB라 미사용 FK 인덱스 |
@@ -184,12 +184,12 @@ E2E에서 발견해 고친 것: `respond_attendance_edit`가 잘못된 상태 �
 | # | 한계 | 다음 할 일 |
 |---|---|---|
 | 2 | ~~서울 리전 아님~~ → 2026-11-06 서울 프로젝트로 이전 완료 | — |
-| 3 | 로그인 수단: 이메일만 (카카오 provider 미설정) | 카카오 앱 키 확보 후 Auth provider 추가 |
+| 3 | 로그인 수단: 이메일만 (카카오 provider 미설정 — 프론트 버튼은 준비됨) | 카카오 앱 키 확보 후 Auth provider 추가 (사람샘각 `docs/KAKAO_LOGIN_SETUP.md`) |
 | 4 | 위치 판정은 기기가 보낸 inside/outside(가상) | 카카오맵 좌표 + 서버 거리 판정 |
 | 5 | 카카오 알림·AI 상담·법제처 감지 미구현 | 설정 스위치는 준비됨 |
-| 6 | 비회원 실제 접수 꺼짐 | 처리방침·보유 기간·제3자 제공 문구 확정 후 `guest_consult_intake = true` |
+| 6 | 비회원 실제 접수 꺼짐 | 처리방침(사람샘각 `/privacy`, 2026-11-07 시행)에 항목·180일 보유는 적어 둠. 협약 노무법인이 정해지면 `guest_consult_intake = true` |
 | 7 | 상용 소득세 자동 계산 없음 (프론트와 동일) | 간이세액표 확보 |
-| 8 | 노무법인·관리자 2FA 없음 | Supabase MFA(TOTP) 강제 |
+| 8 | ~~노무법인·관리자 2FA 없음~~ → 2026-11-07 TOTP aal2 강제(마이그레이션 10) | 인증 앱 분실 시 운영자가 `auth.mfa_factors` 행 삭제 |
 | 9 | 관리자 지정은 SQL로 (`insert into admins`) | 관리 화면 |
 | 10 | 공개 사이트 가입: Auth Site URL·Redirect URL 미설정, Supabase 기본 메일은 팀 주소에만 발송 | 대시보드에서 URL 설정 + SMTP 연결 (DEPLOY.md 4장) |
 | 11 | 서버 모드에서 근로조건 이력 수정(입사일 변경 시 첫 조건 이동 등)·JSON 가져오기는 안 됨 | 화면이 "저장하지 않은 변경"으로 알림. 필요하면 새 적용일 조건 추가 |

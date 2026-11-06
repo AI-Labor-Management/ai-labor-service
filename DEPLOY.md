@@ -7,12 +7,12 @@
 | 항목 | 값 |
 |---|---|
 | 프로젝트 | `nomu-service-seoul` · ref `smbxhspzflnvncatdgjs` · **`ap-northeast-2` (서울)**. 처음 쓰던 시드니 프로젝트 `nomu-service`(`htdnyekvbuncuweeqpmn`)는 가입자·데이터 0인 상태에서 2026-11-06 옮긴 뒤 일시정지 |
-| 마이그레이션 | `supabase/migrations/20261106000001` ~ `…0009` 9개 적용 |
+| 마이그레이션 | `supabase/migrations/20261106000001` ~ `20261107000010` 10개 적용 (10 = 노무법인·관리자 2단계 인증 강제, 관리자 접속 기록 1년 보관) |
 | 프론트엔드 | GitHub Pages 빌드(`deploy.yml`)와 사람샘각(`AI-Labor-Management/saram-saemgak`의 `.env.production`)에 `VITE_SUPABASE_URL`·`VITE_SUPABASE_ANON_KEY`(공개 값) 포함 → 시작 화면에서 서버 모드 선택 가능 |
 | Edge Functions | `api` v2 (verify_jwt on), `public-api` v1 (off), `cron-daily` v1 (off, 비밀 헤더 검사) — 서울 프로젝트 |
 | 함수 코드 기준 커밋 | `api` = `e57826edb75934be453fbde84f7d40aec45cf2b4` (회원 탈퇴 `account/delete` 추가), `public-api`·`cron-daily` = `b88498a406f2e78fe6ff4480102c26760b53abd6` (사람샘각 공개 주소 CORS 허용). jsDelivr 고정 URL, 아래 3-B |
 | Auth | Site URL `https://ai-labor-management.github.io/saram-saemgak-site/` (사람샘각 최신 공개 체험, GitHub Pages), Redirect URLs: 그 주소 `/**`, `https://ai-labor-service-draft-sj.gold89765.chatgpt.site/**`, `https://ai-labor-management.github.io/ai-labor-service/**`, `http://localhost:5173/**`. **Confirm email 켜 둠** — 메일 발송: 네이버 SMTP `smtp.naver.com:465`, 보내는 사람 `사람샘각 <kip2301@naver.com>`(비밀번호는 대시보드에만 — 2단계 인증 계정이라 네이버 **애플리케이션 비밀번호** 필요, 일반 비밀번호는 535로 거절). 가입 확인 메일 제목·본문 한국어 |
-| 서울 프로젝트 확인 | RLS 격리 49개, E2E 83개, 프론트 실서버 시험(사람샘각 `tests/live`) 9개, 가입 즉시 세션, 예약 실행 200 — 모두 통과 후 시험 계정 삭제 |
+| 서울 프로젝트 확인 (2026-11-07) | RLS 격리 53개, E2E 86개(2단계 인증 포함), 프론트 실서버 시험(사람샘각 `tests/live`) 11개, 예약 실행 200 — 모두 통과 후 시험 계정 삭제 |
 | 예약 실행 | `labor-daily-alerts` `0 0 * * *` (09:00 KST) 활성 |
 | 데이터 | 비어 있음 (기본 노무법인 행 1개만). 시험 계정은 모두 지움 |
 
@@ -97,7 +97,7 @@ Deno.serve(handler);
 
 설정 전에는 가입 확인 메일의 링크가 기본값(localhost)으로 가요. 또 Supabase 기본 메일 발송은 **조직 팀원 주소에만** 보내고 시간당 몇 통으로 제한돼요. 누구나 가입하게 하려면 Authentication → Emails → SMTP Settings에 발송 서비스를 연결하거나, 시험 기간에만 Sign In / Providers → Email의 "Confirm email"을 끄세요(끄면 아무 주소로나 가입 가능 — 운영 전 다시 켜기).
 
-(`config.toml`과 같은 값입니다. 로컬 `supabase start`에는 자동 적용.) 카카오 로그인은 키를 받은 뒤 Providers에서 켭니다. 노무법인·관리자 계정은 MFA를 켜는 것을 권장합니다.
+(`config.toml`과 같은 값입니다. 로컬 `supabase start`에는 자동 적용.) 카카오 로그인은 사람샘각 저장소 `docs/KAKAO_LOGIN_SETUP.md`대로 카카오 앱을 만든 뒤 Providers → Kakao에서 켭니다(Redirect URI `https://<ref>.supabase.co/auth/v1/callback`, "Allow users without an email" 켜기). 노무법인·관리자는 **2단계 인증(TOTP)이 필수**입니다 — 마이그레이션 10 이후 `app.is_firm_member`·`app.is_admin`이 aal2 세션에서만 참이라, 인증 앱을 등록·확인하기 전에는 그 역할의 데이터가 보이지 않습니다. 인증 앱을 잃어버린 사용자는 `delete from auth.mfa_factors where user_id = <id>;`로 등록을 지우면 다음 로그인 때 다시 등록합니다.
 
 역할 부여는 지금 SQL로 합니다:
 
@@ -123,14 +123,14 @@ curl -s https://<ref>.supabase.co/functions/v1/public-api/health
 
 `"ok":true`와 규칙 44개가 나오면 됩니다. 그다음:
 
-1. **RLS 격리**: SQL 편집기에서 `supabase/tests/rls_isolation.sql` 실행 → 오류 메시지가 `RLS_TESTS_PASSED (49 checks)`면 통과. 시험 데이터는 예외로 끝나며 모두 되돌려집니다(`FAIL: …`이면 그 항목이 깨진 것).
+1. **RLS 격리**: SQL 편집기에서 `supabase/tests/rls_isolation.sql` 실행 → 오류 메시지가 `RLS_TESTS_PASSED (53 checks)`면 통과. 시험 데이터는 예외로 끝나며 모두 되돌려집니다(`FAIL: …`이면 그 항목이 깨진 것).
 2. **E2E (개발 프로젝트에서만)**: `supabase/tests/e2e_setup.sql` 실행 → 나온 `password`로
 
 ```bash
 SUPABASE_URL=https://<ref>.supabase.co SB_KEY=<publishable key> E2E_PASSWORD=<password> node supabase/tests/e2e_api.mjs
 ```
 
-   `E2E: 83 passed, 0 failed`가 나오면 통과. 같은 계정으로 화면 코드 시험도: `E2E_PASSWORD=<password> npx vitest run tests/live` (7개 통과, `.env.local` 필요). 끝나면 `supabase/tests/e2e_cleanup.sql` 실행.
+   `E2E: 86 passed, 0 failed`가 나오면 통과(노무법인 계정은 시험 안에서 인증 앱을 등록해 aal2로 올리고, 끝나면 등록을 지운다). 같은 계정으로 화면 코드 시험도: `E2E_PASSWORD=<password> npx vitest run tests/live --no-file-parallelism` (11개 통과, `.env.local` 필요). 끝나면 `supabase/tests/e2e_cleanup.sql` 실행.
 3. **예약 실행**: `select app.call_cron_daily();` → 잠시 후 `select status_code, content from net._http_response order by id desc limit 1;`이 200이면 통과.
 
 ## 6. 운영 스위치
