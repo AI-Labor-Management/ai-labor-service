@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/api/handler.ts (npm run build:functions)
-// sha256:0dd27564f018
+// sha256:006319b09283
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -6166,7 +6166,11 @@ async function ownerRoutes(req, db, user, path, body, url) {
   if (m === "GET") {
     switch (path) {
       case "state":
-        return json(req, { base, state });
+        return json(req, {
+          base,
+          state,
+          ids: { userId: user.id, workplaceId: wp.id, payrollIdByMonth: Object.fromEntries(ctx.rows.payroll_months.map((p) => [p.month, p.id])) }
+        });
       case "home":
         return json(req, await home(state, date));
       case "checklist":
@@ -6257,6 +6261,71 @@ function employeeView(state, e, base) {
     notifications: state.notifications.filter((n) => n.to === e.id)
   };
 }
+function employeeState(state, e) {
+  const own = (xs) => xs.filter((x) => x.employeeId === e.id);
+  const subs = state.substitutions.filter(
+    (s) => s.fromEmployeeId === e.id || s.toEmployeeId === e.id || s.mode === "request" && s.status === "open"
+  );
+  const others = new Set(subs.flatMap((s) => [s.fromEmployeeId, s.toEmployeeId]).filter((id) => !!id && id !== e.id));
+  const stub = (x) => ({
+    id: x.id,
+    alias: x.alias,
+    ageBand: "18-59",
+    birthDate: null,
+    startedBefore65: null,
+    hireDate: x.hireDate,
+    employmentType: "regular",
+    contractEnd: null,
+    probationEnd: null,
+    foodHandler: false,
+    isForeign: false,
+    foreign: null,
+    school: null,
+    insuranceMethod: "self",
+    registeredAt: x.registeredAt,
+    onboarding: "existing-done",
+    resignDate: x.resignDate,
+    resignType: null,
+    account: "none",
+    invite: null,
+    locationConsent: null,
+    conditionAcks: [],
+    bonusAnnual: 0,
+    leaveAllowanceAnnual: 0,
+    createdAt: x.createdAt
+  });
+  const myRecords = new Set(own(state.attendance).map((a) => a.id));
+  const payrolls = state.payrolls.map((p) => ({ ...p, manual: [], confirmedLines: p.confirmedLines?.filter((l) => l.employeeId === e.id) ?? null })).filter((p) => p.confirmedLines?.length);
+  return {
+    schemaVersion: 1,
+    workplace: state.workplace,
+    employees: [{ ...e, invite: null }, ...state.employees.filter((x) => others.has(x.id)).map(stub)],
+    conditions: own(state.conditions),
+    overrides: own(state.overrides),
+    attendance: own(state.attendance),
+    attendanceEdits: state.attendanceEdits.filter((x) => myRecords.has(x.recordId)),
+    substitutions: subs,
+    leaveRequests: own(state.leaveRequests),
+    payrolls,
+    payrollEdits: own(state.payrollEdits),
+    statements: own(state.statements),
+    insuranceReports: [],
+    insuranceNotices: [],
+    docRecords: [],
+    docRequests: [],
+    customForms: [],
+    deadlineActions: [],
+    riskAnswers: [],
+    offboarding: [],
+    consults: [],
+    guestConsults: [],
+    reviewComments: [],
+    notifications: state.notifications.filter((n) => n.to === e.id),
+    busyDays: [],
+    settings: { baseDateOverride: state.settings.baseDateOverride, kakaoBannerDismissed: true, employeeLang: { [e.id]: state.settings.employeeLang[e.id] ?? "ko" } },
+    seq: 0
+  };
+}
 async function clock(db, ctx, body) {
   const { wp, state, e, base } = ctx;
   const kind = oneOf(body.kind, "kind", ["in", "out"]);
@@ -6287,6 +6356,7 @@ async function clock(db, ctx, body) {
 async function employeeRoutes(req, db, user, path, body, url) {
   const ctx = await employeeCtx(db, user, body.employeeId ?? url.searchParams.get("employeeId"));
   if (req.method === "GET" && path === "me") return json(req, employeeView(ctx.state, ctx.e, ctx.base));
+  if (req.method === "GET" && path === "state") return json(req, { base: ctx.base, employeeId: ctx.e.id, state: employeeState(ctx.state, ctx.e) });
   if (req.method === "POST" && path === "clock") return json(req, await clock(db, ctx, body), 201);
   throw notFound(`없는 경로예요: ${req.method} /employee/${path}`);
 }

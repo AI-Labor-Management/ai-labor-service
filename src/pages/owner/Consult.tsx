@@ -13,7 +13,7 @@ import { INDUSTRY_LABEL, SCALE_LABEL } from '../../ui/labels';
 type Tab = 'faq' | 'expert' | 'sent';
 
 export default function Consult() {
-  const { state, update, base } = useStore();
+  const { state, update, base, mode } = useStore();
   const toast = useToast();
   const [params, setParams] = useSearchParams();
   const topicQ = params.get('topic') ?? '';
@@ -71,7 +71,8 @@ export default function Consult() {
     });
     setBusy(false);
     setConsent(false);
-    toast('로컬 데모: 이 브라우저의 노무법인 화면에만 도착했어요 (실제 전송 아님)', 'warn');
+    if (mode === 'server') toast('협력 노무법인 요청함에 보냈어요 (고른 항목만 · 언제든 철회할 수 있어요)');
+    else toast('로컬 데모: 이 브라우저의 노무법인 화면에만 도착했어요 (실제 전송 아님)', 'warn');
     setTab('sent');
   };
 

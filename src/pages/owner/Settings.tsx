@@ -10,7 +10,8 @@ import { Button, Card, ConnBadge, download, Field, inputCls, KV, LinkButton, Mod
 import { INDUSTRY_LABEL, SCALE_LABEL } from '../../ui/labels';
 
 export default function Settings() {
-  const { state, update, base, adapter, resetEmpty, resetSeed, replaceState } = useStore();
+  const { state, update, base, adapter, resetEmpty, resetSeed, replaceState, mode } = useStore();
+  const server = mode === 'server';
   const toast = useToast();
   const [d, setD] = useState(state.settings.baseDateOverride ?? todayLocal());
   const [confirm, setConfirm] = useState<null | 'empty' | 'seed'>(null);
@@ -78,12 +79,20 @@ export default function Settings() {
         </Card>
         <Card title="데이터">
           <KV k="저장 위치" v={adapter.description} />
-          <Notice tone="warn" className="mt-2">
-            실제 인증·사용자별 격리가 없는 로컬 데모예요. 같은 브라우저를 쓰는 사람은 모든 역할의 데이터를 볼 수 있어요. 실제 개인정보를 넣지 마세요.
-          </Notice>
+          {server ? (
+            <Notice tone="info" className="mt-2">
+              로그인한 계정의 사업장만 서버에 저장돼요. 직원·노무법인은 서버 권한(RLS)으로 본인 몫만 봐요. 시험 운영 중이라 실제 개인정보는 넣지 마세요.
+            </Notice>
+          ) : (
+            <Notice tone="warn" className="mt-2">
+              실제 인증·사용자별 격리가 없는 로컬 데모예요. 같은 브라우저를 쓰는 사람은 모든 역할의 데이터를 볼 수 있어요. 실제 개인정보를 넣지 마세요.
+            </Notice>
+          )}
           <div className="mt-3 flex flex-wrap gap-2">
             <Button onClick={() => download(`ai-labor-demo-${base}.json`, JSON.stringify(state, null, 2), 'application/json')}>JSON 내보내기</Button>
-            <Button onClick={() => fileRef.current?.click()}>JSON 가져오기</Button>
+            <Button onClick={() => fileRef.current?.click()} reason={server ? '서버 모드에서는 가져오기를 쓸 수 없어요 (로그인 없이 둘러보기에서만)' : undefined}>
+              JSON 가져오기
+            </Button>
             <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void importFile(f); e.target.value = ''; }} />
             <Button variant="danger" onClick={() => setConfirm('empty')}>
               데이터 초기화
@@ -99,7 +108,7 @@ export default function Settings() {
         </Card>
       </div>
       <Modal open={!!confirm} onClose={() => setConfirm(null)} title={confirm === 'empty' ? '데이터 초기화' : '가상 시드 복원'} footer={<><Button onClick={() => setConfirm(null)}>취소</Button><Button variant="danger" onClick={async () => { if (confirm === 'empty') await resetEmpty(); else await resetSeed(); setConfirm(null); toast(confirm === 'empty' ? '초기화했어요' : '가상 시드로 바꿨어요'); }}>{confirm === 'empty' ? '모두 지우기' : '시드로 바꾸기'}</Button></>}>
-        <p className="text-sm">이 브라우저에 저장된 사업장·직원·급여·기록이 {confirm === 'empty' ? '모두 지워져요' : '가상 시드(카페 샘터, 직원 A·B·C)로 바뀌어요'}. 필요하면 먼저 JSON으로 내보내세요. 기준일 고정 설정은 유지돼요.</p>
+        <p className="text-sm">{server ? '서버에 저장된 내 사업장의' : '이 브라우저에 저장된'} 사업장·직원·급여·기록이 {confirm === 'empty' ? '모두 지워져요 (되돌릴 수 없어요)' : '가상 시드(카페 샘터, 직원 A·B·C)로 바뀌어요'}. 필요하면 먼저 JSON으로 내보내세요. 기준일 고정 설정은 유지돼요.</p>
       </Modal>
     </div>
   );

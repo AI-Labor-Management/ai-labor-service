@@ -174,11 +174,11 @@ function Receipt({ rec, en }: { rec: { recordNo: string; time: string; inside: b
 }
 
 function EmpHomeInner() {
-  const { state, update, base } = useStore();
+  const { state, update, base, mode } = useStore();
   const { emp, view, en, t } = useMe();
   const toast = useToast();
   const [inside, setInside] = useState(true);
-  const [time, setTime] = useState(nowHM());
+  const [timeInput, setTime] = useState(nowHM());
   const [receipt, setReceipt] = useState<null | Parameters<typeof Receipt>[0]['rec']>(null);
   if (!emp || !view) return null;
   const plan = dayPlan(state, emp, base);
@@ -189,6 +189,8 @@ function EmpHomeInner() {
   const unread = view.notifications.filter((n) => !n.readAt);
 
   const clock = (kind: '출근' | '퇴근') => {
+    // 서버 모드는 서버 시각으로 남는다 (기기 시각은 보내지 않음). 화면에는 지금 시각을 먼저 보여 준다
+    const time = mode === 'server' ? nowHM() : timeInput;
     if (!isHHMM(time)) return toast('시각 형식을 확인하세요', 'warn');
     const loc = consent ? demoLocate(inside) : null;
     const gpsResult = loc ? loc.gps : 'denied';
@@ -241,10 +243,14 @@ function EmpHomeInner() {
             ) : (
               <p className="text-xs text-muted">위치 동의를 하지 않아 수동 기록으로 남고 사장님 확인을 거쳐요.</p>
             )}
-            <label className="flex items-center gap-2 text-xs text-muted">
-              데모 기록 시각
-              <input type="time" className={cx(inputBaseCls, 'w-32')} value={time} onChange={(e) => setTime(e.target.value)} />
-            </label>
+            {mode === 'server' ? (
+              <p className="text-xs text-muted">{t('기록 시각은 서버 시각(지금)으로 남아요', 'Time is recorded by the server (now)')}</p>
+            ) : (
+              <label className="flex items-center gap-2 text-xs text-muted">
+                데모 기록 시각
+                <input type="time" className={cx(inputBaseCls, 'w-32')} value={timeInput} onChange={(e) => setTime(e.target.value)} />
+              </label>
+            )}
             {!rec ? (
               <Button variant="primary" size="lg" className="w-full" onClick={() => clock('출근')}>
                 {consent && !inside ? t('수동 출근 요청', 'Request manual clock-in') : t('출근하기', 'Clock in')}

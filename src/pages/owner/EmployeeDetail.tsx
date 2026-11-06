@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { useStore, uid, nowIso, pushNotification } from '../../state/store';
+import { friendly, rpc } from '../../adapters/server';
 import { conditionHistory, isUnder5, weeklyHours, netMinutes } from '../../domain/work';
 import { foreignSignal, SIGNAL_LABEL, VISA_GUIDE } from '../../domain/foreign';
 import { employeeInsurance, INSURANCE_LABEL, VERDICT_LABEL } from '../../domain/insurance';
@@ -24,7 +25,9 @@ type Tab = 'summary' | 'conditions' | 'insurance' | 'leave' | 'app';
 export default function EmployeeDetail() {
   const { id } = useParams();
   const [params, setParams] = useSearchParams();
-  const { state, update, base, setSession } = useStore();
+  const { state, update, base, setSession, mode, flushNow } = useStore();
+  // 서버 모드: 초대 토큰 원문은 만들 때 한 번만 받는다 (서버에는 해시만 저장)
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
   const nav = useNavigate();
   const toast = useToast();
   const e = state.employees.find((x) => x.id === id);
@@ -88,7 +91,23 @@ export default function EmployeeDetail() {
     toast('조건 변경을 이력으로 남겼어요. 변경 계약서 할 일이 생겼어요.');
   };
 
-  const makeInvite = () => {
+  const makeInvite = async () => {
+    if (mode === 'server') {
+      try {
+        await flushNow();
+        const r = await rpc<{ token: string; expiresAt: string }>('create_invite', { p_employee_id: e.id });
+        setInviteToken(r.token);
+        update((d) => {
+          const t = d.employees.find((x) => x.id === e.id)!;
+          t.invite = { token: r.token, expiresAt: r.expiresAt, used: false };
+          if (t.account === 'none') t.account = 'invited';
+        });
+        toast('초대 링크를 만들었어요 (7일 유효, 일회용 · 이전 링크는 무효)');
+      } catch (err) {
+        toast(friendly(err), 'warn');
+      }
+      return;
+    }
     const token = Math.random().toString(36).slice(2, 10);
     update((d) => {
       const t = d.employees.find((x) => x.id === e.id)!;
@@ -97,7 +116,8 @@ export default function EmployeeDetail() {
     });
     toast('초대 링크를 만들었어요 (7일 유효, 일회용)');
   };
-  const inviteUrl = e.invite ? `${location.origin}${import.meta.env.BASE_URL}employee/join?invite=${e.invite.token}` : '';
+  const token = mode === 'server' ? inviteToken : e.invite?.token;
+  const inviteUrl = token ? `${location.origin}${import.meta.env.BASE_URL}${mode === 'server' ? `invite?token=${token}` : `employee/join?invite=${token}`}` : '';
 
   return (
     <div className="max-w-5xl">
@@ -319,10 +339,11 @@ export default function EmployeeDetail() {
           <p className="mt-2 text-sm text-muted">직원이 가입하지 않아도 사장님은 모든 기능을 쓸 수 있어요. 직원 앱은 출퇴근·내 일정·대타·연차(5명 이상)·임금명세서 수령 확인만 있어요.</p>
           {e.account !== 'joined' && e.account !== 'blocked' && (
             <div className="mt-3 space-y-2">
-              <Button variant="primary" onClick={makeInvite}>
+              <Button variant="primary" onClick={() => void makeInvite()}>
                 {e.invite ? '초대 링크 다시 만들기' : '초대 링크 만들기'}
               </Button>
-              {e.invite && (
+              {e.invite && !inviteUrl && <p className="text-xs text-muted">{fmtDate(e.invite.expiresAt)}까지 유효한 링크가 있어요. 보안을 위해 링크 원문은 만들 때만 보여요 — 다시 보내려면 [다시 만들기]를 누르세요 (이전 링크는 무효).</p>}
+              {e.invite && inviteUrl && (
                 <div className="rounded-xl border border-line p-3 text-sm">
                   <p className="break-all font-mono text-xs">{inviteUrl}</p>
                   <p className="mt-1 text-xs text-muted">{fmtDate(e.invite.expiresAt)}까지 · 일회용 · 연락처 대신 사장님이 직접 보내요 (카톡·문자 공유 연동은 연결 대기)</p>
@@ -330,9 +351,11 @@ export default function EmployeeDetail() {
                     <Button size="sm" onClick={async () => toast((await copyText(`[${state.workplace?.name || '가게'}] 근무 관리 앱 초대 링크예요: ${inviteUrl}`)) ? '초대 문구를 복사했어요' : '복사하지 못했어요 — 직접 선택해 복사하세요', 'info')}>
                       초대 문구 복사
                     </Button>
-                    <Button size="sm" onClick={() => { setSession({ role: 'employee', employeeId: e.id }); nav('/employee/join'); }}>
-                      데모: 직원으로 링크 열기
-                    </Button>
+                    {mode === 'local' && (
+                      <Button size="sm" onClick={() => { setSession({ role: 'employee', employeeId: e.id }); nav('/employee/join'); }}>
+                        데모: 직원으로 링크 열기
+                      </Button>
+                    )}
                   </div>
                 </div>
               )}

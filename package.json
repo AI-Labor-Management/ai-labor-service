@@ -17,6 +17,7 @@
     "build:functions": "node scripts/build-functions.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "2.117.3",
     "react": "19.1.1",
     "react-dom": "19.1.1",
     "react-router": "7.18.5"

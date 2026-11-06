@@ -404,7 +404,12 @@ async function ownerRoutes(req: Request, db: Db, user: User, path: string, body:
   if (m === 'GET') {
     switch (path) {
       case 'state':
-        return json(req, { base, state });
+        // 프론트엔드 동기화용: 상태 + 화면 상태에 없는 DB id (급여월 id)
+        return json(req, {
+          base,
+          state,
+          ids: { userId: user.id, workplaceId: wp.id, payrollIdByMonth: Object.fromEntries(ctx.rows.payroll_months.map((p) => [p.month, p.id])) },
+        });
       case 'home':
         return json(req, await home(state, date));
       case 'checklist':
@@ -502,6 +507,57 @@ function employeeView(state: AppState, e: Employee, base: string) {
   };
 }
 
+/**
+ * 직원 화면용 AppState — 프론트엔드의 employeeScope가 그대로 동작하도록 같은 모양으로 주되, 본인 데이터만 넣는다.
+ * 다른 직원은 대타 요청에 보이는 별칭만(근로조건·금액·기록 없음). 서류·보험·위험 점검·상담은 비운다.
+ */
+function employeeState(state: AppState, e: Employee): AppState {
+  const own = <T extends { employeeId: string }>(xs: T[]) => xs.filter((x) => x.employeeId === e.id);
+  const subs = state.substitutions.filter(
+    (s) => s.fromEmployeeId === e.id || s.toEmployeeId === e.id || (s.mode === 'request' && s.status === 'open'),
+  );
+  const others = new Set(subs.flatMap((s) => [s.fromEmployeeId, s.toEmployeeId]).filter((id): id is string => !!id && id !== e.id));
+  const stub = (x: Employee): Employee => ({
+    id: x.id, alias: x.alias, ageBand: '18-59', birthDate: null, startedBefore65: null, hireDate: x.hireDate, employmentType: 'regular',
+    contractEnd: null, probationEnd: null, foodHandler: false, isForeign: false, foreign: null, school: null, insuranceMethod: 'self',
+    registeredAt: x.registeredAt, onboarding: 'existing-done', resignDate: x.resignDate, resignType: null, account: 'none', invite: null,
+    locationConsent: null, conditionAcks: [], bonusAnnual: 0, leaveAllowanceAnnual: 0, createdAt: x.createdAt,
+  });
+  const myRecords = new Set(own(state.attendance).map((a) => a.id));
+  const payrolls = state.payrolls
+    .map((p) => ({ ...p, manual: [], confirmedLines: p.confirmedLines?.filter((l) => l.employeeId === e.id) ?? null }))
+    .filter((p) => p.confirmedLines?.length);
+  return {
+    schemaVersion: 1,
+    workplace: state.workplace,
+    employees: [{ ...e, invite: null }, ...state.employees.filter((x) => others.has(x.id)).map(stub)],
+    conditions: own(state.conditions),
+    overrides: own(state.overrides),
+    attendance: own(state.attendance),
+    attendanceEdits: state.attendanceEdits.filter((x) => myRecords.has(x.recordId)),
+    substitutions: subs,
+    leaveRequests: own(state.leaveRequests),
+    payrolls,
+    payrollEdits: own(state.payrollEdits),
+    statements: own(state.statements),
+    insuranceReports: [],
+    insuranceNotices: [],
+    docRecords: [],
+    docRequests: [],
+    customForms: [],
+    deadlineActions: [],
+    riskAnswers: [],
+    offboarding: [],
+    consults: [],
+    guestConsults: [],
+    reviewComments: [],
+    notifications: state.notifications.filter((n) => n.to === e.id),
+    busyDays: [],
+    settings: { baseDateOverride: state.settings.baseDateOverride, kakaoBannerDismissed: true, employeeLang: { [e.id]: state.settings.employeeLang[e.id] ?? 'ko' } },
+    seq: 0,
+  };
+}
+
 async function clock(db: Db, ctx: Awaited<ReturnType<typeof employeeCtx>>, body: Body) {
   const { wp, state, e, base } = ctx;
   const kind = oneOf(body.kind, 'kind', ['in', 'out'] as const);
@@ -534,6 +590,7 @@ async function clock(db: Db, ctx: Awaited<ReturnType<typeof employeeCtx>>, body:
 async function employeeRoutes(req: Request, db: Db, user: User, path: string, body: Body, url: URL): Promise<Response> {
   const ctx = await employeeCtx(db, user, (body.employeeId as string | undefined) ?? url.searchParams.get('employeeId'));
   if (req.method === 'GET' && path === 'me') return json(req, employeeView(ctx.state, ctx.e, ctx.base));
+  if (req.method === 'GET' && path === 'state') return json(req, { base: ctx.base, employeeId: ctx.e.id, state: employeeState(ctx.state, ctx.e) });
   if (req.method === 'POST' && path === 'clock') return json(req, await clock(db, ctx, body), 201);
   throw notFound(`없는 경로예요: ${req.method} /employee/${path}`);
 }

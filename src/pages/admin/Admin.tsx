@@ -11,8 +11,9 @@ import { RulesTable } from '../owner/Rules';
 type Tab = 'status' | 'rules' | 'forms';
 
 export default function Admin() {
-  const { state, base } = useStore();
-  const a = adminScope(state);
+  const { state, base, mode, adminStats } = useStore();
+  // 서버 모드는 admin_stats RPC 집계(전체 서비스, 개인 데이터 없음 · 호출은 접근 기록에 남음)
+  const a = mode === 'server' && adminStats ? { ...adminStats, notificationsInApp: adminStats.notifications7d } : adminScope(state);
   const [tab, setTab] = useState<Tab>('status');
   const counts = allRules().flatMap((r) => r.values).reduce<Record<string, number>>((m, v) => ({ ...m, [v.status]: (m[v.status] ?? 0) + 1 }), {});
   return (
@@ -31,13 +32,13 @@ export default function Admin() {
       />
       {tab === 'status' && (
         <div className="grid gap-4 md:grid-cols-2">
-          <Card title="집계 (이 브라우저)">
+          <Card title={mode === 'server' ? '집계 (서버 전체)' : '집계 (이 브라우저)'}>
             <KV k="사업장" v={a.workplaces} />
             <KV k="직원 수" v={a.employees} />
             <KV k="확정 급여" v={a.payrollsConfirmed} />
             <KV k="회원 상담 요청" v={a.consults} />
             <KV k="비회원 신청 (시연)" v={a.guestConsults} />
-            <KV k="앱 안 알림" v={a.notificationsInApp} />
+            <KV k={mode === 'server' ? '앱 안 알림 (최근 7일)' : '앱 안 알림'} v={a.notificationsInApp} />
             <KV k="카톡 발송 성공률" v={<Badge tone="warn">연결 대기 · 발송 0건</Badge>} />
           </Card>
           <Card title="규칙 값 상태 (값 구간 기준)">

@@ -10,8 +10,68 @@ export const SERVICE_NAME = 'AI 인사노무 관리';
 
 const SCALE_LABEL = { '1-4': '1~4명', '5-9': '5~9명', '10+': '10명 이상' } as const;
 
+const ROLE_PATH = { owner: '/owner', employee: '/employee', firm: '/firm', admin: '/admin' } as const;
+
+/** 서버 모드 띠: 로그인 계정, 계정이 가진 역할 전환, 저장 상태, 로그아웃 */
+function ServerBar() {
+  const { auth, session, setSession, base, state, saveError, retrySave, syncing, logout } = useStore();
+  const nav = useNavigate();
+  const me = auth.me;
+  const value = session ? (session.role === 'employee' ? `employee:${session.employeeId}` : session.role) : '';
+  const change = (v: string) => {
+    const s: DemoSession = v.startsWith('employee:') ? { role: 'employee', employeeId: v.slice(9) } : { role: v as DemoSession['role'], employeeId: null };
+    setSession(s);
+    nav(ROLE_PATH[s.role]);
+  };
+  return (
+    <div className="no-print">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 bg-ink px-4 py-1.5 text-xs text-white/90">
+        <span className="font-bold text-kakao">서버 저장</span>
+        <span className="max-w-[16rem] truncate">{auth.email}</span>
+        <span aria-live="polite">{syncing ? '저장 중…' : '저장됨'}</span>
+        {session?.role === 'owner' && (
+          <Link to="/owner/settings" className="underline decoration-white/40 underline-offset-2">
+            기준일 {fmtDate(base)}
+            {state.settings.baseDateOverride ? ' (고정)' : ''}
+          </Link>
+        )}
+        <span className="ml-auto flex items-center gap-2">
+          {me && (
+            <select value={value} onChange={(e) => change(e.target.value)} className="rounded bg-white/10 px-1.5 py-0.5 text-white outline-none [&>option]:text-ink" aria-label="내 역할 전환">
+              <option value="owner">사장님{me.roles.owner ? ` · ${me.roles.owner.name || '내 사업장'}` : ' (사업장 만들기)'}</option>
+              {me.roles.employee.map((e) => (
+                <option key={e.employeeId} value={`employee:${e.employeeId}`}>
+                  직원 · {e.alias}
+                </option>
+              ))}
+              {me.roles.firm.length > 0 && <option value="firm">노무법인</option>}
+              {me.roles.admin && <option value="admin">관리자</option>}
+            </select>
+          )}
+          <button type="button" className="underline decoration-white/40 underline-offset-2" onClick={() => void logout().then(() => nav('/start'))}>
+            로그아웃
+          </button>
+        </span>
+      </div>
+      {saveError && (
+        <div role="alert" className="flex items-center gap-3 bg-risk-soft px-4 py-2 text-sm text-risk">
+          <span>{saveError}</span>
+          <Button size="sm" variant="danger" onClick={retrySave}>
+            서버 내용 다시 불러오기
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** 데모 띠: 실제 인증이 아님을 모든 화면에 표시하고, 역할을 바꿀 수 있게 한다 */
 export function DemoBar() {
+  const { mode } = useStore();
+  return mode === 'server' ? <ServerBar /> : <LocalBar />;
+}
+
+function LocalBar() {
   const { state, session, setSession, base, saveError, retrySave, storageWarning } = useStore();
   const nav = useNavigate();
   const value = session ? (session.role === 'employee' ? `employee:${session.employeeId}` : session.role) : '';
@@ -67,11 +127,11 @@ export function DemoBar() {
 }
 
 export function LoadGate({ children }: { children: ReactNode }) {
-  const { status, loadError, retryLoad, resetEmpty } = useStore();
+  const { status, loadError, retryLoad, resetEmpty, mode, switchMode } = useStore();
   if (status === 'loading')
     return (
       <div className="flex min-h-screen items-center justify-center text-muted" aria-busy="true">
-        저장된 데이터를 불러오는 중…
+        {mode === 'server' ? '서버에서 불러오는 중…' : '저장된 데이터를 불러오는 중…'}
       </div>
     );
   if (status === 'error')
@@ -83,9 +143,13 @@ export function LoadGate({ children }: { children: ReactNode }) {
             <Button variant="primary" onClick={retryLoad}>
               다시 시도
             </Button>
-            <Button variant="danger" onClick={() => void resetEmpty()}>
-              저장 데이터 초기화
-            </Button>
+            {mode === 'server' ? (
+              <Button onClick={() => switchMode('local')}>로그인 없이 둘러보기로 바꾸기</Button>
+            ) : (
+              <Button variant="danger" onClick={() => void resetEmpty()}>
+                저장 데이터 초기화
+              </Button>
+            )}
           </div>
         </Notice>
       </div>

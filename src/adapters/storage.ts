@@ -84,10 +84,41 @@ export class LocalStorageAdapter implements StorageAdapter {
   }
 }
 
-export function createStorage(): { adapter: StorageAdapter; warning: string | null } {
+/**
+ * 서버 모드 표시용. 실제 읽기·쓰기는 store.tsx가 server.ts(로그인·역할별 읽기)와 sync.ts(변경 → 서버 요청)로 한다.
+ * 화면은 지금처럼 update()만 쓰면 된다.
+ */
+export class ServerStorageInfo implements StorageAdapter {
+  readonly kind = 'supabase' as const;
+  readonly description = 'Supabase 서버 (로그인 계정별 · RLS로 사업장·직원별 격리)';
+  async load(): Promise<AppState | null> {
+    return null;
+  }
+  async save(): Promise<void> {}
+  async clear(): Promise<void> {}
+  loadSession(): DemoSession | null {
+    try {
+      const t = localStorage.getItem('ai-labor/server-session');
+      return t ? (JSON.parse(t) as DemoSession) : null;
+    } catch {
+      return null;
+    }
+  }
+  saveSession(s: DemoSession | null): void {
+    try {
+      if (s) localStorage.setItem('ai-labor/server-session', JSON.stringify(s));
+      else localStorage.removeItem('ai-labor/server-session');
+    } catch {
+      /* 역할 기억 실패는 다음 접속 때 기본 역할로 */
+    }
+  }
+}
+
+export function createStorage(mode: 'local' | 'server' = 'local'): { adapter: StorageAdapter; warning: string | null } {
+  if (mode === 'server') return { adapter: new ServerStorageInfo(), warning: null };
   const want = (import.meta.env.VITE_STORAGE_ADAPTER as string | undefined) ?? 'local';
-  if (want === 'supabase') {
-    return { adapter: new LocalStorageAdapter(), warning: 'VITE_STORAGE_ADAPTER=supabase 는 아직 구현되지 않아 로컬 저장소로 실행 중이에요.' };
+  if (want === 'supabase' && !import.meta.env.VITE_SUPABASE_URL) {
+    return { adapter: new LocalStorageAdapter(), warning: 'VITE_STORAGE_ADAPTER=supabase 인데 VITE_SUPABASE_URL·VITE_SUPABASE_ANON_KEY가 없어 로컬 저장소로 실행 중이에요.' };
   }
   return { adapter: new LocalStorageAdapter(), warning: null };
 }

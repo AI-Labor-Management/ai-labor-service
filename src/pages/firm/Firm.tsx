@@ -12,7 +12,7 @@ import { INDUSTRY_LABEL, SCALE_LABEL } from '../../ui/labels';
 type Tab = 'inbox' | 'insurance' | 'review';
 
 export default function Firm() {
-  const { state, update, base } = useStore();
+  const { state, update, base, mode } = useStore();
   const toast = useToast();
   const v = firmScope(state);
   const [tab, setTab] = useState<Tab>('inbox');
@@ -20,9 +20,15 @@ export default function Firm() {
   const [comment, setComment] = useState('');
   return (
     <div>
-      <Notice tone="warn" className="mb-4" title="로컬 데모 · 2단계 인증 연결 대기">
-        실제 운영에서는 별도 입구와 2단계 인증을 써요. 이 화면은 이 브라우저의 사장님 데이터 중 사장님이 고른 항목만 보여줘요 — 급여·서류 상태는 볼 수 없어요.
-      </Notice>
+      {mode === 'server' ? (
+        <Notice tone="info" className="mb-4" title="서버 · 2단계 인증 연결 대기">
+          협력 사업장의 사장님이 보낸 요청 중 고른 항목만, 맡김·공유 동의한 4대보험 건만 보여요. 철회된 요청은 내용이 가려져요. 급여·서류 상태는 볼 수 없어요.
+        </Notice>
+      ) : (
+        <Notice tone="warn" className="mb-4" title="로컬 데모 · 2단계 인증 연결 대기">
+          실제 운영에서는 별도 입구와 2단계 인증을 써요. 이 화면은 이 브라우저의 사장님 데이터 중 사장님이 고른 항목만 보여줘요 — 급여·서류 상태는 볼 수 없어요.
+        </Notice>
+      )}
       <Tabs<Tab>
         tabs={[
           { value: 'inbox', label: `상담 요청함 (${v.consults.length + v.guests.length})` },

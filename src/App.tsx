@@ -4,6 +4,7 @@ import { ToastProvider } from './ui/kit';
 import { LoadGate, OwnerLayout, RoleLayout, SERVICE_NAME } from './ui/layouts';
 import Landing from './pages/public/Landing';
 import Start from './pages/public/Start';
+import Invite from './pages/public/Invite';
 import OwnerHome from './pages/owner/Home';
 import Setup from './pages/owner/Setup';
 import Precheck from './pages/owner/Precheck';
@@ -38,6 +39,7 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/start" element={<Start />} />
+              <Route path="/invite" element={<Invite />} />
               <Route path="/owner" element={<OwnerLayout />}>
                 <Route index element={<OwnerHome />} />
                 <Route path="setup" element={<Setup />} />
