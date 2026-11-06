@@ -98,6 +98,7 @@ Postgres
 |---|---|---|
 | GET | `health` | 상태 (토큰 불필요) |
 | GET | `me` | 내 역할(사장님·직원·노무법인·관리자) |
+| POST | `account/delete` | 회원 탈퇴 `{"confirm":"탈퇴"}` — 사장님 사업장 전체 삭제 → 직원 앱 연결 해제(사장님 쪽 기록 유지) → 로그인 계정 삭제. 되돌릴 수 없음 |
 | POST | `owner/seed-demo` `{replace?, baseDate?}` | 가상 시드(카페 샘터·직원 A·B·C) 넣기. `replace:true`면 기존 데이터 전부 지우고 다시 |
 | GET | `owner/state` | 사업장 전체 `AppState` + 화면에 없는 DB id(`ids.workplaceId`, `ids.payrollIdByMonth`) — 서버 모드 화면이 읽음 |
 | GET | `owner/home?date=` | 할 일·영역별 수·위험·이번 달 예상·오늘 근무 |

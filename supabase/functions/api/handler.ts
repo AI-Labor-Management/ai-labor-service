@@ -74,6 +74,28 @@ async function me(db: Db, user: User) {
   };
 }
 
+// ───────────────────────── 계정 ─────────────────────────
+/**
+ * 회원 탈퇴 (POST account/delete, body {"confirm": "탈퇴"}). 되돌릴 수 없다.
+ *  1) 사장님이면 사업장 데이터 전체 삭제 (delete_my_workplace — 확정 급여·명세서 포함)
+ *  2) 직원으로 연결된 사업장은 연결만 끊는다 (leave_employee_app — 사장님 쪽 근무·급여 기록은 법정 보관을 위해 유지)
+ *  3) 로그인 계정 삭제. 노무법인·관리자 소속은 계정과 함께 지워지고, 남은 작성 기록의 작성자 칸은 비워진다
+ */
+async function deleteAccount(db: Db, user: User, body: Body) {
+  if (body.confirm !== '탈퇴') throw bad('확인 문구가 필요해요 ({"confirm": "탈퇴"})');
+  const asUser = userClient(user.token);
+  const { error: wpError } = await asUser.rpc('delete_my_workplace');
+  if (wpError) throw wpError;
+  const links = await must(db.from('employees').select('id').eq('user_id', user.id).eq('account_status', 'joined'));
+  for (const link of links) {
+    const { error } = await asUser.rpc('leave_employee_app', { p_employee_id: link.id });
+    if (error) throw error;
+  }
+  const { error } = await db.auth.admin.deleteUser(user.id);
+  if (error) throw error;
+  return { deleted: true, workplaceDeleted: true, employeeLinksRemoved: links.length };
+}
+
 // ───────────────────────── 사장님 ─────────────────────────
 async function seedDemo(db: Db, user: User, body: Body) {
   const existing = await ownerWorkplace(db, user.id);
@@ -606,6 +628,7 @@ export async function handler(req: Request): Promise<Response> {
     const url = new URL(req.url);
     const [area, ...rest] = path.split('/');
     if (path === 'me') return json(req, await me(db, user));
+    if (path === 'account/delete' && req.method === 'POST') return json(req, await deleteAccount(db, user, body));
     if (area === 'owner') return await ownerRoutes(req, db, user, rest.join('/'), body, url);
     if (area === 'employee') return await employeeRoutes(req, db, user, rest.join('/'), body, url);
     throw notFound(`없는 경로예요: ${path}`);

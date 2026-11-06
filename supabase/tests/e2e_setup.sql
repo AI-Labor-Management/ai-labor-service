@@ -1,4 +1,4 @@
--- E2E 시험용 임시 계정 3개 만들기 (사장님·직원·노무법인). 가상 이메일(example.test)만 쓴다.
+-- E2E 시험용 임시 계정 4개 만들기 (사장님·직원·노무법인·탈퇴 시험). 가상 이메일(example.test)만 쓴다.
 -- 개발 프로젝트에서만 실행하세요. 결과의 password를 E2E_PASSWORD 환경변수로 넘기고, 끝나면 e2e_cleanup.sql로 지웁니다.
 -- 직원 계정은 시험 안에서 초대 링크(create_invite → accept_invite)로 연결됩니다.
 with pw as (select 'E2e-' || encode(extensions.gen_random_bytes(12), 'hex') as p),
@@ -8,7 +8,7 @@ u as (
   select '00000000-0000-0000-0000-000000000000', gen_random_uuid(), 'authenticated', 'authenticated', 'e2e-' || r || '@example.test',
     extensions.crypt((select p from pw), extensions.gen_salt('bf')), now(),
     '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', '', '', '', '', ''
-  from unnest(array['owner', 'employee', 'firm']) r
+  from unnest(array['owner', 'employee', 'firm', 'delete']) r
   returning id, email
 ),
 i as (

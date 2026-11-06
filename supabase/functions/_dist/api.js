@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/api/handler.ts (npm run build:functions)
-// sha256:8481a09ce283
+// sha256:c45bb34a3730
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -5860,6 +5860,20 @@ async function me(db, user) {
     }
   };
 }
+async function deleteAccount(db, user, body) {
+  if (body.confirm !== "탈퇴") throw bad('확인 문구가 필요해요 ({"confirm": "탈퇴"})');
+  const asUser = userClient(user.token);
+  const { error: wpError } = await asUser.rpc("delete_my_workplace");
+  if (wpError) throw wpError;
+  const links = await must(db.from("employees").select("id").eq("user_id", user.id).eq("account_status", "joined"));
+  for (const link of links) {
+    const { error: error2 } = await asUser.rpc("leave_employee_app", { p_employee_id: link.id });
+    if (error2) throw error2;
+  }
+  const { error } = await db.auth.admin.deleteUser(user.id);
+  if (error) throw error;
+  return { deleted: true, workplaceDeleted: true, employeeLinksRemoved: links.length };
+}
 async function seedDemo(db, user, body) {
   const existing = await ownerWorkplace(db, user.id);
   if (existing && body.replace !== true) throw conflict('이미 사업장이 있어요. 지우고 다시 넣으려면 {"replace": true}를 보내세요 (모든 데이터가 지워져요)');
@@ -6373,6 +6387,7 @@ async function handler(req) {
     const url = new URL(req.url);
     const [area, ...rest] = path.split("/");
     if (path === "me") return json(req, await me(db, user));
+    if (path === "account/delete" && req.method === "POST") return json(req, await deleteAccount(db, user, body));
     if (area === "owner") return await ownerRoutes(req, db, user, rest.join("/"), body, url);
     if (area === "employee") return await employeeRoutes(req, db, user, rest.join("/"), body, url);
     throw notFound(`없는 경로예요: ${path}`);
