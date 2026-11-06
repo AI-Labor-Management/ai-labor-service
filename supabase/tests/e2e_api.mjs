@@ -50,7 +50,13 @@ async function mfaUpgrade(token) {
   const ch = await post(`factors/${en.body.id}/challenge`);
   const ve = await post(`factors/${en.body.id}/verify`, { challenge_id: ch.body.id, code: totp(en.body.totp.secret) });
   if (!ve.body.access_token) throw new Error('2단계 인증 확인 실패 ' + JSON.stringify(ve.body));
+  mfaFactors.push({ id: en.body.id, token: ve.body.access_token });
   return ve.body.access_token;
+}
+const mfaFactors = [];
+/** 시험이 끝나면 인증 앱 등록을 지운다 (다른 시험이 같은 계정으로 새로 등록할 수 있게) */
+async function mfaCleanup() {
+  for (const f of mfaFactors) await fetch(`${BASE}/auth/v1/factors/${f.id}`, { method: 'DELETE', headers: { apikey: KEY, Authorization: `Bearer ${f.token}` } });
 }
 
 async function call(fn, path, token, { method = 'GET', body, raw = false, origin } = {}) {
@@ -328,5 +334,6 @@ ok(r.status === 200 && r.body.confirmed === false, 'replace 후 급여는 다시
 r = await rest('notifications?recipient=eq.owner&select=kind,text', owner);
 ok(r.status === 200, '사장님 알림 조회', r.body.length);
 
+await mfaCleanup();
 console.log(`\nE2E: ${pass} passed, ${fails.length} failed`);
 if (fails.length) { console.log(fails.join('\n')); process.exit(1); }
