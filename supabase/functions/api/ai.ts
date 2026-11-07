@@ -9,6 +9,7 @@ import type Anthropic from '@anthropic-ai/sdk';
 import { HttpError } from '../_shared/http.ts';
 import { type AiAnswer, toAiAnswer } from './ai-answer.ts';
 import { isCreditError, modelProfile, pickModel } from './ai-model.ts';
+import { GEMINI_POLICY_FROM, geminiConfigured } from './gemini.ts';
 
 export type { AiAnswer };
 
@@ -39,9 +40,23 @@ export const AI_SOURCES = [
   'eps.go.kr', // 고용허가제
 ];
 
-export function aiConfigured(): boolean {
+/** Claude(유료 — 무료 크레딧이 끝나면 결제 필요) 키가 들어 있는지 */
+export function claudeConfigured(): boolean {
   return !!AnthropicCtor && !!Deno.env.get('ANTHROPIC_API_KEY');
 }
+
+/**
+ * 지금 답할 AI 제공사. 기본은 무료 Gemini(GEMINI_API_KEY, 처리방침 시행일 GEMINI_POLICY_FROM부터),
+ * 없거나 AI_PROVIDER=anthropic이면 Claude(ANTHROPIC_API_KEY). 둘 다 없으면 null(연결 전).
+ */
+export function aiProvider(today: string): 'gemini' | 'anthropic' | null {
+  const gemini = geminiConfigured() && today >= GEMINI_POLICY_FROM;
+  if (Deno.env.get('AI_PROVIDER') === 'anthropic' && claudeConfigured()) return 'anthropic';
+  if (gemini) return 'gemini';
+  if (claudeConfigured()) return 'anthropic';
+  return null;
+}
+export const aiConfigured = (today: string) => aiProvider(today) !== null;
 
 const SYSTEM = `너는 한국 소상공인 사장님을 돕는 인사·노무 안내 도우미다. 서비스 이름은 사람샘각이다.
 

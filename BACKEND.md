@@ -99,7 +99,7 @@ Postgres
 | GET | `health` | 상태 (토큰 불필요) |
 | GET | `me` | 내 역할(사장님·직원·노무법인·관리자) |
 | POST | `account/delete` | 회원 탈퇴 `{"confirm":"탈퇴"}` — 사장님 사업장 전체 삭제 → 직원 앱 연결 해제(사장님 쪽 기록 유지) → 로그인 계정 삭제. 되돌릴 수 없음 |
-| POST | `owner/consult/answer` `{question}` | AI 노무 상담(Claude, 기본 `claude-haiku-5-5` — 무료 크레딧으로 오래 쓰도록 검색 2회. 함수 비밀 값 `ANTHROPIC_MODEL`로 `claude-opus-5-5` 등으로 바꿈. 공식 사이트만 web_search). 크레딧이 떨어지면 503 `AI_CREDIT_EMPTY`. 질문 2~500자·개인정보 패턴 거절(422), 사업장 필요, 키 없으면 503 `AI_NOT_CONFIGURED`, 하루 20회 넘으면 429. 응답 `{status, text, citations, usedToday, dailyLimit}`. 질문·답 저장 안 함 (`api/ai.ts`) |
+| POST | `owner/consult/answer` `{question}` | AI 노무 상담. **기본: 무료 Google Gemini** (`gemini-3.8-flash`, 비밀 값 `GEMINI_API_KEY`, 처리방침 시행일 2026-11-15부터) — 무료 등급은 웹 검색 근거가 없어 앱의 검증된 규칙 44개·FAQ를 자료로 넘기고 그 번호만 근거로 받는다(`ai-ground.ts`, 근거 없으면 근거 부족). **선택: Claude** (`ANTHROPIC_API_KEY`, 유료, 기본 `claude-haiku-5-5`·공식 사이트 web_search 2회, `ANTHROPIC_MODEL`로 바꿈; 크레딧이 떨어지면 503 `AI_CREDIT_EMPTY`). 둘 다 있으면 Gemini, `AI_PROVIDER=anthropic`이면 Claude. health의 `aiProvider`로 확인. 질문 2~500자·개인정보 패턴 거절(422), 사업장 필요, 키 없으면 503 `AI_NOT_CONFIGURED`, 하루 20회 넘으면 429. 응답 `{status, text, citations, usedToday, dailyLimit}`. 질문·답 저장 안 함 (`api/ai.ts`) |
 | POST | `owner/seed-demo` `{replace?, baseDate?}` | 가상 시드(카페 샘터·직원 A·B·C) 넣기. `replace:true`면 기존 데이터 전부 지우고 다시 |
 | GET | `owner/state` | 사업장 전체 `AppState` + 화면에 없는 DB id(`ids.workplaceId`, `ids.payrollIdByMonth`) — 서버 모드 화면이 읽음 |
 | GET | `owner/home?date=` | 할 일·영역별 수·위험·이번 달 예상·오늘 근무 |
@@ -157,7 +157,8 @@ Postgres
 | `project_url` | 프로젝트 주소 | cron이 부를 함수 주소 |
 
 함수 비밀 값 (운영자가 대시보드 Edge Functions → Secrets에 직접 넣음, 저장소에 두지 않음):
-- `ANTHROPIC_API_KEY` — AI 노무 상담
+- `GEMINI_API_KEY` — AI 노무 상담 기본(무료, Google AI Studio에서 발급). `GEMINI_MODEL`로 모델 변경
+- `ANTHROPIC_API_KEY` — AI 노무 상담 선택(유료 Claude). `ANTHROPIC_MODEL`, `AI_PROVIDER=anthropic`
 - `KAKAO_REST_KEY`·`KAKAO_CLIENT_SECRET` — 카카오톡 나에게 보내기 (카카오 앱의 REST API 키·카카오 로그인 Client Secret, Supabase 카카오 로그인에 넣은 값과 같다). 켜는 순서는 사람샘각 `docs/KAKAO_ALERTS_SETUP.md`
 
 카카오톡 알림 경로: `GET api/owner/kakao`(상태) · `POST api/owner/kakao/start`(동의 주소, 처리방침 시행일 2026-11-14 전에는 409) · `POST api/owner/kakao/test`(시험 발송) · `POST api/owner/kakao/disconnect` · `GET public-api/kakao/callback`(카카오 Redirect URI). 갱신 토큰은 `kakao_links`에 Vault 키로 암호화해 두고 서비스 역할만 읽는다. cron-daily가 앱 안 알림과 같은 내용을 하루 한 번 보내고, 만료 한 달 안쪽 토큰은 미리 갱신한다.
