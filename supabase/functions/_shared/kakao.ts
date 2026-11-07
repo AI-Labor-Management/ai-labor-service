@@ -26,6 +26,27 @@ export function callbackUrl(): string {
   return `${Deno.env.get('SUPABASE_URL')}/functions/v1/public-api/kakao/callback`;
 }
 export const safeReturn = (v: unknown) => C.safeReturn(v, SITE_URL);
+
+/**
+ * 키 사전 점검 (health?check=kakao) — 사용자 정보 없이 가짜 코드로 토큰을 요청한다.
+ * 키(REST API 키·Client Secret)가 맞으면 카카오가 '코드가 틀림'(invalid_grant)으로, 틀리면 invalid_client로 거절한다.
+ */
+export async function checkKakaoKeys(): Promise<{ ok: boolean; detail: string }> {
+  if (!kakaoConfigured()) return { ok: false, detail: 'KAKAO_REST_KEY·KAKAO_CLIENT_SECRET 없음' };
+  try {
+    const r = await fetch(`${AUTH_HOST}/oauth/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8' },
+      body: new URLSearchParams({ grant_type: 'authorization_code', client_id: keys().restKey, client_secret: keys().secret, redirect_uri: callbackUrl(), code: 'saram-selfcheck-invalid-code' }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    const j = (await r.json().catch(() => ({}))) as { error?: string; error_code?: string; error_description?: string };
+    if (j.error === 'invalid_grant') return { ok: true, detail: '키 정상 (시험용 가짜 코드는 거절됨)' };
+    return { ok: false, detail: `${j.error ?? r.status} ${j.error_code ?? ''} ${j.error_description ?? ''}`.trim() };
+  } catch {
+    return { ok: false, detail: '연결 실패' };
+  }
+}
 export const readState = (state: string) => C.readState(keys().secret, state);
 
 export async function authorizeUrl(userId: string, returnTo: string): Promise<string> {
