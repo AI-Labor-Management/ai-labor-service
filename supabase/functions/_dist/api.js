@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/api/handler.ts (npm run build:functions)
-// sha256:50b1060e8acd
+// sha256:d213e3606617
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -5929,7 +5929,7 @@ function toGroundedAnswer(raw, docs, checkedAt) {
 var DEFAULT_GEMINI_MODEL = "gemini-3.8-flash";
 var GEMINI_POLICY_FROM = "2026-11-15";
 var ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
-var TIMEOUT_MS = 6e4;
+var TIMEOUT_MS = 9e4;
 function geminiConfigured() {
   return !!Deno.env.get("GEMINI_API_KEY");
 }
@@ -5983,7 +5983,8 @@ async function askGemini(question, context, checkedAt, docs) {
       responseJsonSchema: ANSWER_SCHEMA,
       maxOutputTokens: 4096,
       // thinkingLevel은 Gemini 3 이상에서만 (이전 모델에 보내면 오류)
-      .../^gemini-([3-9]|\d\d)/.test(model) ? { thinkingConfig: { thinkingLevel: "MEDIUM" } } : {}
+      // 근거 자료 안에서 고르는 일이라 깊은 추론은 필요 없다 — LOW가 빠르다 (MEDIUM은 무료 등급에서 60초를 넘겼다, 2026-11-08)
+      .../^gemini-([3-9]|\d\d)/.test(model) ? { thinkingConfig: { thinkingLevel: "LOW" } } : {}
     }
   };
   let r;
@@ -6640,15 +6641,15 @@ var SELF_TEST_QUESTION = "주 15시간 일하는 아르바이트생에게 주휴
 var selfTestCache = null;
 async function aiSelfTestAnswer(today) {
   if (selfTestCache && Date.now() - selfTestCache.at < 6e5) return selfTestCache.result;
-  let result;
+  const started = Date.now();
   try {
     const a = await askGemini(SELF_TEST_QUESTION, { industry: "음식점·카페", scale: "1~4명" }, today, aiCorpus(today));
-    result = { ok: true, question: SELF_TEST_QUESTION, status: a.status, text: a.text, citations: a.citations };
+    const result = { ok: true, ms: Date.now() - started, question: SELF_TEST_QUESTION, status: a.status, text: a.text, citations: a.citations };
+    selfTestCache = { at: Date.now(), result };
+    return result;
   } catch (e) {
-    result = { ok: false, question: SELF_TEST_QUESTION, error: e instanceof HttpError ? e.message : String(e), code: e instanceof HttpError ? e.detail : void 0 };
+    return { ok: false, ms: Date.now() - started, question: SELF_TEST_QUESTION, error: e instanceof HttpError ? e.message : String(e), code: e instanceof HttpError ? e.detail : void 0 };
   }
-  selfTestCache = { at: Date.now(), result };
-  return result;
 }
 async function consultAnswer(db, user, body) {
   const question = typeof body.question === "string" ? body.question.trim() : "";

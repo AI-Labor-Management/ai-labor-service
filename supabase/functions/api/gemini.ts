@@ -12,7 +12,8 @@ export const DEFAULT_GEMINI_MODEL = 'gemini-3.8-flash';
 /** 처리방침 변경(AI 제공사 Google 추가) 시행일 — 이날부터 Gemini로 답한다 (방침: 시행 7일 전 알림) */
 export const GEMINI_POLICY_FROM = '2026-11-15';
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
-const TIMEOUT_MS = 60_000;
+/** 무료 등급은 응답이 느릴 수 있다 — 화면은 100초까지 기다리고, Edge Function 벽시계 한도(150초) 안에서 끝낸다 */
+const TIMEOUT_MS = 90_000;
 
 export function geminiConfigured(): boolean {
   return !!Deno.env.get('GEMINI_API_KEY');
@@ -79,7 +80,8 @@ export async function askGemini(question: string, context: { industry: string; s
       responseJsonSchema: ANSWER_SCHEMA,
       maxOutputTokens: 4096,
       // thinkingLevel은 Gemini 3 이상에서만 (이전 모델에 보내면 오류)
-      ...(/^gemini-([3-9]|\d\d)/.test(model) ? { thinkingConfig: { thinkingLevel: 'MEDIUM' } } : {}),
+      // 근거 자료 안에서 고르는 일이라 깊은 추론은 필요 없다 — LOW가 빠르다 (MEDIUM은 무료 등급에서 60초를 넘겼다, 2026-11-08)
+      ...(/^gemini-([3-9]|\d\d)/.test(model) ? { thinkingConfig: { thinkingLevel: 'LOW' } } : {}),
     },
   };
   let r: Response;
