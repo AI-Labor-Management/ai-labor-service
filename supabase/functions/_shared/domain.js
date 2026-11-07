@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: src/domain, src/data (npm run build:functions)
-// sha256:81b1336ed665
+// sha256:253e56ed1213
 // src/data/rules.json
 var rules_default = {
   schema: "bix-rules/1",
@@ -2878,8 +2878,8 @@ function localDate(isoDateTime) {
 // src/data/holidays.ts
 var HOLIDAY_SOURCE = {
   label: "앱 내장 목록 (특일정보 API 연결 전)",
-  status: "unverified",
-  note: "공식 특일정보와 대조하지 않았어요. 실제 운영 전 API 결과로 바꿔야 해요."
+  status: "checked",
+  note: "2026·2027년은 우주항공청 월력요항과 공휴일 규정 개정(노동절·제헌절)에 맞춰 확인했어요(2026-11-07). 2028년부터는 API 연결이나 목록 추가가 필요해요."
 };
 var HOLIDAYS = [
   { date: "2026-01-01", name: "신정" },
@@ -2887,13 +2887,14 @@ var HOLIDAYS = [
   { date: "2026-02-17", name: "설날" },
   { date: "2026-02-18", name: "설날 연휴" },
   { date: "2026-03-02", name: "삼일절 대체공휴일", substitute: true },
+  { date: "2026-05-01", name: "노동절" },
   { date: "2026-05-05", name: "어린이날" },
   { date: "2026-05-25", name: "부처님오신날 대체공휴일", substitute: true },
   { date: "2026-06-03", name: "전국동시지방선거" },
+  { date: "2026-07-17", name: "제헌절" },
   { date: "2026-08-17", name: "광복절 대체공휴일", substitute: true },
   { date: "2026-09-24", name: "추석 연휴" },
   { date: "2026-09-25", name: "추석" },
-  { date: "2026-09-28", name: "추석 대체공휴일", substitute: true },
   { date: "2026-10-05", name: "개천절 대체공휴일", substitute: true },
   { date: "2026-10-09", name: "한글날" },
   { date: "2026-12-25", name: "성탄절" },
@@ -2901,8 +2902,10 @@ var HOLIDAYS = [
   { date: "2027-02-08", name: "설날 연휴" },
   { date: "2027-02-09", name: "설날 대체공휴일", substitute: true },
   { date: "2027-03-01", name: "삼일절" },
+  { date: "2027-05-03", name: "노동절 대체공휴일", substitute: true },
   { date: "2027-05-05", name: "어린이날" },
   { date: "2027-05-13", name: "부처님오신날" },
+  { date: "2027-07-19", name: "제헌절 대체공휴일", substitute: true },
   { date: "2027-08-16", name: "광복절 대체공휴일", substitute: true },
   { date: "2027-09-14", name: "추석 연휴" },
   { date: "2027-09-15", name: "추석" },
@@ -2922,6 +2925,7 @@ var WEEKEND_HOLIDAYS = [
   { date: "2027-02-07", name: "설날" },
   { date: "2027-05-01", name: "노동절" },
   { date: "2027-06-06", name: "현충일" },
+  { date: "2027-07-17", name: "제헌절" },
   { date: "2027-08-15", name: "광복절" },
   { date: "2027-10-03", name: "개천절" },
   { date: "2027-10-09", name: "한글날" },
