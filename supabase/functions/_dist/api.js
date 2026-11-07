@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/api/handler.ts (npm run build:functions)
-// sha256:554361d25d86
+// sha256:2bd9f98e1d54
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -5848,6 +5848,162 @@ function modelProfile(model) {
 }
 var isCreditError = (message) => /credit balance is too low|insufficient (credit|balance)|purchase credits/i.test(message);
 
+// supabase/functions/api/ai-ground.ts
+var LAW_NAMES = {
+  퇴직급여법: "근로자퇴직급여 보장법",
+  징수법: "고용보험 및 산업재해보상보험의 보험료징수 등에 관한 법률",
+  "징수법 시행령": "고용보험 및 산업재해보상보험의 보험료징수 등에 관한 법률 시행령",
+  기간제법: "기간제 및 단시간근로자 보호 등에 관한 법률",
+  "기간제법 시행령": "기간제 및 단시간근로자 보호 등에 관한 법률 시행령",
+  외국인고용법: "외국인근로자의 고용 등에 관한 법률",
+  "남녀고용평등법 시행령": "남녀고용평등과 일ㆍ가정 양립 지원에 관한 법률 시행령",
+  건강진단규칙: "식품위생 분야 종사자의 건강진단 규칙",
+  공휴일규정: "관공서의 공휴일에 관한 규정"
+};
+var lawFullName = (law) => LAW_NAMES[law] ?? law;
+function lawUrl(law, article) {
+  const name = encodeURIComponent(lawFullName(law).replace(/\s+/g, ""));
+  return `https://www.law.go.kr/법령/${name}${article ? `/${encodeURIComponent(article)}` : ""}`;
+}
+var sourceUrl = (s) => !s ? "https://www.law.go.kr" : s.url && /^https:\/\//.test(s.url) ? s.url : s.law ? lawUrl(s.law, s.article) : "https://www.law.go.kr";
+var sourceLabel = (s) => [s.law ? lawFullName(s.law) : s.ref, s.article].filter(Boolean).join(" ");
+var valueText = (v) => typeof v === "object" && v !== null ? JSON.stringify(v) : String(v);
+function buildCorpus(rules, resolve, faqs) {
+  const docs = [];
+  const ruleUrl = /* @__PURE__ */ new Map();
+  for (const r of rules) {
+    const v = resolve(r.id);
+    if (!v.ok) continue;
+    const src = v.sources ?? [];
+    const basis = src.slice(0, 3).map((s) => `${sourceLabel(s)}${s.quote ? ` "${s.quote}"` : ""}`).join("; ");
+    const url = sourceUrl(src[0]);
+    ruleUrl.set(r.id, url);
+    docs.push({
+      id: `R:${r.id}`,
+      title: `${r.label}${src[0] ? ` (${sourceLabel(src[0])})` : ""}`,
+      text: `${r.label}: ${valueText(v.value)}${r.unit ? ` [${r.unit}]` : ""}${basis ? ` · 근거: ${basis}` : ""}${v.note ? ` · 참고: ${v.note}` : ""}`,
+      url
+    });
+  }
+  for (const f of faqs) {
+    docs.push({
+      id: `F:${f.id}`,
+      title: `자주 묻는 질문 — ${f.q} (${f.basis})`,
+      text: `질문: ${f.q} · 답: ${f.oneLine} · 할 일: ${f.todo.join(", ")} · 근거: ${f.basis}${f.expert ? " · 노무 전문가 확인 권장" : ""}`,
+      url: f.ruleIds.map((id) => ruleUrl.get(id)).find(Boolean) ?? "https://www.law.go.kr"
+    });
+  }
+  return docs;
+}
+var corpusText = (docs) => docs.map((d) => `[${d.id}] ${d.text}`).join("\n");
+var ANSWER_SCHEMA = {
+  type: "object",
+  properties: {
+    status: { type: "string", enum: ["answer", "insufficient_evidence", "expert_required"] },
+    text: { type: "string", description: "한국어 존댓말 평문 답변 (마크다운 없이, 600자 안팎)" },
+    sources: { type: "array", items: { type: "string" }, description: "답에 실제로 쓴 근거 자료 번호 (예: R:minimumWage.hourly, F:FAQ2)" }
+  },
+  required: ["status", "text", "sources"]
+};
+var STATUSES = /* @__PURE__ */ new Set(["answer", "insufficient_evidence", "expert_required"]);
+function toGroundedAnswer(raw, docs, checkedAt) {
+  const o = raw && typeof raw === "object" ? raw : {};
+  let status = typeof o.status === "string" && STATUSES.has(o.status) ? o.status : "insufficient_evidence";
+  let text2 = (typeof o.text === "string" ? o.text : "").replace(/\[[RF]:[^\]]+\]/g, "").replace(/\*\*(.+?)\*\*/g, "$1").replace(/^#+\s*/gm, "").trim();
+  const byId = new Map(docs.map((d) => [d.id, d]));
+  const seen = /* @__PURE__ */ new Map();
+  for (const id of Array.isArray(o.sources) ? o.sources : []) {
+    const d = typeof id === "string" ? byId.get(id.replace(/^\[|\]$/g, "").trim()) : void 0;
+    if (d && !seen.has(d.url)) seen.set(d.url, d.title);
+  }
+  const citations = [...seen].slice(0, 5).map(([url, title]) => ({ title, url, checkedAt }));
+  if (status === "answer" && citations.length === 0) status = "insufficient_evidence";
+  if (!text2) {
+    status = "insufficient_evidence";
+    text2 = "앱에 있는 공식 근거 자료에서 이 질문의 답을 찾지 못했어요. 노무 전문가와 확인해 주세요.";
+  }
+  return { status, text: text2, citations };
+}
+
+// supabase/functions/api/gemini.ts
+var DEFAULT_GEMINI_MODEL = "gemini-3.8-flash";
+var GEMINI_POLICY_FROM = "2026-11-15";
+var ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
+var TIMEOUT_MS = 6e4;
+function geminiConfigured() {
+  return !!Deno.env.get("GEMINI_API_KEY");
+}
+function geminiModel() {
+  const m = (Deno.env.get("GEMINI_MODEL") ?? "").trim();
+  return /^gemini-[0-9][\w.-]*$/.test(m) ? m : DEFAULT_GEMINI_MODEL;
+}
+var SYSTEM = (docs) => `너는 한국 소상공인 사장님을 돕는 인사·노무 안내 도우미다. 서비스 이름은 사람샘각이다.
+
+원칙:
+- 아래 "근거 자료"에 적힌 내용만으로 답한다. 자료에 없는 조문 번호·금액·비율·날짜를 기억으로 만들지 않는다.
+- 자료로 답할 수 없으면 status를 insufficient_evidence로 하고, 무엇을 노무 전문가나 고용노동부(국번 없이 1350)에 확인하면 되는지만 짧게 안내한다.
+- 해고·징계의 정당성, 임금 체불 다툼, 괴롭힘·성희롱 신고, 산재 사고, 근로자성 판단, 체류자격 문제처럼 개별 사실관계에 따라 결론이 달라지는 질문은 결론을 내리지 말고 status를 expert_required로 한다 (자료에 있는 일반 기준은 함께 안내해도 된다).
+- 자료의 값은 기준일(오늘) 시행 중인 값이다. 연도별로 바뀌는 값(최저임금, 보험료율 등)은 연도를 함께 적는다.
+- 질문에 개인 이름·연락처 같은 개인정보가 있어도 되풀이하지 않는다.
+
+답변:
+- text: 한국어 존댓말 평문. 마크다운·표·자료 번호 없이 600자 안팎. 결론 한두 문장 → 근거(법령 이름과 조문) → 사장님이 할 일. 목록은 줄 앞에 "· ".
+- sources: text에 실제로 쓴 자료의 번호만 (예: "R:minimumWage.hourly", "F:FAQ2"). 쓰지 않은 자료는 넣지 않는다.
+
+근거 자료:
+${corpusText(docs)}`;
+async function askGemini(question, context, checkedAt, docs) {
+  const key = Deno.env.get("GEMINI_API_KEY");
+  if (!key) throw new HttpError(503, "AI 상담이 아직 연결되지 않았어요. 자주 묻는 질문이나 노무 전문가 상담을 이용해 주세요.", { code: "AI_NOT_CONFIGURED" });
+  const model = geminiModel();
+  const body = {
+    systemInstruction: { parts: [{ text: SYSTEM(docs) }] },
+    contents: [{ role: "user", parts: [{ text: `기준일: ${checkedAt}
+사업장: ${context.industry} · 직원 ${context.scale}
+질문: ${question}` }] }],
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseJsonSchema: ANSWER_SCHEMA,
+      maxOutputTokens: 4096,
+      // thinkingLevel은 Gemini 3 이상에서만 (이전 모델에 보내면 오류)
+      .../^gemini-([3-9]|\d\d)/.test(model) ? { thinkingConfig: { thinkingLevel: "MEDIUM" } } : {}
+    }
+  };
+  let r;
+  try {
+    r = await fetch(`${ENDPOINT}/${encodeURIComponent(model)}:generateContent`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(TIMEOUT_MS)
+    });
+  } catch (e) {
+    if (e instanceof DOMException && (e.name === "TimeoutError" || e.name === "AbortError"))
+      throw new HttpError(504, "AI 답변이 늦어지고 있어요. 잠시 뒤 다시 시도해 주세요.", { code: "AI_TIMEOUT" });
+    throw new HttpError(502, "AI 답변을 받지 못했어요. 잠시 뒤 다시 시도해 주세요.", { code: "AI_ERROR" });
+  }
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const msg = j.error?.message ?? "";
+    if (r.status === 429) throw new HttpError(429, "오늘 무료 AI 이용량이 많아요. 잠시 뒤 다시 시도하거나 자주 묻는 질문을 이용해 주세요.", { code: "AI_BUSY" });
+    if (r.status === 401 || r.status === 403 || /API key/i.test(msg))
+      throw new HttpError(503, "AI 연결 설정을 확인해야 해요. 운영자에게 알려 주세요.", { code: "AI_NOT_CONFIGURED" });
+    throw new HttpError(502, "AI 답변을 받지 못했어요. 잠시 뒤 다시 시도해 주세요.", { code: "AI_ERROR", status: r.status });
+  }
+  const cand = j.candidates?.[0];
+  if (j.promptFeedback?.blockReason || cand?.finishReason === "SAFETY" || cand?.finishReason === "PROHIBITED_CONTENT") {
+    return { status: "expert_required", text: "이 질문에는 AI가 답하지 않았어요. 노무 전문가와 확인해 주세요.", citations: [] };
+  }
+  const text2 = (cand?.content?.parts ?? []).filter((p) => !p.thought && typeof p.text === "string").map((p) => p.text).join("");
+  let parsed = null;
+  try {
+    parsed = JSON.parse(text2);
+  } catch {
+    parsed = null;
+  }
+  return toGroundedAnswer(parsed, docs, checkedAt);
+}
+
 // supabase/functions/api/ai.ts
 var AnthropicCtor = null;
 function setAnthropic(ctor) {
@@ -5855,7 +6011,7 @@ function setAnthropic(ctor) {
 }
 var aiModel = () => pickModel(Deno.env.get("ANTHROPIC_MODEL"));
 var AI_DAILY_LIMIT = 20;
-var TIMEOUT_MS = 9e4;
+var TIMEOUT_MS2 = 9e4;
 var AI_SOURCES = [
   "law.go.kr",
   // 국가법령정보센터
@@ -5880,10 +6036,18 @@ var AI_SOURCES = [
   "eps.go.kr"
   // 고용허가제
 ];
-function aiConfigured() {
+function claudeConfigured() {
   return !!AnthropicCtor && !!Deno.env.get("ANTHROPIC_API_KEY");
 }
-var SYSTEM = `너는 한국 소상공인 사장님을 돕는 인사·노무 안내 도우미다. 서비스 이름은 사람샘각이다.
+function aiProvider(today) {
+  const gemini = geminiConfigured() && today >= GEMINI_POLICY_FROM;
+  if (Deno.env.get("AI_PROVIDER") === "anthropic" && claudeConfigured()) return "anthropic";
+  if (gemini) return "gemini";
+  if (claudeConfigured()) return "anthropic";
+  return null;
+}
+var aiConfigured = (today) => aiProvider(today) !== null;
+var SYSTEM2 = `너는 한국 소상공인 사장님을 돕는 인사·노무 안내 도우미다. 서비스 이름은 사람샘각이다.
 
 원칙:
 - 반드시 web_search로 공식 자료(국가법령정보센터 법령·고용노동부·4대보험 기관 등)를 찾아 확인한 내용만 안내한다. 기억에 의존해 조문 번호·금액·비율을 만들지 않는다.
@@ -5902,7 +6066,7 @@ var SYSTEM = `너는 한국 소상공인 사장님을 돕는 인사·노무 안�
 async function askClaude(question, context, checkedAt, signal) {
   const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
   if (!AnthropicCtor || !apiKey) throw new HttpError(503, "AI 상담이 아직 연결되지 않았어요. 자주 묻는 질문이나 노무 전문가 상담을 이용해 주세요.", { code: "AI_NOT_CONFIGURED" });
-  const client = new AnthropicCtor({ apiKey, timeout: TIMEOUT_MS, maxRetries: 1 });
+  const client = new AnthropicCtor({ apiKey, timeout: TIMEOUT_MS2, maxRetries: 1 });
   const messages = [
     { role: "user", content: `사업장: ${context.industry} · 직원 ${context.scale}
 질문: ${question}` }
@@ -5924,7 +6088,7 @@ async function askClaude(question, context, checkedAt, signal) {
           // Opus만: 안전 분류기가 거절하면 Anthropic이 권장하는 다른 모델로 서버에서 다시 시도한다
           ...p.serverFallback ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" } : {},
           output_config: { effort: "medium" },
-          system: SYSTEM,
+          system: SYSTEM2,
           tools: [p.searchTool === "web_search_20260209" ? { type: "web_search_20260209", ...search } : { type: "web_search_20250305", ...search }],
           messages
         },
@@ -6445,6 +6609,16 @@ async function sendConsult(db, ctx, body) {
 }
 var INDUSTRY_KO = { food: "음식점·카페", retail: "소매", service: "기타 서비스업" };
 var SCALE_KO = { "1-4": "1~4명", "5-9": "5~9명", "10+": "10명 이상" };
+var corpusCache = null;
+function aiCorpus(today) {
+  if (corpusCache?.day !== today) {
+    corpusCache = {
+      day: today,
+      docs: buildCorpus(engine.RULES_FILE.rules, (id) => engine.resolveRule(id, today), engine.FAQS)
+    };
+  }
+  return corpusCache.docs;
+}
 async function consultAnswer(db, user, body) {
   const question = typeof body.question === "string" ? body.question.trim() : "";
   if (question.length < 2 || question.length > 500) throw new HttpError(422, "질문은 2~500자로 적어 주세요", { code: "INVALID_QUESTION" });
@@ -6452,11 +6626,14 @@ async function consultAnswer(db, user, body) {
   if (pii.length) throw new HttpError(422, `개인정보로 보이는 내용(${pii.join(", ")})을 지우고 다시 물어 주세요`, { code: "PII_DETECTED" });
   const wp = await ownerWorkplace(db, user.id);
   if (!wp) throw notFound("사업장이 없어요. 먼저 사업장을 만들어 주세요");
-  if (!aiConfigured()) throw new HttpError(503, "AI 상담이 아직 연결되지 않았어요. 자주 묻는 질문이나 노무 전문가 상담을 이용해 주세요.", { code: "AI_NOT_CONFIGURED" });
+  const today = kstToday();
+  const provider = aiProvider(today);
+  if (!provider) throw new HttpError(503, "AI 상담이 아직 연결되지 않았어요. 자주 묻는 질문이나 노무 전문가 상담을 이용해 주세요.", { code: "AI_NOT_CONFIGURED" });
   const { data: used, error } = await db.rpc("ai_take", { p_user: user.id, p_limit: AI_DAILY_LIMIT });
   if (error) throw error;
   if (used < 0) throw new HttpError(429, `오늘 AI 상담 ${AI_DAILY_LIMIT}회를 모두 썼어요. 내일 다시 이용하거나 노무 전문가 상담을 이용해 주세요.`, { code: "AI_DAILY_LIMIT" });
-  const answer = await askClaude(question, { industry: INDUSTRY_KO[wp.industry] ?? "기타", scale: SCALE_KO[wp.scale] ?? wp.scale }, kstToday());
+  const ctx = { industry: INDUSTRY_KO[wp.industry] ?? "기타", scale: SCALE_KO[wp.scale] ?? wp.scale };
+  const answer = provider === "gemini" ? await askGemini(question, ctx, today, aiCorpus(today)) : await askClaude(question, ctx, today);
   return { ...answer, usedToday: used, dailyLimit: AI_DAILY_LIMIT };
 }
 async function kakaoRoutes(req, db, user, path, body) {
@@ -6695,7 +6872,7 @@ async function handler(req) {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
   try {
     const path = subPath(req, "api");
-    if (path === "health" || path === "") return json(req, { ok: true, function: "api", time: (/* @__PURE__ */ new Date()).toISOString(), kstToday: kstToday(), ai: aiConfigured(), kakao: kakaoConfigured() });
+    if (path === "health" || path === "") return json(req, { ok: true, function: "api", time: (/* @__PURE__ */ new Date()).toISOString(), kstToday: kstToday(), ai: aiConfigured(kstToday()), aiProvider: aiProvider(kstToday()), kakao: kakaoConfigured() });
     const user = await requireUser(req);
     const db = serviceClient();
     const body = await readJson(req) ?? {};

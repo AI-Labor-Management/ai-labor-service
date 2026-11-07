@@ -8,7 +8,9 @@ import { stateToInsertPlan, INSERT_ORDER } from '../_shared/mapping.ts';
 import { type Db, kstNowHHMM, kstToday, loadWorkplace, must, ownerWorkplace, pushNotification, requireUser, serviceClient, userClient } from '../_shared/db.ts';
 import { bad, conflict, corsHeaders, forbidden, handleError, HttpError, int, json, notFound, oneOf, readJson, str, subPath, text, uuid } from '../_shared/http.ts';
 
-import { AI_DAILY_LIMIT, aiConfigured, askClaude } from './ai.ts';
+import { AI_DAILY_LIMIT, aiConfigured, aiProvider, askClaude } from './ai.ts';
+import { askGemini } from './gemini.ts';
+import { buildCorpus } from './ai-ground.ts';
 import * as K from '../_shared/kakao.ts';
 
 type Body = Record<string, unknown>;
@@ -423,7 +425,19 @@ async function sendConsult(db: Db, ctx: Awaited<ReturnType<typeof ownerCtx>>, bo
 const INDUSTRY_KO: Record<string, string> = { food: '음식점·카페', retail: '소매', service: '기타 서비스업' };
 const SCALE_KO: Record<string, string> = { '1-4': '1~4명', '5-9': '5~9명', '10+': '10명 이상' };
 
-/** AI 노무 상담 — 질문 확인(길이·개인정보) → 하루 한도 → Claude. 질문·답은 저장하지 않는다 */
+/** 무료 Gemini에 넘길 근거 자료 — 오늘 시행 중인 규칙 값과 FAQ (하루에 한 번 만든다) */
+let corpusCache: { day: string; docs: ReturnType<typeof buildCorpus> } | null = null;
+function aiCorpus(today: string) {
+  if (corpusCache?.day !== today) {
+    corpusCache = {
+      day: today,
+      docs: buildCorpus(E.RULES_FILE.rules as never, (id) => E.resolveRule(id, today) as never, E.FAQS as never),
+    };
+  }
+  return corpusCache.docs;
+}
+
+/** AI 노무 상담 — 질문 확인(길이·개인정보) → 하루 한도 → 무료 Gemini(근거: 앱 규칙·FAQ) 또는 Claude(웹 검색). 질문·답은 저장하지 않는다 */
 async function consultAnswer(db: Db, user: User, body: Body) {
   const question = typeof body.question === 'string' ? body.question.trim() : '';
   if (question.length < 2 || question.length > 500) throw new HttpError(422, '질문은 2~500자로 적어 주세요', { code: 'INVALID_QUESTION' });
@@ -431,11 +445,17 @@ async function consultAnswer(db: Db, user: User, body: Body) {
   if (pii.length) throw new HttpError(422, `개인정보로 보이는 내용(${pii.join(', ')})을 지우고 다시 물어 주세요`, { code: 'PII_DETECTED' });
   const wp = await ownerWorkplace(db, user.id);
   if (!wp) throw notFound('사업장이 없어요. 먼저 사업장을 만들어 주세요');
-  if (!aiConfigured()) throw new HttpError(503, 'AI 상담이 아직 연결되지 않았어요. 자주 묻는 질문이나 노무 전문가 상담을 이용해 주세요.', { code: 'AI_NOT_CONFIGURED' });
+  const today = kstToday();
+  const provider = aiProvider(today);
+  if (!provider) throw new HttpError(503, 'AI 상담이 아직 연결되지 않았어요. 자주 묻는 질문이나 노무 전문가 상담을 이용해 주세요.', { code: 'AI_NOT_CONFIGURED' });
   const { data: used, error } = await db.rpc('ai_take', { p_user: user.id, p_limit: AI_DAILY_LIMIT });
   if (error) throw error;
   if ((used as number) < 0) throw new HttpError(429, `오늘 AI 상담 ${AI_DAILY_LIMIT}회를 모두 썼어요. 내일 다시 이용하거나 노무 전문가 상담을 이용해 주세요.`, { code: 'AI_DAILY_LIMIT' });
-  const answer = await askClaude(question, { industry: INDUSTRY_KO[wp.industry] ?? '기타', scale: SCALE_KO[wp.scale] ?? wp.scale }, kstToday());
+  const ctx = { industry: INDUSTRY_KO[wp.industry] ?? '기타', scale: SCALE_KO[wp.scale] ?? wp.scale };
+  const answer =
+    provider === 'gemini'
+      ? await askGemini(question, ctx, today, aiCorpus(today))
+      : await askClaude(question, ctx, today);
   return { ...answer, usedToday: used as number, dailyLimit: AI_DAILY_LIMIT };
 }
 
@@ -674,7 +694,7 @@ export async function handler(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(req) });
   try {
     const path = subPath(req, 'api');
-    if (path === 'health' || path === '') return json(req, { ok: true, function: 'api', time: new Date().toISOString(), kstToday: kstToday(), ai: aiConfigured(), kakao: K.kakaoConfigured() });
+    if (path === 'health' || path === '') return json(req, { ok: true, function: 'api', time: new Date().toISOString(), kstToday: kstToday(), ai: aiConfigured(kstToday()), aiProvider: aiProvider(kstToday()), kakao: K.kakaoConfigured() });
     const user = await requireUser(req);
     const db = serviceClient();
     const body = (await readJson<Body>(req)) ?? {};
