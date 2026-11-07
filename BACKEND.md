@@ -99,6 +99,7 @@ Postgres
 | GET | `health` | 상태 (토큰 불필요) |
 | GET | `me` | 내 역할(사장님·직원·노무법인·관리자) |
 | POST | `account/delete` | 회원 탈퇴 `{"confirm":"탈퇴"}` — 사장님 사업장 전체 삭제 → 직원 앱 연결 해제(사장님 쪽 기록 유지) → 로그인 계정 삭제. 되돌릴 수 없음 |
+| POST | `owner/consult/answer` `{question}` | AI 노무 상담(Claude `claude-opus-5-5`, 공식 사이트만 web_search). 질문 2~500자·개인정보 패턴 거절(422), 사업장 필요, 키 없으면 503 `AI_NOT_CONFIGURED`, 하루 20회 넘으면 429. 응답 `{status, text, citations, usedToday, dailyLimit}`. 질문·답 저장 안 함 (`api/ai.ts`) |
 | POST | `owner/seed-demo` `{replace?, baseDate?}` | 가상 시드(카페 샘터·직원 A·B·C) 넣기. `replace:true`면 기존 데이터 전부 지우고 다시 |
 | GET | `owner/state` | 사업장 전체 `AppState` + 화면에 없는 DB id(`ids.workplaceId`, `ids.payrollIdByMonth`) — 서버 모드 화면이 읽음 |
 | GET | `owner/home?date=` | 할 일·영역별 수·위험·이번 달 예상·오늘 근무 |
@@ -151,9 +152,11 @@ Postgres
 |---|---|---|
 | `guest_consult_intake` | `false` | 비회원 상담 실제 저장. 처리방침·보유 기간 확정 전에는 끔 |
 | `kakao_enabled` | `false` | 카카오 알림 발송 (모듈 미구현 — 켜도 `failed`로 기록만) |
-| `ai_enabled` | `false` | AI 상담 (미구현) |
+| `ai_enabled` | `false` | (예전 스위치 — 쓰지 않음. AI 상담은 함수 비밀 값 `ANTHROPIC_API_KEY`가 있으면 켜진다) |
 | `client_clock_time_allowed` | `false` | 출퇴근 시각을 기기 값으로 받기(시험용). 운영은 false |
 | `project_url` | 프로젝트 주소 | cron이 부를 함수 주소 |
+
+함수 비밀 값: `ANTHROPIC_API_KEY`(AI 노무 상담 — 운영자가 대시보드 Edge Functions → Secrets에 직접 넣음, 저장소에 두지 않음).
 
 Vault: `guest_phone_key`(pgcrypto 대칭 암호화·HMAC 키), `cron_secret`(cron-daily 호출 헤더). 둘 다 DB 안에서 생성되어 저장소·환경변수에 없습니다.
 
@@ -186,7 +189,7 @@ E2E에서 발견해 고친 것: `respond_attendance_edit`가 잘못된 상태 �
 | 2 | ~~서울 리전 아님~~ → 2026-11-06 서울 프로젝트로 이전 완료 | — |
 | 3 | 로그인 수단: 이메일만 (카카오 provider 미설정 — 프론트 버튼은 준비됨) | 카카오 앱 키 확보 후 Auth provider 추가 (사람샘각 `docs/KAKAO_LOGIN_SETUP.md`) |
 | 4 | 위치 판정은 기기가 보낸 inside/outside(가상) | 카카오맵 좌표 + 서버 거리 판정 |
-| 5 | 카카오 알림·AI 상담·법제처 감지 미구현 | 설정 스위치는 준비됨 |
+| 5 | 카카오 알림·법제처 감지 미구현 (AI 상담은 2026-11-07 Claude로 구현 — 키 입력 대기) | 설정 스위치는 준비됨 |
 | 6 | 비회원 실제 접수 꺼짐 | 처리방침(사람샘각 `/privacy`, 2026-11-07 시행)에 항목·180일 보유는 적어 둠. 협약 노무법인이 정해지면 `guest_consult_intake = true` |
 | 7 | 상용 소득세 자동 계산 없음 (프론트와 동일) | 간이세액표 확보 |
 | 8 | ~~노무법인·관리자 2FA 없음~~ → 2026-11-07 TOTP aal2 강제(마이그레이션 10) | 인증 앱 분실 시 운영자가 `auth.mfa_factors` 행 삭제 |
