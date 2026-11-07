@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/api/handler.ts (npm run build:functions)
-// sha256:5a344c4a333f
+// sha256:537a72b8cb60
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -5926,10 +5926,12 @@ function toGroundedAnswer(raw, docs, checkedAt) {
 }
 
 // supabase/functions/api/gemini.ts
-var DEFAULT_GEMINI_MODEL = "gemini-3.8-flash";
+var DEFAULT_GEMINI_MODEL = "gemini-3.6-flash";
+var FALLBACK_GEMINI_MODEL = "gemini-3.5-flash-lite";
 var GEMINI_POLICY_FROM = "2026-11-15";
 var ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
-var TIMEOUT_MS = 9e4;
+var PRIMARY_TIMEOUT_MS = 45e3;
+var FALLBACK_TIMEOUT_MS = 3e4;
 function geminiConfigured() {
   return !!Deno.env.get("GEMINI_API_KEY");
 }
@@ -5969,41 +5971,37 @@ async function checkGemini() {
   lastCheck = { at: Date.now(), result };
   return result;
 }
-var FREE_MODELS = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"];
-async function pingGemini(kind, docs, modelParam) {
-  const key = Deno.env.get("GEMINI_API_KEY") ?? "";
-  const model = modelParam && FREE_MODELS.includes(modelParam) ? modelParam : geminiModel();
-  const started = Date.now();
-  const body = { contents: [{ role: "user", parts: [{ text: "한 단어로만 답해 주세요: 안녕하세요" }] }] };
-  const cfg = { maxOutputTokens: 256 };
-  if (kind !== "ping") {
-    cfg.responseMimeType = "application/json";
-    cfg.responseJsonSchema = ANSWER_SCHEMA;
-  }
-  if (kind === "thinking" || kind === "corpus") cfg.thinkingConfig = { thinkingLevel: "LOW" };
-  if (kind === "corpus") {
-    body.systemInstruction = { parts: [{ text: SYSTEM(docs) }] };
-    cfg.maxOutputTokens = 4096;
-  }
-  body.generationConfig = cfg;
+async function callModel(key, model, body, timeoutMs) {
+  let r;
   try {
-    const r = await fetch(`${ENDPOINT}/${encodeURIComponent(model)}:generateContent`, {
+    r = await fetch(`${ENDPOINT}/${encodeURIComponent(model)}:generateContent`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": key },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(4e4)
+      signal: AbortSignal.timeout(timeoutMs)
     });
-    const t = await r.text();
-    return { kind, model, status: r.status, ms: Date.now() - started, snippet: t.slice(0, 400) };
   } catch (e) {
-    return { kind, model, status: null, ms: Date.now() - started, snippet: e instanceof Error ? `${e.name}: ${e.message}` : String(e) };
+    const timeout = e instanceof DOMException && (e.name === "TimeoutError" || e.name === "AbortError");
+    return {
+      ok: false,
+      retryable: true,
+      error: timeout ? new HttpError(504, "AI 답변이 늦어지고 있어요. 잠시 뒤 다시 시도해 주세요.", { code: "AI_TIMEOUT" }) : new HttpError(502, "AI 답변을 받지 못했어요. 잠시 뒤 다시 시도해 주세요.", { code: "AI_ERROR" })
+    };
   }
+  const j = await r.json().catch(() => ({}));
+  if (r.ok) return { ok: true, json: j };
+  const msg = j.error?.message ?? "";
+  if (r.status === 401 || r.status === 403 || /API key/i.test(msg))
+    return { ok: false, retryable: false, error: new HttpError(503, "AI 연결 설정을 확인해야 해요. 운영자에게 알려 주세요.", { code: "AI_NOT_CONFIGURED" }) };
+  if (r.status === 429)
+    return { ok: false, retryable: true, error: new HttpError(429, "오늘 무료 AI 이용량이 많아요. 잠시 뒤 다시 시도하거나 자주 묻는 질문을 이용해 주세요.", { code: "AI_BUSY" }) };
+  return { ok: false, retryable: r.status >= 500, error: new HttpError(502, "AI 답변을 받지 못했어요. 잠시 뒤 다시 시도해 주세요.", { code: "AI_ERROR", status: r.status }) };
 }
 async function askGemini(question, context, checkedAt, docs) {
   const key = Deno.env.get("GEMINI_API_KEY");
   if (!key) throw new HttpError(503, "AI 상담이 아직 연결되지 않았어요. 자주 묻는 질문이나 노무 전문가 상담을 이용해 주세요.", { code: "AI_NOT_CONFIGURED" });
-  const model = geminiModel();
-  const body = {
+  const primary = geminiModel();
+  const bodyFor = (model) => ({
     systemInstruction: { parts: [{ text: SYSTEM(docs) }] },
     contents: [{ role: "user", parts: [{ text: `기준일: ${checkedAt}
 사업장: ${context.industry} · 직원 ${context.scale}
@@ -6012,32 +6010,16 @@ async function askGemini(question, context, checkedAt, docs) {
       responseMimeType: "application/json",
       responseJsonSchema: ANSWER_SCHEMA,
       maxOutputTokens: 4096,
-      // thinkingLevel은 Gemini 3 이상에서만 (이전 모델에 보내면 오류)
-      // 근거 자료 안에서 고르는 일이라 깊은 추론은 필요 없다 — LOW가 빠르다 (MEDIUM은 무료 등급에서 60초를 넘겼다, 2026-11-08)
+      // thinkingLevel은 Gemini 3 이상에서만 (이전 모델에 보내면 오류). 자료 안에서 고르는 일이라 LOW로 충분하고 빠르다
       .../^gemini-([3-9]|\d\d)/.test(model) ? { thinkingConfig: { thinkingLevel: "LOW" } } : {}
     }
-  };
-  let r;
-  try {
-    r = await fetch(`${ENDPOINT}/${encodeURIComponent(model)}:generateContent`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(TIMEOUT_MS)
-    });
-  } catch (e) {
-    if (e instanceof DOMException && (e.name === "TimeoutError" || e.name === "AbortError"))
-      throw new HttpError(504, "AI 답변이 늦어지고 있어요. 잠시 뒤 다시 시도해 주세요.", { code: "AI_TIMEOUT" });
-    throw new HttpError(502, "AI 답변을 받지 못했어요. 잠시 뒤 다시 시도해 주세요.", { code: "AI_ERROR" });
+  });
+  let res = await callModel(key, primary, bodyFor(primary), PRIMARY_TIMEOUT_MS);
+  if (!res.ok && res.retryable && primary !== FALLBACK_GEMINI_MODEL) {
+    res = await callModel(key, FALLBACK_GEMINI_MODEL, bodyFor(FALLBACK_GEMINI_MODEL), FALLBACK_TIMEOUT_MS);
   }
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok) {
-    const msg = j.error?.message ?? "";
-    if (r.status === 429) throw new HttpError(429, "오늘 무료 AI 이용량이 많아요. 잠시 뒤 다시 시도하거나 자주 묻는 질문을 이용해 주세요.", { code: "AI_BUSY" });
-    if (r.status === 401 || r.status === 403 || /API key/i.test(msg))
-      throw new HttpError(503, "AI 연결 설정을 확인해야 해요. 운영자에게 알려 주세요.", { code: "AI_NOT_CONFIGURED" });
-    throw new HttpError(502, "AI 답변을 받지 못했어요. 잠시 뒤 다시 시도해 주세요.", { code: "AI_ERROR", status: r.status });
-  }
+  if (!res.ok) throw res.error;
+  const j = res.json;
   const cand = j.candidates?.[0];
   if (j.promptFeedback?.blockReason || cand?.finishReason === "SAFETY" || cand?.finishReason === "PROHIBITED_CONTENT") {
     return { status: "expert_required", text: "이 질문에는 AI가 답하지 않았어요. 노무 전문가와 확인해 주세요.", citations: [] };
@@ -6059,7 +6041,7 @@ function setAnthropic(ctor) {
 }
 var aiModel = () => pickModel(Deno.env.get("ANTHROPIC_MODEL"));
 var AI_DAILY_LIMIT = 20;
-var TIMEOUT_MS2 = 9e4;
+var TIMEOUT_MS = 9e4;
 var AI_SOURCES = [
   "law.go.kr",
   // 국가법령정보센터
@@ -6114,7 +6096,7 @@ var SYSTEM2 = `너는 한국 소상공인 사장님을 돕는 인사·노무 안
 async function askClaude(question, context, checkedAt, signal) {
   const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
   if (!AnthropicCtor || !apiKey) throw new HttpError(503, "AI 상담이 아직 연결되지 않았어요. 자주 묻는 질문이나 노무 전문가 상담을 이용해 주세요.", { code: "AI_NOT_CONFIGURED" });
-  const client = new AnthropicCtor({ apiKey, timeout: TIMEOUT_MS2, maxRetries: 1 });
+  const client = new AnthropicCtor({ apiKey, timeout: TIMEOUT_MS, maxRetries: 1 });
   const messages = [
     { role: "user", content: `사업장: ${context.industry} · 직원 ${context.scale}
 질문: ${question}` }
@@ -6939,10 +6921,6 @@ async function handler(req) {
       const check = new URL(req.url).searchParams.get("check");
       const aiCheck = check === "ai" || check === "ai-answer" ? await checkGemini() : void 0;
       const aiSelfTest = check === "ai-answer" && aiCheck?.ok ? await aiSelfTestAnswer(today) : void 0;
-      if (check === "ai-ping") {
-        const q = new URL(req.url).searchParams;
-        return json(req, { ping: await pingGemini(q.get("kind") ?? "ping", aiCorpus(today), q.get("model")) });
-      }
       return json(req, {
         ok: true,
         function: "api",

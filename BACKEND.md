@@ -99,7 +99,7 @@ Postgres
 | GET | `health` | 상태 (토큰 불필요) |
 | GET | `me` | 내 역할(사장님·직원·노무법인·관리자) |
 | POST | `account/delete` | 회원 탈퇴 `{"confirm":"탈퇴"}` — 사장님 사업장 전체 삭제 → 직원 앱 연결 해제(사장님 쪽 기록 유지) → 로그인 계정 삭제. 되돌릴 수 없음 |
-| POST | `owner/consult/answer` `{question}` | AI 노무 상담. **기본: 무료 Google Gemini** (`gemini-3.8-flash`, 비밀 값 `GEMINI_API_KEY`, 처리방침 시행일 2026-11-15부터) — 무료 등급은 웹 검색 근거가 없어 앱의 검증된 규칙 44개·FAQ를 자료로 넘기고 그 번호만 근거로 받는다(`ai-ground.ts`, 근거 없으면 근거 부족). **선택: Claude** (`ANTHROPIC_API_KEY`, 유료, 기본 `claude-haiku-5-5`·공식 사이트 web_search 2회, `ANTHROPIC_MODEL`로 바꿈; 크레딧이 떨어지면 503 `AI_CREDIT_EMPTY`). 둘 다 있으면 Gemini, `AI_PROVIDER=anthropic`이면 Claude. health의 `aiProvider`로 확인. 질문 2~500자·개인정보 패턴 거절(422), 사업장 필요, 키 없으면 503 `AI_NOT_CONFIGURED`, 하루 20회 넘으면 429. 응답 `{status, text, citations, usedToday, dailyLimit}`. 질문·답 저장 안 함 (`api/ai.ts`) |
+| POST | `owner/consult/answer` `{question}` | AI 노무 상담. **기본: 무료 Google Gemini** (`gemini-3.6-flash` → 실패 시 `gemini-3.5-flash-lite`, 비밀 값 `GEMINI_API_KEY`, 처리방침 시행일 2026-11-15부터) — 무료 등급은 웹 검색 근거가 없어 앱의 검증된 규칙 44개·FAQ를 자료로 넘기고 그 번호만 근거로 받는다(`ai-ground.ts`, 근거 없으면 근거 부족). **선택: Claude** (`ANTHROPIC_API_KEY`, 유료, 기본 `claude-haiku-5-5`·공식 사이트 web_search 2회, `ANTHROPIC_MODEL`로 바꿈; 크레딧이 떨어지면 503 `AI_CREDIT_EMPTY`). 둘 다 있으면 Gemini, `AI_PROVIDER=anthropic`이면 Claude. health의 `aiProvider`로 확인. 질문 2~500자·개인정보 패턴 거절(422), 사업장 필요, 키 없으면 503 `AI_NOT_CONFIGURED`, 하루 20회 넘으면 429. 응답 `{status, text, citations, usedToday, dailyLimit}`. 질문·답 저장 안 함 (`api/ai.ts`) |
 | POST | `owner/seed-demo` `{replace?, baseDate?}` | 가상 시드(카페 샘터·직원 A·B·C) 넣기. `replace:true`면 기존 데이터 전부 지우고 다시 |
 | GET | `owner/state` | 사업장 전체 `AppState` + 화면에 없는 DB id(`ids.workplaceId`, `ids.payrollIdByMonth`) — 서버 모드 화면이 읽음 |
 | GET | `owner/home?date=` | 할 일·영역별 수·위험·이번 달 예상·오늘 근무 |
