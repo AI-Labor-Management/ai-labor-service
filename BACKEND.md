@@ -161,7 +161,7 @@ Postgres
 - `ANTHROPIC_API_KEY` — AI 노무 상담 선택(유료 Claude). `ANTHROPIC_MODEL`, `AI_PROVIDER=anthropic`
 - `KAKAO_REST_KEY`·`KAKAO_CLIENT_SECRET` — 카카오톡 나에게 보내기 (카카오 앱의 REST API 키·카카오 로그인 Client Secret, Supabase 카카오 로그인에 넣은 값과 같다). 켜는 순서는 사람샘각 `docs/KAKAO_ALERTS_SETUP.md`
 
-카카오톡 알림 경로: `GET api/owner/kakao`(상태) · `POST api/owner/kakao/start`(동의 주소, 처리방침 시행일 2026-11-14 전에는 409) · `POST api/owner/kakao/test`(시험 발송) · `POST api/owner/kakao/disconnect` · `GET public-api/kakao/callback`(카카오 Redirect URI). 갱신 토큰은 `kakao_links`에 Vault 키로 암호화해 두고 서비스 역할만 읽는다. cron-daily가 앱 안 알림과 같은 내용을 하루 한 번 보내고, 만료 한 달 안쪽 토큰은 미리 갱신한다.
+카카오톡 알림 경로: `GET api/owner/kakao`(상태) · `POST api/owner/kakao/start`(동의 주소, 처리방침 시행일 `KAKAO_POLICY_FROM`(2026-11-08, 운영자 결정으로 바로 시행) 전에는 409) · `POST api/owner/kakao/test`(시험 발송) · `POST api/owner/kakao/disconnect` · `GET public-api/kakao/callback`(카카오 Redirect URI). 갱신 토큰은 `kakao_links`에 Vault 키로 암호화해 두고 서비스 역할만 읽는다. cron-daily가 앱 안 알림과 같은 내용을 하루 한 번 보내고, 만료 한 달 안쪽 토큰은 미리 갱신한다.
 
 Vault: `guest_phone_key`(pgcrypto 대칭 암호화·HMAC 키), `cron_secret`(cron-daily 호출 헤더). 둘 다 DB 안에서 생성되어 저장소·환경변수에 없습니다.
 
@@ -194,7 +194,7 @@ E2E에서 발견해 고친 것: `respond_attendance_edit`가 잘못된 상태 �
 | 2 | ~~서울 리전 아님~~ → 2026-11-06 서울 프로젝트로 이전 완료 | — |
 | 3 | ~~로그인 수단: 이메일만~~ → 2026-11-07 카카오 로그인 켜짐 (닉네임 필수, 이메일·프로필 사진 선택) | 이메일 제공에 동의하지 않은 카카오 계정은 같은 사람의 이메일 계정과 별개 계정이 된다 — 합치려면 계정 연결 기능 |
 | 4 | 위치 판정은 기기가 보낸 inside/outside(가상) | 카카오맵 좌표 + 서버 거리 판정 |
-| 5 | 법제처 감지 미구현. 카카오톡 알림·AI 상담은 구현 — 키 입력 대기 (카카오는 처리방침 시행일 2026-11-14부터 연결) | 함수 비밀 값 넣기 |
+| 5 | 법제처 감지 미구현. 카카오톡 알림·AI 상담은 구현 — 키 입력 대기 (카카오는 2026-11-08부터 연결 가능) | 함수 비밀 값 넣기 |
 | 6 | 비회원 실제 접수 꺼짐 | 처리방침(사람샘각 `/privacy`, 2026-11-07 시행)에 항목·180일 보유는 적어 둠. 협약 노무법인이 정해지면 `guest_consult_intake = true` |
 | 7 | 상용 소득세 자동 계산 없음 (프론트와 동일) | 간이세액표 확보 |
 | 8 | ~~노무법인·관리자 2FA 없음~~ → 2026-11-07 TOTP aal2 강제(마이그레이션 10) | 인증 앱 분실 시 운영자가 `auth.mfa_factors` 행 삭제 |

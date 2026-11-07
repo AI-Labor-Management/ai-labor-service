@@ -76,7 +76,7 @@ describe('동의·템플릿·오류', () => {
     expect(tokenErrorCode(undefined)).toBe('TOKEN_FAILED');
   });
 
-  it('처리방침 변경 시행일은 오늘(2026-11-07)부터 7일 뒤다', () => {
-    expect(KAKAO_POLICY_FROM).toBe('2026-11-14');
+  it('처리방침 변경 시행일은 운영자 결정으로 2026-11-08 바로 시행이다', () => {
+    expect(KAKAO_POLICY_FROM).toBe('2026-11-08');
   });
 });
