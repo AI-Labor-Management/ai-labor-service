@@ -6,7 +6,9 @@ import { engine as E } from '../_shared/engine.ts';
 import type { AppState, DaySchedule, Employee, PayrollLine } from '../_shared/domain-types.ts';
 import { stateToInsertPlan, INSERT_ORDER } from '../_shared/mapping.ts';
 import { type Db, kstNowHHMM, kstToday, loadWorkplace, must, ownerWorkplace, pushNotification, requireUser, serviceClient, userClient } from '../_shared/db.ts';
-import { bad, conflict, corsHeaders, forbidden, handleError, int, json, notFound, oneOf, readJson, str, subPath, text, uuid } from '../_shared/http.ts';
+import { bad, conflict, corsHeaders, forbidden, handleError, HttpError, int, json, notFound, oneOf, readJson, str, subPath, text, uuid } from '../_shared/http.ts';
+
+import { AI_DAILY_LIMIT, aiConfigured, askClaude } from './ai.ts';
 
 type Body = Record<string, unknown>;
 type User = { id: string; email: string | null; token: string };
@@ -417,9 +419,29 @@ async function sendConsult(db: Db, ctx: Awaited<ReturnType<typeof ownerCtx>>, bo
   return { ...row, sharedItems: shareItems, note: '협력 노무법인 요청함에 저장됐어요. 언제든 revoke_consult로 철회할 수 있어요' };
 }
 
+const INDUSTRY_KO: Record<string, string> = { food: '음식점·카페', retail: '소매', service: '기타 서비스업' };
+const SCALE_KO: Record<string, string> = { '1-4': '1~4명', '5-9': '5~9명', '10+': '10명 이상' };
+
+/** AI 노무 상담 — 질문 확인(길이·개인정보) → 하루 한도 → Claude. 질문·답은 저장하지 않는다 */
+async function consultAnswer(db: Db, user: User, body: Body) {
+  const question = typeof body.question === 'string' ? body.question.trim() : '';
+  if (question.length < 2 || question.length > 500) throw new HttpError(422, '질문은 2~500자로 적어 주세요', { code: 'INVALID_QUESTION' });
+  const pii = E.detectPII(question);
+  if (pii.length) throw new HttpError(422, `개인정보로 보이는 내용(${pii.join(', ')})을 지우고 다시 물어 주세요`, { code: 'PII_DETECTED' });
+  const wp = await ownerWorkplace(db, user.id);
+  if (!wp) throw notFound('사업장이 없어요. 먼저 사업장을 만들어 주세요');
+  if (!aiConfigured()) throw new HttpError(503, 'AI 상담이 아직 연결되지 않았어요. 자주 묻는 질문이나 노무 전문가 상담을 이용해 주세요.', { code: 'AI_NOT_CONFIGURED' });
+  const { data: used, error } = await db.rpc('ai_take', { p_user: user.id, p_limit: AI_DAILY_LIMIT });
+  if (error) throw error;
+  if ((used as number) < 0) throw new HttpError(429, `오늘 AI 상담 ${AI_DAILY_LIMIT}회를 모두 썼어요. 내일 다시 이용하거나 노무 전문가 상담을 이용해 주세요.`, { code: 'AI_DAILY_LIMIT' });
+  const answer = await askClaude(question, { industry: INDUSTRY_KO[wp.industry] ?? '기타', scale: SCALE_KO[wp.scale] ?? wp.scale }, kstToday());
+  return { ...answer, usedToday: used as number, dailyLimit: AI_DAILY_LIMIT };
+}
+
 async function ownerRoutes(req: Request, db: Db, user: User, path: string, body: Body, url: URL): Promise<Response> {
   const m = req.method;
   if (m === 'POST' && path === 'seed-demo') return json(req, await seedDemo(db, user, body), 201);
+  if (m === 'POST' && path === 'consult/answer') return json(req, await consultAnswer(db, user, body));
   const ctx = await ownerCtx(db, user);
   const { state, base, wp } = ctx;
   const date = url.searchParams.get('date') ? iso(url.searchParams.get('date'), 'date') : base;
@@ -621,7 +643,7 @@ export async function handler(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(req) });
   try {
     const path = subPath(req, 'api');
-    if (path === 'health' || path === '') return json(req, { ok: true, function: 'api', time: new Date().toISOString(), kstToday: kstToday() });
+    if (path === 'health' || path === '') return json(req, { ok: true, function: 'api', time: new Date().toISOString(), kstToday: kstToday(), ai: aiConfigured() });
     const user = await requireUser(req);
     const db = serviceClient();
     const body = (await readJson<Body>(req)) ?? {};

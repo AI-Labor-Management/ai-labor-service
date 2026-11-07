@@ -36,6 +36,24 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_usage: {
+        Row: {
+          count: number
+          day: string
+          user_id: string
+        }
+        Insert: {
+          count?: number
+          day: string
+          user_id: string
+        }
+        Update: {
+          count?: number
+          day?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       admins: {
         Row: {
           created_at: string
@@ -1753,6 +1771,7 @@ export type Database = {
         Returns: undefined
       }
       admin_stats: { Args: never; Returns: Json }
+      ai_take: { Args: { p_limit: number; p_user: string }; Returns: number }
       apply_substitution: {
         Args: { p_employee_id: string; p_substitution_id: string }
         Returns: undefined

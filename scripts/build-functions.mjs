@@ -40,7 +40,8 @@ for (const fn of ['api', 'public-api', 'cron-daily']) {
   const out = join(dist, `${fn}.js`);
   await build({
     stdin: {
-      contents: `export { handler } from '../${fn}/handler.ts';\nexport { setCreateClient } from '../_shared/db.ts';\n`,
+      // api는 Claude SDK도 진입점에서 넣어 준다 (setAnthropic) — SDK는 묶음에 넣지 않는다
+      contents: `export { handler } from '../${fn}/handler.ts';\nexport { setCreateClient } from '../_shared/db.ts';\n${fn === 'api' ? "export { setAnthropic } from '../api/ai.ts';\n" : ''}`,
       resolveDir: dist,
       sourcefile: `${fn}-entry.ts`,
       loader: 'ts',

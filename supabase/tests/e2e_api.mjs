@@ -331,6 +331,23 @@ r = await api('owner/payroll?month=2026-10', owner);
 ok(r.status === 200 && r.body.confirmed === false, 'replace 후 급여는 다시 초안', r.body.confirmed);
 
 // ── 사장님 알림 ──
+// ── AI 노무 상담 (Claude) — 키가 없으면 503, 있으면 근거와 함께 답한다 ──
+r = await api('health', owner);
+const aiOn = r.body?.ai === true;
+ok(r.status === 200 && typeof r.body?.ai === 'boolean', `health가 AI 연결 여부를 알려 줌 (ai=${r.body?.ai})`);
+r = await api('owner/consult/answer', owner, { method: 'POST', body: { question: '주휴수당 010-1234-5678로 연락' } });
+ok(r.status === 422 && r.body?.detail?.code === 'PII_DETECTED', 'AI 질문에 휴대폰 번호가 있으면 422', r.body);
+r = await api('owner/consult/answer', owner, { method: 'POST', body: { question: '?' } });
+ok(r.status === 422 && r.body?.detail?.code === 'INVALID_QUESTION', 'AI 질문이 너무 짧으면 422', r.body);
+r = await api('owner/consult/answer', emp, { method: 'POST', body: { question: '주휴수당은 언제 줘야 하나요?' } });
+ok(r.status === 404, '사업장 없는 계정(직원)은 AI 상담 경로를 못 씀', r.status);
+r = await api('owner/consult/answer', owner, { method: 'POST', body: { question: '주 15시간 일하는 알바에게 주휴수당을 줘야 하나요?' } });
+if (aiOn) {
+  ok(r.status === 200 && ['answer', 'insufficient_evidence', 'expert_required'].includes(r.body?.status) && Array.isArray(r.body?.citations) && r.body?.text?.length > 0, `AI 답변 (${r.body?.status}, 근거 ${r.body?.citations?.length}개, 오늘 ${r.body?.usedToday}/${r.body?.dailyLimit})`, r.body);
+  ok(r.body?.status !== 'answer' || r.body.citations.every((c) => /^https:\/\//.test(c.url)), 'AI 답의 근거는 https 공식 출처', r.body?.citations);
+} else {
+  ok(r.status === 503 && r.body?.detail?.code === 'AI_NOT_CONFIGURED', 'AI 키가 없으면 503 연결 전', r.body);
+}
 r = await rest('notifications?recipient=eq.owner&select=kind,text', owner);
 ok(r.status === 200, '사장님 알림 조회', r.body.length);
 
