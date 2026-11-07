@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/api/handler.ts (npm run build:functions)
-// sha256:c0092b4f2ad5
+// sha256:50b1060e8acd
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -6636,6 +6636,20 @@ function aiCorpus(today) {
   }
   return corpusCache.docs;
 }
+var SELF_TEST_QUESTION = "주 15시간 일하는 아르바이트생에게 주휴수당을 줘야 하나요?";
+var selfTestCache = null;
+async function aiSelfTestAnswer(today) {
+  if (selfTestCache && Date.now() - selfTestCache.at < 6e5) return selfTestCache.result;
+  let result;
+  try {
+    const a = await askGemini(SELF_TEST_QUESTION, { industry: "음식점·카페", scale: "1~4명" }, today, aiCorpus(today));
+    result = { ok: true, question: SELF_TEST_QUESTION, status: a.status, text: a.text, citations: a.citations };
+  } catch (e) {
+    result = { ok: false, question: SELF_TEST_QUESTION, error: e instanceof HttpError ? e.message : String(e), code: e instanceof HttpError ? e.detail : void 0 };
+  }
+  selfTestCache = { at: Date.now(), result };
+  return result;
+}
 async function consultAnswer(db, user, body) {
   const question = typeof body.question === "string" ? body.question.trim() : "";
   if (question.length < 2 || question.length > 500) throw new HttpError(422, "질문은 2~500자로 적어 주세요", { code: "INVALID_QUESTION" });
@@ -6891,8 +6905,21 @@ async function handler(req) {
     const path = subPath(req, "api");
     if (path === "health" || path === "") {
       const today = kstToday();
-      const aiCheck = new URL(req.url).searchParams.get("check") === "ai" ? await checkGemini() : void 0;
-      return json(req, { ok: true, function: "api", time: (/* @__PURE__ */ new Date()).toISOString(), kstToday: today, ai: aiConfigured(today), aiProvider: aiProvider(today), aiFrom: GEMINI_POLICY_FROM, ...aiCheck ? { aiCheck } : {}, kakao: kakaoConfigured() });
+      const check = new URL(req.url).searchParams.get("check");
+      const aiCheck = check === "ai" || check === "ai-answer" ? await checkGemini() : void 0;
+      const aiSelfTest = check === "ai-answer" && aiCheck?.ok ? await aiSelfTestAnswer(today) : void 0;
+      return json(req, {
+        ok: true,
+        function: "api",
+        time: (/* @__PURE__ */ new Date()).toISOString(),
+        kstToday: today,
+        ai: aiConfigured(today),
+        aiProvider: aiProvider(today),
+        aiFrom: GEMINI_POLICY_FROM,
+        ...aiCheck ? { aiCheck } : {},
+        ...aiSelfTest ? { aiSelfTest } : {},
+        kakao: kakaoConfigured()
+      });
     }
     const user = await requireUser(req);
     const db = serviceClient();
