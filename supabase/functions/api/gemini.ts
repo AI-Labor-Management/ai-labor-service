@@ -61,6 +61,40 @@ export async function checkGemini(): Promise<{ ok: boolean; model: string; detai
   return result;
 }
 
+/**
+ * 진단 — 조건을 하나씩 더해 Gemini가 응답하는지 본다 (개인정보 없는 고정 문장만, health?check=ai-ping&kind=…)
+ *  ping: 짧은 문장만 / schema: + JSON 형식 / thinking: + 생각 단계 LOW / corpus: + 시스템 지시·근거 자료 전체
+ */
+export async function pingGemini(kind: string, docs: Doc[]): Promise<{ kind: string; status: number | null; ms: number; snippet: string }> {
+  const key = Deno.env.get('GEMINI_API_KEY') ?? '';
+  const model = geminiModel();
+  const started = Date.now();
+  const body: Record<string, unknown> = { contents: [{ role: 'user', parts: [{ text: '한 단어로만 답해 주세요: 안녕하세요' }] }] };
+  const cfg: Record<string, unknown> = { maxOutputTokens: 256 };
+  if (kind !== 'ping') {
+    cfg.responseMimeType = 'application/json';
+    cfg.responseJsonSchema = ANSWER_SCHEMA;
+  }
+  if (kind === 'thinking' || kind === 'corpus') cfg.thinkingConfig = { thinkingLevel: 'LOW' };
+  if (kind === 'corpus') {
+    body.systemInstruction = { parts: [{ text: SYSTEM(docs) }] };
+    cfg.maxOutputTokens = 4096;
+  }
+  body.generationConfig = cfg;
+  try {
+    const r = await fetch(`${ENDPOINT}/${encodeURIComponent(model)}:generateContent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(40_000),
+    });
+    const t = await r.text();
+    return { kind, status: r.status, ms: Date.now() - started, snippet: t.slice(0, 400) };
+  } catch (e) {
+    return { kind, status: null, ms: Date.now() - started, snippet: e instanceof Error ? `${e.name}: ${e.message}` : String(e) };
+  }
+}
+
 interface GeminiResponse {
   candidates?: { content?: { parts?: { text?: string; thought?: boolean }[] }; finishReason?: string }[];
   promptFeedback?: { blockReason?: string };

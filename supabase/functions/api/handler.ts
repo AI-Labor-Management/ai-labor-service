@@ -9,7 +9,7 @@ import { type Db, kstNowHHMM, kstToday, loadWorkplace, must, ownerWorkplace, pus
 import { bad, conflict, corsHeaders, forbidden, handleError, HttpError, int, json, notFound, oneOf, readJson, str, subPath, text, uuid } from '../_shared/http.ts';
 
 import { AI_DAILY_LIMIT, aiConfigured, aiProvider, askClaude } from './ai.ts';
-import { askGemini, checkGemini, GEMINI_POLICY_FROM } from './gemini.ts';
+import { askGemini, checkGemini, GEMINI_POLICY_FROM, pingGemini } from './gemini.ts';
 import { buildCorpus } from './ai-ground.ts';
 import * as K from '../_shared/kakao.ts';
 
@@ -717,6 +717,8 @@ export async function handler(req: Request): Promise<Response> {
       const aiCheck = check === 'ai' || check === 'ai-answer' ? await checkGemini() : undefined;
       // ?check=ai-answer: 개인정보가 없는 고정 시험 질문 하나로 끝까지 점검 (처리방침 시행일 전에도 — 사용자 입력은 받지 않음)
       const aiSelfTest = check === 'ai-answer' && aiCheck?.ok ? await aiSelfTestAnswer(today) : undefined;
+      // ?check=ai-ping&kind=ping|schema|thinking|corpus: 응답 지연 원인 진단 (고정 문장만)
+      if (check === 'ai-ping') return json(req, { ping: await pingGemini(new URL(req.url).searchParams.get('kind') ?? 'ping', aiCorpus(today)) });
       return json(req, {
         ok: true,
         function: 'api',

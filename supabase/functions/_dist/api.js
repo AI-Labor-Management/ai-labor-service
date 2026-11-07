@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/api/handler.ts (npm run build:functions)
-// sha256:d213e3606617
+// sha256:62f3d6736e5e
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -5969,6 +5969,35 @@ async function checkGemini() {
   lastCheck = { at: Date.now(), result };
   return result;
 }
+async function pingGemini(kind, docs) {
+  const key = Deno.env.get("GEMINI_API_KEY") ?? "";
+  const model = geminiModel();
+  const started = Date.now();
+  const body = { contents: [{ role: "user", parts: [{ text: "한 단어로만 답해 주세요: 안녕하세요" }] }] };
+  const cfg = { maxOutputTokens: 256 };
+  if (kind !== "ping") {
+    cfg.responseMimeType = "application/json";
+    cfg.responseJsonSchema = ANSWER_SCHEMA;
+  }
+  if (kind === "thinking" || kind === "corpus") cfg.thinkingConfig = { thinkingLevel: "LOW" };
+  if (kind === "corpus") {
+    body.systemInstruction = { parts: [{ text: SYSTEM(docs) }] };
+    cfg.maxOutputTokens = 4096;
+  }
+  body.generationConfig = cfg;
+  try {
+    const r = await fetch(`${ENDPOINT}/${encodeURIComponent(model)}:generateContent`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(4e4)
+    });
+    const t = await r.text();
+    return { kind, status: r.status, ms: Date.now() - started, snippet: t.slice(0, 400) };
+  } catch (e) {
+    return { kind, status: null, ms: Date.now() - started, snippet: e instanceof Error ? `${e.name}: ${e.message}` : String(e) };
+  }
+}
 async function askGemini(question, context, checkedAt, docs) {
   const key = Deno.env.get("GEMINI_API_KEY");
   if (!key) throw new HttpError(503, "AI 상담이 아직 연결되지 않았어요. 자주 묻는 질문이나 노무 전문가 상담을 이용해 주세요.", { code: "AI_NOT_CONFIGURED" });
@@ -6909,6 +6938,7 @@ async function handler(req) {
       const check = new URL(req.url).searchParams.get("check");
       const aiCheck = check === "ai" || check === "ai-answer" ? await checkGemini() : void 0;
       const aiSelfTest = check === "ai-answer" && aiCheck?.ok ? await aiSelfTestAnswer(today) : void 0;
+      if (check === "ai-ping") return json(req, { ping: await pingGemini(new URL(req.url).searchParams.get("kind") ?? "ping", aiCorpus(today)) });
       return json(req, {
         ok: true,
         function: "api",
