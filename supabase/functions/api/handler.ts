@@ -437,6 +437,22 @@ function aiCorpus(today: string) {
   return corpusCache.docs;
 }
 
+/** 운영 점검용 고정 시험 질문 (개인정보 없음, 사용자 입력을 받지 않는다). 무료 이용량을 아끼려고 10분 동안 결과를 재사용한다 */
+const SELF_TEST_QUESTION = '주 15시간 일하는 아르바이트생에게 주휴수당을 줘야 하나요?';
+let selfTestCache: { at: number; result: unknown } | null = null;
+async function aiSelfTestAnswer(today: string) {
+  if (selfTestCache && Date.now() - selfTestCache.at < 600_000) return selfTestCache.result;
+  let result: unknown;
+  try {
+    const a = await askGemini(SELF_TEST_QUESTION, { industry: '음식점·카페', scale: '1~4명' }, today, aiCorpus(today));
+    result = { ok: true, question: SELF_TEST_QUESTION, status: a.status, text: a.text, citations: a.citations };
+  } catch (e) {
+    result = { ok: false, question: SELF_TEST_QUESTION, error: e instanceof HttpError ? e.message : String(e), code: e instanceof HttpError ? e.detail : undefined };
+  }
+  selfTestCache = { at: Date.now(), result };
+  return result;
+}
+
 /** AI 노무 상담 — 질문 확인(길이·개인정보) → 하루 한도 → 무료 Gemini(근거: 앱 규칙·FAQ) 또는 Claude(웹 검색). 질문·답은 저장하지 않는다 */
 async function consultAnswer(db: Db, user: User, body: Body) {
   const question = typeof body.question === 'string' ? body.question.trim() : '';
@@ -696,9 +712,23 @@ export async function handler(req: Request): Promise<Response> {
     const path = subPath(req, 'api');
     if (path === 'health' || path === '') {
       const today = kstToday();
+      const check = new URL(req.url).searchParams.get('check');
       // ?check=ai: Gemini 키·모델 사전 점검 (모델 정보만 조회 — 사용자 질문은 보내지 않음)
-      const aiCheck = new URL(req.url).searchParams.get('check') === 'ai' ? await checkGemini() : undefined;
-      return json(req, { ok: true, function: 'api', time: new Date().toISOString(), kstToday: today, ai: aiConfigured(today), aiProvider: aiProvider(today), aiFrom: GEMINI_POLICY_FROM, ...(aiCheck ? { aiCheck } : {}), kakao: K.kakaoConfigured() });
+      const aiCheck = check === 'ai' || check === 'ai-answer' ? await checkGemini() : undefined;
+      // ?check=ai-answer: 개인정보가 없는 고정 시험 질문 하나로 끝까지 점검 (처리방침 시행일 전에도 — 사용자 입력은 받지 않음)
+      const aiSelfTest = check === 'ai-answer' && aiCheck?.ok ? await aiSelfTestAnswer(today) : undefined;
+      return json(req, {
+        ok: true,
+        function: 'api',
+        time: new Date().toISOString(),
+        kstToday: today,
+        ai: aiConfigured(today),
+        aiProvider: aiProvider(today),
+        aiFrom: GEMINI_POLICY_FROM,
+        ...(aiCheck ? { aiCheck } : {}),
+        ...(aiSelfTest ? { aiSelfTest } : {}),
+        kakao: K.kakaoConfigured(),
+      });
     }
     const user = await requireUser(req);
     const db = serviceClient();
