@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/api/handler.ts (npm run build:functions)
-// sha256:c49ec40cae7f
+// sha256:4fb5878b432f
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -6195,6 +6195,22 @@ function callbackUrl() {
   return `${Deno.env.get("SUPABASE_URL")}/functions/v1/public-api/kakao/callback`;
 }
 var safeReturn2 = (v) => safeReturn(v, SITE_URL);
+async function checkKakaoKeys() {
+  if (!kakaoConfigured()) return { ok: false, detail: "KAKAO_REST_KEY·KAKAO_CLIENT_SECRET 없음" };
+  try {
+    const r = await fetch(`${AUTH_HOST}/oauth/token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded;charset=utf-8" },
+      body: new URLSearchParams({ grant_type: "authorization_code", client_id: keys().restKey, client_secret: keys().secret, redirect_uri: callbackUrl(), code: "saram-selfcheck-invalid-code" }),
+      signal: AbortSignal.timeout(1e4)
+    });
+    const j = await r.json().catch(() => ({}));
+    if (j.error === "invalid_grant") return { ok: true, detail: "키 정상 (시험용 가짜 코드는 거절됨)" };
+    return { ok: false, detail: `${j.error ?? r.status} ${j.error_code ?? ""} ${j.error_description ?? ""}`.trim() };
+  } catch {
+    return { ok: false, detail: "연결 실패" };
+  }
+}
 async function authorizeUrl(userId, returnTo) {
   const q = new URLSearchParams({
     client_id: keys().restKey,
@@ -6931,7 +6947,10 @@ async function handler(req) {
         aiFrom: GEMINI_POLICY_FROM,
         ...aiCheck ? { aiCheck } : {},
         ...aiSelfTest ? { aiSelfTest } : {},
-        kakao: kakaoConfigured()
+        kakao: kakaoConfigured(),
+        kakaoFrom: KAKAO_POLICY_FROM,
+        // ?check=kakao: 카카오 키 사전 점검 (가짜 코드로 토큰 요청 — 사용자 정보 없음)
+        ...check === "kakao" ? { kakaoCheck: await checkKakaoKeys() } : {}
       });
     }
     const user = await requireUser(req);

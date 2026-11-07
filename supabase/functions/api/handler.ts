@@ -728,6 +728,9 @@ export async function handler(req: Request): Promise<Response> {
         ...(aiCheck ? { aiCheck } : {}),
         ...(aiSelfTest ? { aiSelfTest } : {}),
         kakao: K.kakaoConfigured(),
+        kakaoFrom: K.KAKAO_POLICY_FROM,
+        // ?check=kakao: 카카오 키 사전 점검 (가짜 코드로 토큰 요청 — 사용자 정보 없음)
+        ...(check === 'kakao' ? { kakaoCheck: await K.checkKakaoKeys() } : {}),
       });
     }
     const user = await requireUser(req);
