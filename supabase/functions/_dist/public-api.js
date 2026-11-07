@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/public-api/handler.ts (npm run build:functions)
-// sha256:71bc1cc864dd
+// sha256:dfe769a5ef5b
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -5160,9 +5160,9 @@ function cc() {
 function serviceKey() {
   const legacy = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (legacy) return legacy;
-  const keys = Deno.env.get("SUPABASE_SECRET_KEYS");
-  if (keys) {
-    const parsed = JSON.parse(keys);
+  const keys2 = Deno.env.get("SUPABASE_SECRET_KEYS");
+  if (keys2) {
+    const parsed = JSON.parse(keys2);
     const first = parsed.default ?? Object.values(parsed)[0];
     if (first) return first;
   }
@@ -5179,7 +5179,107 @@ function kstToday() {
   return new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 10);
 }
 
+// supabase/functions/_shared/kakao-core.ts
+var KAKAO_SCOPE = "talk_message";
+var KAKAO_POLICY_FROM = "2026-11-14";
+var RETURN_ORIGINS = ["https://ai-labor-management.github.io", "http://localhost:5173", "http://localhost:4173", "http://localhost:4175"];
+var STATE_TTL_MS = 10 * 6e4;
+var b64url = (b) => btoa(String.fromCharCode(...b)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+var fromB64url = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
+async function hmac(secret, data) {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(`kakao-state:${secret}`), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return b64url(new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(data))));
+}
+async function readState(secret, state, now = Date.now()) {
+  const [body, sig] = state.split(".");
+  if (!body || !sig || await hmac(secret, body) !== sig) return null;
+  try {
+    const o = JSON.parse(new TextDecoder().decode(fromB64url(body)));
+    if (!o.u || !o.r || !o.e || o.e < now) return null;
+    return { userId: o.u, returnTo: o.r };
+  } catch {
+    return null;
+  }
+}
+function safeReturn(v, siteUrl) {
+  if (typeof v === "string") {
+    try {
+      const u = new URL(v);
+      if (RETURN_ORIGINS.includes(u.origin)) return u.toString();
+    } catch {
+    }
+  }
+  return `${siteUrl}/owner/deadlines`;
+}
+function withParam(url, key, value) {
+  const u = new URL(url);
+  u.searchParams.set(key, value);
+  return u.toString();
+}
+var hasMessageScope = (scope) => (scope ?? "").split(/[\s,]+/).includes(KAKAO_SCOPE);
+var tokenErrorCode = (error) => error === "invalid_grant" ? "TOKEN_EXPIRED" : "TOKEN_FAILED";
+
+// supabase/functions/_shared/kakao.ts
+var SITE_URL = (Deno.env.get("SITE_URL") ?? "https://ai-labor-management.github.io/saram-saemgak-site").replace(/\/$/, "");
+var AUTH_HOST = "https://kauth.kakao.com";
+function keys() {
+  return { restKey: Deno.env.get("KAKAO_REST_KEY") ?? "", secret: Deno.env.get("KAKAO_CLIENT_SECRET") ?? "" };
+}
+function kakaoConfigured() {
+  const k = keys();
+  return !!k.restKey && !!k.secret;
+}
+function callbackUrl() {
+  return `${Deno.env.get("SUPABASE_URL")}/functions/v1/public-api/kakao/callback`;
+}
+var safeReturn2 = (v) => safeReturn(v, SITE_URL);
+var readState2 = (state) => readState(keys().secret, state);
+var KakaoError = class extends Error {
+  constructor(code, message) {
+    super(message);
+    this.code = code;
+  }
+  code;
+};
+async function tokenRequest(params) {
+  const r = await fetch(`${AUTH_HOST}/oauth/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded;charset=utf-8" },
+    body: new URLSearchParams({ client_id: keys().restKey, client_secret: keys().secret, ...params }),
+    signal: AbortSignal.timeout(15e3)
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || j.error) throw new KakaoError(tokenErrorCode(j.error), `${j.error ?? r.status} ${j.error_description ?? ""}`.trim());
+  return j;
+}
+async function connectWithCode(db, userId, code) {
+  const t = await tokenRequest({ grant_type: "authorization_code", redirect_uri: callbackUrl(), code });
+  if (!hasMessageScope(t.scope)) throw new KakaoError("NO_SCOPE", "카카오톡 메시지 전송에 동의하지 않았어요");
+  if (!t.refresh_token) throw new KakaoError("TOKEN_FAILED", "갱신 토큰을 받지 못했어요");
+  const { error } = await db.rpc("kakao_link_save", { p_user: userId, p_refresh: t.refresh_token, p_expires_in: t.refresh_token_expires_in ?? null, p_connect: true });
+  if (error) throw error;
+}
+
 // supabase/functions/public-api/handler.ts
+var redirect = (to) => new Response(null, { status: 302, headers: { Location: to, "Cache-Control": "no-store" } });
+async function kakaoCallback(url) {
+  const fallback = safeReturn2(null);
+  if (!kakaoConfigured()) return redirect(withParam(fallback, "kakao", "error"));
+  const st2 = await readState2(url.searchParams.get("state") ?? "");
+  if (!st2) return redirect(withParam(fallback, "kakao", "expired"));
+  const back = safeReturn2(st2.returnTo);
+  const err = url.searchParams.get("error");
+  if (err) return redirect(withParam(back, "kakao", err === "access_denied" ? "denied" : "error"));
+  const code = url.searchParams.get("code");
+  if (!code || kstToday() < KAKAO_POLICY_FROM) return redirect(withParam(back, "kakao", "error"));
+  try {
+    await connectWithCode(serviceClient(), st2.userId, code);
+    return redirect(withParam(back, "kakao", "connected"));
+  } catch (e) {
+    console.error("kakao callback", e instanceof Error ? e.message : e);
+    return redirect(withParam(back, "kakao", e instanceof KakaoError && e.code === "NO_SCOPE" ? "noscope" : "error"));
+  }
+}
 function precheck(body) {
   const date = body.date && engine.isISODate(body.date) ? body.date : kstToday();
   const hourlyWage = int(body.hourlyWage, "hourlyWage", 1, 1e6);
@@ -5218,6 +5318,7 @@ async function handler(req) {
     if (m === "GET" && path === "faq") return json(req, engine.FAQS, 200, { "Cache-Control": "public, max-age=300" });
     if (m === "GET" && path === "checklist-items") return json(req, engine.CHECKLIST_ITEMS, 200, { "Cache-Control": "public, max-age=300" });
     if (m === "GET" && path === "holidays") return json(req, { source: engine.HOLIDAY_SOURCE, holidays: engine.HOLIDAYS });
+    if (m === "GET" && path === "kakao/callback") return await kakaoCallback(url);
     const body = await readJson(req);
     if (m === "POST" && path === "diagnosis") return json(req, { ...engine.diagnose(body.answers ?? body), stored: false });
     if (m === "POST" && path === "precheck") return json(req, precheck(body));
