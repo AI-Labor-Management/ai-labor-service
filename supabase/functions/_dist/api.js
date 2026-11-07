@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/api/handler.ts (npm run build:functions)
-// sha256:62f3d6736e5e
+// sha256:5a344c4a333f
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -5969,9 +5969,10 @@ async function checkGemini() {
   lastCheck = { at: Date.now(), result };
   return result;
 }
-async function pingGemini(kind, docs) {
+var FREE_MODELS = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"];
+async function pingGemini(kind, docs, modelParam) {
   const key = Deno.env.get("GEMINI_API_KEY") ?? "";
-  const model = geminiModel();
+  const model = modelParam && FREE_MODELS.includes(modelParam) ? modelParam : geminiModel();
   const started = Date.now();
   const body = { contents: [{ role: "user", parts: [{ text: "한 단어로만 답해 주세요: 안녕하세요" }] }] };
   const cfg = { maxOutputTokens: 256 };
@@ -5993,9 +5994,9 @@ async function pingGemini(kind, docs) {
       signal: AbortSignal.timeout(4e4)
     });
     const t = await r.text();
-    return { kind, status: r.status, ms: Date.now() - started, snippet: t.slice(0, 400) };
+    return { kind, model, status: r.status, ms: Date.now() - started, snippet: t.slice(0, 400) };
   } catch (e) {
-    return { kind, status: null, ms: Date.now() - started, snippet: e instanceof Error ? `${e.name}: ${e.message}` : String(e) };
+    return { kind, model, status: null, ms: Date.now() - started, snippet: e instanceof Error ? `${e.name}: ${e.message}` : String(e) };
   }
 }
 async function askGemini(question, context, checkedAt, docs) {
@@ -6938,7 +6939,10 @@ async function handler(req) {
       const check = new URL(req.url).searchParams.get("check");
       const aiCheck = check === "ai" || check === "ai-answer" ? await checkGemini() : void 0;
       const aiSelfTest = check === "ai-answer" && aiCheck?.ok ? await aiSelfTestAnswer(today) : void 0;
-      if (check === "ai-ping") return json(req, { ping: await pingGemini(new URL(req.url).searchParams.get("kind") ?? "ping", aiCorpus(today)) });
+      if (check === "ai-ping") {
+        const q = new URL(req.url).searchParams;
+        return json(req, { ping: await pingGemini(q.get("kind") ?? "ping", aiCorpus(today), q.get("model")) });
+      }
       return json(req, {
         ok: true,
         function: "api",
