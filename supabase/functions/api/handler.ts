@@ -437,20 +437,20 @@ function aiCorpus(today: string) {
   return corpusCache.docs;
 }
 
-/** 운영 점검용 고정 시험 질문 (개인정보 없음, 사용자 입력을 받지 않는다). 무료 이용량을 아끼려고 10분 동안 결과를 재사용한다 */
+/** 운영 점검용 고정 시험 질문 (개인정보 없음, 사용자 입력을 받지 않는다). 성공한 결과는 무료 이용량을 아끼려고 10분 재사용한다 */
 const SELF_TEST_QUESTION = '주 15시간 일하는 아르바이트생에게 주휴수당을 줘야 하나요?';
 let selfTestCache: { at: number; result: unknown } | null = null;
 async function aiSelfTestAnswer(today: string) {
   if (selfTestCache && Date.now() - selfTestCache.at < 600_000) return selfTestCache.result;
-  let result: unknown;
+  const started = Date.now();
   try {
     const a = await askGemini(SELF_TEST_QUESTION, { industry: '음식점·카페', scale: '1~4명' }, today, aiCorpus(today));
-    result = { ok: true, question: SELF_TEST_QUESTION, status: a.status, text: a.text, citations: a.citations };
+    const result = { ok: true, ms: Date.now() - started, question: SELF_TEST_QUESTION, status: a.status, text: a.text, citations: a.citations };
+    selfTestCache = { at: Date.now(), result };
+    return result;
   } catch (e) {
-    result = { ok: false, question: SELF_TEST_QUESTION, error: e instanceof HttpError ? e.message : String(e), code: e instanceof HttpError ? e.detail : undefined };
+    return { ok: false, ms: Date.now() - started, question: SELF_TEST_QUESTION, error: e instanceof HttpError ? e.message : String(e), code: e instanceof HttpError ? e.detail : undefined };
   }
-  selfTestCache = { at: Date.now(), result };
-  return result;
 }
 
 /** AI 노무 상담 — 질문 확인(길이·개인정보) → 하루 한도 → 무료 Gemini(근거: 앱 규칙·FAQ) 또는 Claude(웹 검색). 질문·답은 저장하지 않는다 */
