@@ -353,7 +353,7 @@ r = await api('health', owner);
 const kakaoOn = r.body?.kakao === true;
 ok(typeof r.body?.kakao === 'boolean', `health가 카카오 알림 연결 여부를 알려 줌 (kakao=${r.body?.kakao})`);
 r = await api('owner/kakao', owner);
-ok(r.status === 200 && r.body?.connected === false && r.body?.configured === kakaoOn && r.body?.policyFrom === '2026-11-14', '카카오 알림 상태: 연결 안 됨', r.body);
+ok(r.status === 200 && r.body?.connected === false && r.body?.configured === kakaoOn && r.body?.policyFrom === '2026-11-08', '카카오 알림 상태: 연결 안 됨', r.body);
 r = await api('owner/kakao/start', emp, { method: 'POST', body: {} });
 ok(r.status === 404, '사업장 없는 계정은 카카오 알림을 연결할 수 없음', r.status);
 r = await api('owner/kakao/start', owner, { method: 'POST', body: { returnTo: 'https://evil.example/x' } });

@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/public-api/handler.ts (npm run build:functions)
-// sha256:dfe769a5ef5b
+// sha256:dd5e30c8d507
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -5181,7 +5181,7 @@ function kstToday() {
 
 // supabase/functions/_shared/kakao-core.ts
 var KAKAO_SCOPE = "talk_message";
-var KAKAO_POLICY_FROM = "2026-11-14";
+var KAKAO_POLICY_FROM = "2026-11-08";
 var RETURN_ORIGINS = ["https://ai-labor-management.github.io", "http://localhost:5173", "http://localhost:4173", "http://localhost:4175"];
 var STATE_TTL_MS = 10 * 6e4;
 var b64url = (b) => btoa(String.fromCharCode(...b)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");

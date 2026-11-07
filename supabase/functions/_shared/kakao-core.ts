@@ -1,7 +1,8 @@
 // 카카오톡 나에게 보내기 — Deno·DB에 기대지 않는 순수 부분 (Node 시험에서도 불러올 수 있게 kakao.ts에서 뗐다)
 export const KAKAO_SCOPE = 'talk_message';
-/** 처리방침 변경(카카오톡 알림 항목) 시행일 — 이날부터 연결을 받는다 (방침: 시행 7일 전 알림) */
-export const KAKAO_POLICY_FROM = '2026-11-14';
+/** 처리방침 변경(카카오톡 알림 항목) 시행일 — 이날부터 연결을 받는다.
+ *  2026-11-07에 알리고 원래 11-14 시행이었으나, 가입자가 운영자뿐이라 운영자 결정으로 2026-11-08 바로 시행 */
+export const KAKAO_POLICY_FROM = '2026-11-08';
 /** 연결 뒤 돌아갈 수 있는 사이트 (열린 리다이렉트 방지) */
 export const RETURN_ORIGINS = ['https://ai-labor-management.github.io', 'http://localhost:5173', 'http://localhost:4173', 'http://localhost:4175'];
 export const STATE_TTL_MS = 10 * 60_000;
