@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/api/handler.ts (npm run build:functions)
-// sha256:f6ee6355ad98
+// sha256:554361d25d86
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -5831,12 +5831,29 @@ function toAiAnswer(content, checkedAt) {
   return { status, text: text2, citations };
 }
 
+// supabase/functions/api/ai-model.ts
+var DEFAULT_AI_MODEL = "claude-haiku-5-5";
+var ALLOWED = /^claude-(haiku|sonnet|opus)-5(-5)?$/;
+function pickModel(env) {
+  const m = (env ?? "").trim();
+  return ALLOWED.test(m) ? m : DEFAULT_AI_MODEL;
+}
+function modelProfile(model) {
+  const haiku = model.startsWith("claude-haiku-");
+  return {
+    searchTool: haiku ? "web_search_20250305" : "web_search_20260209",
+    maxSearches: haiku ? 2 : 4,
+    serverFallback: model.startsWith("claude-opus-")
+  };
+}
+var isCreditError = (message) => /credit balance is too low|insufficient (credit|balance)|purchase credits/i.test(message);
+
 // supabase/functions/api/ai.ts
 var AnthropicCtor = null;
 function setAnthropic(ctor) {
   AnthropicCtor = ctor;
 }
-var AI_MODEL = "claude-opus-5-5";
+var aiModel = () => pickModel(Deno.env.get("ANTHROPIC_MODEL"));
 var AI_DAILY_LIMIT = 20;
 var TIMEOUT_MS = 9e4;
 var AI_SOURCES = [
@@ -5890,26 +5907,25 @@ async function askClaude(question, context, checkedAt, signal) {
     { role: "user", content: `사업장: ${context.industry} · 직원 ${context.scale}
 질문: ${question}` }
   ];
+  const model = aiModel();
+  const p = modelProfile(model);
+  const search = {
+    name: "web_search",
+    max_uses: p.maxSearches,
+    allowed_domains: AI_SOURCES,
+    user_location: { type: "approximate", country: "KR", timezone: "Asia/Seoul" }
+  };
   try {
     for (let turn = 0; turn < 3; turn++) {
       const res = await client.beta.messages.create(
         {
-          model: AI_MODEL,
+          model,
           max_tokens: 8e3,
-          // 안전 분류기가 거절하면 Anthropic이 권장하는 다른 모델로 서버에서 다시 시도한다
-          betas: ["server-side-fallback-2026-07-01"],
-          fallbacks: "default",
+          // Opus만: 안전 분류기가 거절하면 Anthropic이 권장하는 다른 모델로 서버에서 다시 시도한다
+          ...p.serverFallback ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" } : {},
           output_config: { effort: "medium" },
           system: SYSTEM,
-          tools: [
-            {
-              type: "web_search_20260209",
-              name: "web_search",
-              max_uses: 4,
-              allowed_domains: AI_SOURCES,
-              user_location: { type: "approximate", country: "KR", timezone: "Asia/Seoul" }
-            }
-          ],
+          tools: [p.searchTool === "web_search_20260209" ? { type: "web_search_20260209", ...search } : { type: "web_search_20250305", ...search }],
           messages
         },
         { signal }
@@ -5933,6 +5949,8 @@ async function askClaude(question, context, checkedAt, signal) {
     if (AnthropicCtor && e instanceof AnthropicCtor.APIConnectionTimeoutError) throw new HttpError(504, "AI 답변이 늦어지고 있어요. 잠시 뒤 다시 시도해 주세요.", { code: "AI_TIMEOUT" });
     if (AnthropicCtor && e instanceof AnthropicCtor.RateLimitError) throw new HttpError(429, "AI 이용량이 많아요. 잠시 뒤 다시 시도해 주세요.", { code: "AI_BUSY" });
     if (AnthropicCtor && e instanceof AnthropicCtor.AuthenticationError) throw new HttpError(503, "AI 연결 설정을 확인해야 해요. 운영자에게 알려 주세요.", { code: "AI_NOT_CONFIGURED" });
+    if (AnthropicCtor && e instanceof AnthropicCtor.APIError && isCreditError(e.message))
+      throw new HttpError(503, "AI 상담 이용량을 다 썼어요. 자주 묻는 질문이나 노무 전문가 상담을 이용해 주세요.", { code: "AI_CREDIT_EMPTY" });
     if (AnthropicCtor && e instanceof AnthropicCtor.APIError) throw new HttpError(502, "AI 답변을 받지 못했어요. 잠시 뒤 다시 시도해 주세요.", { code: "AI_ERROR", status: e.status });
     throw e;
   }
