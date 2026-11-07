@@ -65,9 +65,11 @@ export async function checkGemini(): Promise<{ ok: boolean; model: string; detai
  * 진단 — 조건을 하나씩 더해 Gemini가 응답하는지 본다 (개인정보 없는 고정 문장만, health?check=ai-ping&kind=…)
  *  ping: 짧은 문장만 / schema: + JSON 형식 / thinking: + 생각 단계 LOW / corpus: + 시스템 지시·근거 자료 전체
  */
-export async function pingGemini(kind: string, docs: Doc[]): Promise<{ kind: string; status: number | null; ms: number; snippet: string }> {
+/** 진단에서 비교할 수 있는 무료 모델 (가격표 2026-11 '무료' 표시) */
+const FREE_MODELS = ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
+export async function pingGemini(kind: string, docs: Doc[], modelParam?: string | null): Promise<{ kind: string; model: string; status: number | null; ms: number; snippet: string }> {
   const key = Deno.env.get('GEMINI_API_KEY') ?? '';
-  const model = geminiModel();
+  const model = modelParam && FREE_MODELS.includes(modelParam) ? modelParam : geminiModel();
   const started = Date.now();
   const body: Record<string, unknown> = { contents: [{ role: 'user', parts: [{ text: '한 단어로만 답해 주세요: 안녕하세요' }] }] };
   const cfg: Record<string, unknown> = { maxOutputTokens: 256 };
@@ -89,9 +91,9 @@ export async function pingGemini(kind: string, docs: Doc[]): Promise<{ kind: str
       signal: AbortSignal.timeout(40_000),
     });
     const t = await r.text();
-    return { kind, status: r.status, ms: Date.now() - started, snippet: t.slice(0, 400) };
+    return { kind, model, status: r.status, ms: Date.now() - started, snippet: t.slice(0, 400) };
   } catch (e) {
-    return { kind, status: null, ms: Date.now() - started, snippet: e instanceof Error ? `${e.name}: ${e.message}` : String(e) };
+    return { kind, model, status: null, ms: Date.now() - started, snippet: e instanceof Error ? `${e.name}: ${e.message}` : String(e) };
   }
 }
 
