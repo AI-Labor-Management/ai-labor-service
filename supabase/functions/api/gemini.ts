@@ -1,5 +1,7 @@
 // AI 노무 상담 — Google Gemini 무료 등급 (기본 제공사)
-//  · 모델: 무료로 쓸 수 있는 가장 좋은 gemini-3.8-flash (2026-11 Gemini API 가격표). 함수 비밀 값 GEMINI_MODEL로 바꿀 수 있다.
+//  · 모델: 무료 안정판 중 가장 좋은 gemini-3.6-flash → 실패(시간 초과·429·5xx)하면 gemini-3.5-flash-lite로 한 번 더.
+//    2026-11-08 실측(근거 자료 전체): 3.6 Flash 2.7초, 3.5 Flash-Lite 2.0초, 3.8 Flash('New')는 무료 등급에서 40초 넘게 응답 없음.
+//    함수 비밀 값 GEMINI_MODEL로 첫 모델을 바꿀 수 있다.
 //  · 키: 함수 비밀 값 GEMINI_API_KEY (Google AI Studio에서 무료 발급, 카드 없음). 없으면 이 경로는 꺼짐.
 //  · 무료 등급은 Google 검색 근거를 쓸 수 없어 앱의 검증된 규칙·FAQ만 자료로 넘긴다 (ai-ground.ts).
 //  · 무료 등급의 입력·출력은 Google이 서비스 개선에 쓸 수 있다 → 처리방침에 적고, 개인정보 형식은 서버가 먼저 거절한다.
@@ -8,12 +10,14 @@ import { HttpError } from '../_shared/http.ts';
 import type { AiAnswer } from './ai-answer.ts';
 import { ANSWER_SCHEMA, corpusText, type Doc, toGroundedAnswer } from './ai-ground.ts';
 
-export const DEFAULT_GEMINI_MODEL = 'gemini-3.8-flash';
+export const DEFAULT_GEMINI_MODEL = 'gemini-3.6-flash';
+const FALLBACK_GEMINI_MODEL = 'gemini-3.5-flash-lite';
 /** 처리방침 변경(AI 제공사 Google 추가) 시행일 — 이날부터 Gemini로 답한다 (방침: 시행 7일 전 알림) */
 export const GEMINI_POLICY_FROM = '2026-11-15';
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
-/** 무료 등급은 응답이 느릴 수 있다 — 화면은 100초까지 기다리고, Edge Function 벽시계 한도(150초) 안에서 끝낸다 */
-const TIMEOUT_MS = 90_000;
+/** 첫 모델 45초 + 대체 모델 30초 — 화면은 100초까지 기다리고, Edge Function 벽시계 한도(150초) 안에서 끝낸다 */
+const PRIMARY_TIMEOUT_MS = 45_000;
+const FALLBACK_TIMEOUT_MS = 30_000;
 
 export function geminiConfigured(): boolean {
   return !!Deno.env.get('GEMINI_API_KEY');
@@ -61,86 +65,64 @@ export async function checkGemini(): Promise<{ ok: boolean; model: string; detai
   return result;
 }
 
-/**
- * 진단 — 조건을 하나씩 더해 Gemini가 응답하는지 본다 (개인정보 없는 고정 문장만, health?check=ai-ping&kind=…)
- *  ping: 짧은 문장만 / schema: + JSON 형식 / thinking: + 생각 단계 LOW / corpus: + 시스템 지시·근거 자료 전체
- */
-/** 진단에서 비교할 수 있는 무료 모델 (가격표 2026-11 '무료' 표시) */
-const FREE_MODELS = ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
-export async function pingGemini(kind: string, docs: Doc[], modelParam?: string | null): Promise<{ kind: string; model: string; status: number | null; ms: number; snippet: string }> {
-  const key = Deno.env.get('GEMINI_API_KEY') ?? '';
-  const model = modelParam && FREE_MODELS.includes(modelParam) ? modelParam : geminiModel();
-  const started = Date.now();
-  const body: Record<string, unknown> = { contents: [{ role: 'user', parts: [{ text: '한 단어로만 답해 주세요: 안녕하세요' }] }] };
-  const cfg: Record<string, unknown> = { maxOutputTokens: 256 };
-  if (kind !== 'ping') {
-    cfg.responseMimeType = 'application/json';
-    cfg.responseJsonSchema = ANSWER_SCHEMA;
-  }
-  if (kind === 'thinking' || kind === 'corpus') cfg.thinkingConfig = { thinkingLevel: 'LOW' };
-  if (kind === 'corpus') {
-    body.systemInstruction = { parts: [{ text: SYSTEM(docs) }] };
-    cfg.maxOutputTokens = 4096;
-  }
-  body.generationConfig = cfg;
-  try {
-    const r = await fetch(`${ENDPOINT}/${encodeURIComponent(model)}:generateContent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(40_000),
-    });
-    const t = await r.text();
-    return { kind, model, status: r.status, ms: Date.now() - started, snippet: t.slice(0, 400) };
-  } catch (e) {
-    return { kind, model, status: null, ms: Date.now() - started, snippet: e instanceof Error ? `${e.name}: ${e.message}` : String(e) };
-  }
-}
-
 interface GeminiResponse {
   candidates?: { content?: { parts?: { text?: string; thought?: boolean }[] }; finishReason?: string }[];
   promptFeedback?: { blockReason?: string };
   error?: { code?: number; message?: string; status?: string };
 }
 
-/** Gemini에 묻는다 (자료 안에서만, JSON으로). 실패는 화면 계약의 오류 코드로 바꾼다 */
-export async function askGemini(question: string, context: { industry: string; scale: string }, checkedAt: string, docs: Doc[]): Promise<AiAnswer> {
-  const key = Deno.env.get('GEMINI_API_KEY');
-  if (!key) throw new HttpError(503, 'AI 상담이 아직 연결되지 않았어요. 자주 묻는 질문이나 노무 전문가 상담을 이용해 주세요.', { code: 'AI_NOT_CONFIGURED' });
-  const model = geminiModel();
-  const body = {
-    systemInstruction: { parts: [{ text: SYSTEM(docs) }] },
-    contents: [{ role: 'user', parts: [{ text: `기준일: ${checkedAt}\n사업장: ${context.industry} · 직원 ${context.scale}\n질문: ${question}` }] }],
-    generationConfig: {
-      responseMimeType: 'application/json',
-      responseJsonSchema: ANSWER_SCHEMA,
-      maxOutputTokens: 4096,
-      // thinkingLevel은 Gemini 3 이상에서만 (이전 모델에 보내면 오류)
-      // 근거 자료 안에서 고르는 일이라 깊은 추론은 필요 없다 — LOW가 빠르다 (MEDIUM은 무료 등급에서 60초를 넘겼다, 2026-11-08)
-      ...(/^gemini-([3-9]|\d\d)/.test(model) ? { thinkingConfig: { thinkingLevel: 'LOW' } } : {}),
-    },
-  };
+/** 한 모델에 한 번 묻는다. 다른 모델로 다시 시도해 볼 만한 실패(시간 초과·429·5xx·연결)는 retryable */
+async function callModel(key: string, model: string, body: unknown, timeoutMs: number): Promise<{ ok: true; json: GeminiResponse } | { ok: false; retryable: boolean; error: HttpError }> {
   let r: Response;
   try {
     r = await fetch(`${ENDPOINT}/${encodeURIComponent(model)}:generateContent`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
   } catch (e) {
-    if (e instanceof DOMException && (e.name === 'TimeoutError' || e.name === 'AbortError'))
-      throw new HttpError(504, 'AI 답변이 늦어지고 있어요. 잠시 뒤 다시 시도해 주세요.', { code: 'AI_TIMEOUT' });
-    throw new HttpError(502, 'AI 답변을 받지 못했어요. 잠시 뒤 다시 시도해 주세요.', { code: 'AI_ERROR' });
+    const timeout = e instanceof DOMException && (e.name === 'TimeoutError' || e.name === 'AbortError');
+    return {
+      ok: false,
+      retryable: true,
+      error: timeout
+        ? new HttpError(504, 'AI 답변이 늦어지고 있어요. 잠시 뒤 다시 시도해 주세요.', { code: 'AI_TIMEOUT' })
+        : new HttpError(502, 'AI 답변을 받지 못했어요. 잠시 뒤 다시 시도해 주세요.', { code: 'AI_ERROR' }),
+    };
   }
   const j = (await r.json().catch(() => ({}))) as GeminiResponse;
-  if (!r.ok) {
-    const msg = j.error?.message ?? '';
-    if (r.status === 429) throw new HttpError(429, '오늘 무료 AI 이용량이 많아요. 잠시 뒤 다시 시도하거나 자주 묻는 질문을 이용해 주세요.', { code: 'AI_BUSY' });
-    if (r.status === 401 || r.status === 403 || /API key/i.test(msg))
-      throw new HttpError(503, 'AI 연결 설정을 확인해야 해요. 운영자에게 알려 주세요.', { code: 'AI_NOT_CONFIGURED' });
-    throw new HttpError(502, 'AI 답변을 받지 못했어요. 잠시 뒤 다시 시도해 주세요.', { code: 'AI_ERROR', status: r.status });
+  if (r.ok) return { ok: true, json: j };
+  const msg = j.error?.message ?? '';
+  if (r.status === 401 || r.status === 403 || /API key/i.test(msg))
+    return { ok: false, retryable: false, error: new HttpError(503, 'AI 연결 설정을 확인해야 해요. 운영자에게 알려 주세요.', { code: 'AI_NOT_CONFIGURED' }) };
+  if (r.status === 429)
+    return { ok: false, retryable: true, error: new HttpError(429, '오늘 무료 AI 이용량이 많아요. 잠시 뒤 다시 시도하거나 자주 묻는 질문을 이용해 주세요.', { code: 'AI_BUSY' }) };
+  return { ok: false, retryable: r.status >= 500, error: new HttpError(502, 'AI 답변을 받지 못했어요. 잠시 뒤 다시 시도해 주세요.', { code: 'AI_ERROR', status: r.status }) };
+}
+
+/** Gemini에 묻는다 (자료 안에서만, JSON으로). 첫 모델이 늦거나 막히면 가벼운 모델로 한 번 더. 실패는 화면 계약의 오류 코드로 바꾼다 */
+export async function askGemini(question: string, context: { industry: string; scale: string }, checkedAt: string, docs: Doc[]): Promise<AiAnswer> {
+  const key = Deno.env.get('GEMINI_API_KEY');
+  if (!key) throw new HttpError(503, 'AI 상담이 아직 연결되지 않았어요. 자주 묻는 질문이나 노무 전문가 상담을 이용해 주세요.', { code: 'AI_NOT_CONFIGURED' });
+  const primary = geminiModel();
+  const bodyFor = (model: string) => ({
+    systemInstruction: { parts: [{ text: SYSTEM(docs) }] },
+    contents: [{ role: 'user', parts: [{ text: `기준일: ${checkedAt}\n사업장: ${context.industry} · 직원 ${context.scale}\n질문: ${question}` }] }],
+    generationConfig: {
+      responseMimeType: 'application/json',
+      responseJsonSchema: ANSWER_SCHEMA,
+      maxOutputTokens: 4096,
+      // thinkingLevel은 Gemini 3 이상에서만 (이전 모델에 보내면 오류). 자료 안에서 고르는 일이라 LOW로 충분하고 빠르다
+      ...(/^gemini-([3-9]|\d\d)/.test(model) ? { thinkingConfig: { thinkingLevel: 'LOW' } } : {}),
+    },
+  });
+  let res = await callModel(key, primary, bodyFor(primary), PRIMARY_TIMEOUT_MS);
+  if (!res.ok && res.retryable && primary !== FALLBACK_GEMINI_MODEL) {
+    res = await callModel(key, FALLBACK_GEMINI_MODEL, bodyFor(FALLBACK_GEMINI_MODEL), FALLBACK_TIMEOUT_MS);
   }
+  if (!res.ok) throw res.error;
+  const j = res.json;
   const cand = j.candidates?.[0];
   if (j.promptFeedback?.blockReason || cand?.finishReason === 'SAFETY' || cand?.finishReason === 'PROHIBITED_CONTENT') {
     return { status: 'expert_required', text: '이 질문에는 AI가 답하지 않았어요. 노무 전문가와 확인해 주세요.', citations: [] };
