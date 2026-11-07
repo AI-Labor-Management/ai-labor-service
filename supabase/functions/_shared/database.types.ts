@@ -898,6 +898,36 @@ export type Database = {
           },
         ]
       }
+      kakao_links: {
+        Row: {
+          connected_at: string
+          last_detail: string
+          last_sent_on: string | null
+          last_status: string | null
+          refresh_expires_at: string | null
+          refresh_token_ciphertext: string
+          user_id: string
+        }
+        Insert: {
+          connected_at?: string
+          last_detail?: string
+          last_sent_on?: string | null
+          last_status?: string | null
+          refresh_expires_at?: string | null
+          refresh_token_ciphertext: string
+          user_id: string
+        }
+        Update: {
+          connected_at?: string
+          last_detail?: string
+          last_sent_on?: string | null
+          last_status?: string | null
+          refresh_expires_at?: string | null
+          refresh_token_ciphertext?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       invites: {
         Row: {
           created_at: string
@@ -1772,6 +1802,11 @@ export type Database = {
       }
       admin_stats: { Args: never; Returns: Json }
       ai_take: { Args: { p_limit: number; p_user: string }; Returns: number }
+      kakao_link_save: {
+        Args: { p_connect: boolean; p_expires_in: number | null; p_refresh: string; p_user: string }
+        Returns: undefined
+      }
+      kakao_link_token: { Args: { p_user: string }; Returns: string | null }
       apply_substitution: {
         Args: { p_employee_id: string; p_substitution_id: string }
         Returns: undefined

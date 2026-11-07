@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/api/handler.ts (npm run build:functions)
-// sha256:25b60c05d1b9
+// sha256:f6ee6355ad98
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -5734,9 +5734,9 @@ function cc() {
 function serviceKey() {
   const legacy = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (legacy) return legacy;
-  const keys = Deno.env.get("SUPABASE_SECRET_KEYS");
-  if (keys) {
-    const parsed = JSON.parse(keys);
+  const keys2 = Deno.env.get("SUPABASE_SECRET_KEYS");
+  if (keys2) {
+    const parsed = JSON.parse(keys2);
     const first = parsed.default ?? Object.values(parsed)[0];
     if (first) return first;
   }
@@ -5760,9 +5760,9 @@ async function requireUser(req) {
 function anonKey() {
   const legacy = Deno.env.get("SUPABASE_ANON_KEY");
   if (legacy) return legacy;
-  const keys = Deno.env.get("SUPABASE_PUBLISHABLE_KEYS");
-  if (keys) {
-    const parsed = JSON.parse(keys);
+  const keys2 = Deno.env.get("SUPABASE_PUBLISHABLE_KEYS");
+  if (keys2) {
+    const parsed = JSON.parse(keys2);
     const first = parsed.default ?? Object.values(parsed)[0];
     if (first) return first;
   }
@@ -5936,6 +5936,124 @@ async function askClaude(question, context, checkedAt, signal) {
     if (AnthropicCtor && e instanceof AnthropicCtor.APIError) throw new HttpError(502, "AI 답변을 받지 못했어요. 잠시 뒤 다시 시도해 주세요.", { code: "AI_ERROR", status: e.status });
     throw e;
   }
+}
+
+// supabase/functions/_shared/kakao-core.ts
+var KAKAO_SCOPE = "talk_message";
+var KAKAO_POLICY_FROM = "2026-11-14";
+var RETURN_ORIGINS = ["https://ai-labor-management.github.io", "http://localhost:5173", "http://localhost:4173", "http://localhost:4175"];
+var STATE_TTL_MS = 10 * 6e4;
+var b64url = (b) => btoa(String.fromCharCode(...b)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+async function hmac(secret, data) {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(`kakao-state:${secret}`), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return b64url(new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(data))));
+}
+async function signState(secret, userId, returnTo, now = Date.now()) {
+  const body = b64url(new TextEncoder().encode(JSON.stringify({ u: userId, r: returnTo, e: now + STATE_TTL_MS })));
+  return `${body}.${await hmac(secret, body)}`;
+}
+function safeReturn(v, siteUrl) {
+  if (typeof v === "string") {
+    try {
+      const u = new URL(v);
+      if (RETURN_ORIGINS.includes(u.origin)) return u.toString();
+    } catch {
+    }
+  }
+  return `${siteUrl}/owner/deadlines`;
+}
+function memoTemplate(text2, siteUrl, path) {
+  const url = `${siteUrl}${path}`;
+  return { object_type: "text", text: text2.slice(0, 200), link: { web_url: url, mobile_web_url: url }, button_title: "사람샘각에서 보기" };
+}
+var tokenErrorCode = (error) => error === "invalid_grant" ? "TOKEN_EXPIRED" : "TOKEN_FAILED";
+
+// supabase/functions/_shared/kakao.ts
+var SITE_URL = (Deno.env.get("SITE_URL") ?? "https://ai-labor-management.github.io/saram-saemgak-site").replace(/\/$/, "");
+var AUTH_HOST = "https://kauth.kakao.com";
+var API_HOST = "https://kapi.kakao.com";
+function keys() {
+  return { restKey: Deno.env.get("KAKAO_REST_KEY") ?? "", secret: Deno.env.get("KAKAO_CLIENT_SECRET") ?? "" };
+}
+function kakaoConfigured() {
+  const k = keys();
+  return !!k.restKey && !!k.secret;
+}
+function callbackUrl() {
+  return `${Deno.env.get("SUPABASE_URL")}/functions/v1/public-api/kakao/callback`;
+}
+var safeReturn2 = (v) => safeReturn(v, SITE_URL);
+async function authorizeUrl(userId, returnTo) {
+  const q = new URLSearchParams({
+    client_id: keys().restKey,
+    redirect_uri: callbackUrl(),
+    response_type: "code",
+    scope: KAKAO_SCOPE,
+    state: await signState(keys().secret, userId, returnTo)
+  });
+  return `${AUTH_HOST}/oauth/authorize?${q}`;
+}
+var KakaoError = class extends Error {
+  constructor(code, message) {
+    super(message);
+    this.code = code;
+  }
+  code;
+};
+async function tokenRequest(params) {
+  const r = await fetch(`${AUTH_HOST}/oauth/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded;charset=utf-8" },
+    body: new URLSearchParams({ client_id: keys().restKey, client_secret: keys().secret, ...params }),
+    signal: AbortSignal.timeout(15e3)
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || j.error) throw new KakaoError(tokenErrorCode(j.error), `${j.error ?? r.status} ${j.error_description ?? ""}`.trim());
+  return j;
+}
+async function accessToken(db, userId) {
+  const { data: refresh, error } = await db.rpc("kakao_link_token", { p_user: userId });
+  if (error) throw error;
+  if (!refresh) throw new HttpError(404, "카카오톡 알림이 연결돼 있지 않아요", { code: "KAKAO_NOT_LINKED" });
+  const t = await tokenRequest({ grant_type: "refresh_token", refresh_token: refresh });
+  if (t.refresh_token) {
+    const { error: e2 } = await db.rpc("kakao_link_save", { p_user: userId, p_refresh: t.refresh_token, p_expires_in: t.refresh_token_expires_in ?? null, p_connect: false });
+    if (e2) throw e2;
+  }
+  if (!t.access_token) throw new KakaoError("TOKEN_FAILED", "접근 토큰을 받지 못했어요");
+  return t.access_token;
+}
+async function sendMemo(db, userId, text2, path = "/owner/deadlines") {
+  const token = await accessToken(db, userId);
+  const r = await fetch(`${API_HOST}/v2/api/talk/memo/default/send`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/x-www-form-urlencoded;charset=utf-8" },
+    body: new URLSearchParams({ template_object: JSON.stringify(memoTemplate(text2, SITE_URL, path)) }),
+    signal: AbortSignal.timeout(15e3)
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || j.result_code !== 0) throw new KakaoError("SEND_FAILED", `${j.code ?? r.status} ${j.msg ?? ""}`.trim());
+}
+async function recordResult(db, userId, on, e) {
+  if (e instanceof KakaoError && e.code === "TOKEN_EXPIRED") {
+    await db.from("kakao_links").delete().eq("user_id", userId);
+    return;
+  }
+  await db.from("kakao_links").update({ last_sent_on: on, last_status: e ? "failed" : "sent", last_detail: e ? String(e instanceof Error ? e.message : e).slice(0, 300) : "" }).eq("user_id", userId);
+}
+async function linkStatus(db, userId) {
+  const { data, error } = await db.from("kakao_links").select("connected_at, refresh_expires_at, last_sent_on, last_status, last_detail").eq("user_id", userId).maybeSingle();
+  if (error) throw error;
+  return {
+    configured: kakaoConfigured(),
+    policyFrom: KAKAO_POLICY_FROM,
+    connected: !!data,
+    connectedAt: data?.connected_at ?? null,
+    expiresAt: data?.refresh_expires_at ?? null,
+    lastSentOn: data?.last_sent_on ?? null,
+    lastStatus: data?.last_status ?? null,
+    lastDetail: data?.last_detail ?? ""
+  };
 }
 
 // supabase/functions/api/handler.ts
@@ -6323,10 +6441,38 @@ async function consultAnswer(db, user, body) {
   const answer = await askClaude(question, { industry: INDUSTRY_KO[wp.industry] ?? "기타", scale: SCALE_KO[wp.scale] ?? wp.scale }, kstToday());
   return { ...answer, usedToday: used, dailyLimit: AI_DAILY_LIMIT };
 }
+async function kakaoRoutes(req, db, user, path, body) {
+  const m = req.method;
+  if (m === "GET" && path === "kakao") return json(req, await linkStatus(db, user.id));
+  if (m === "POST" && path === "kakao/disconnect") {
+    await must(db.from("kakao_links").delete().eq("user_id", user.id).select("user_id"));
+    return json(req, { connected: false });
+  }
+  if (m !== "POST" || path !== "kakao/start" && path !== "kakao/test") return null;
+  if (!await ownerWorkplace(db, user.id)) throw notFound("사업장이 없어요. 먼저 사업장을 만들어 주세요");
+  if (!kakaoConfigured()) throw new HttpError(503, "카카오톡 알림이 아직 연결되지 않았어요. 지금은 앱 안 알림과 캘린더 파일을 이용해 주세요.", { code: "KAKAO_NOT_CONFIGURED" });
+  if (kstToday() < KAKAO_POLICY_FROM)
+    throw new HttpError(409, `카카오톡 알림은 개인정보 처리방침 변경 시행일(${KAKAO_POLICY_FROM})부터 연결할 수 있어요`, { code: "KAKAO_POLICY_PENDING" });
+  if (path === "kakao/start") return json(req, { url: await authorizeUrl(user.id, safeReturn2(body.returnTo)) });
+  try {
+    await sendMemo(db, user.id, "[사람샘각] 카카오톡 알림 연결을 확인했어요. 처리할 노무 일이 있는 날 아침 9시에 이렇게 알려 드려요.");
+    await recordResult(db, user.id, kstToday(), null);
+    return json(req, { sent: true });
+  } catch (e) {
+    if (!(e instanceof KakaoError)) throw e;
+    await recordResult(db, user.id, kstToday(), e);
+    throw new HttpError(502, e.code === "TOKEN_EXPIRED" ? "카카오 연결이 만료됐어요. 다시 연결해 주세요" : "카카오톡으로 보내지 못했어요. 잠시 뒤 다시 시도해 주세요", { code: `KAKAO_${e.code}` });
+  }
+}
 async function ownerRoutes(req, db, user, path, body, url) {
   const m = req.method;
   if (m === "POST" && path === "seed-demo") return json(req, await seedDemo(db, user, body), 201);
   if (m === "POST" && path === "consult/answer") return json(req, await consultAnswer(db, user, body));
+  if (path === "kakao" || path.startsWith("kakao/")) {
+    const r = await kakaoRoutes(req, db, user, path, body);
+    if (r) return r;
+    throw notFound(`없는 경로예요: owner/${path}`);
+  }
   const ctx = await ownerCtx(db, user);
   const { state, base, wp } = ctx;
   const date = url.searchParams.get("date") ? iso(url.searchParams.get("date"), "date") : base;
@@ -6531,7 +6677,7 @@ async function handler(req) {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
   try {
     const path = subPath(req, "api");
-    if (path === "health" || path === "") return json(req, { ok: true, function: "api", time: (/* @__PURE__ */ new Date()).toISOString(), kstToday: kstToday(), ai: aiConfigured() });
+    if (path === "health" || path === "") return json(req, { ok: true, function: "api", time: (/* @__PURE__ */ new Date()).toISOString(), kstToday: kstToday(), ai: aiConfigured(), kakao: kakaoConfigured() });
     const user = await requireUser(req);
     const db = serviceClient();
     const body = await readJson(req) ?? {};

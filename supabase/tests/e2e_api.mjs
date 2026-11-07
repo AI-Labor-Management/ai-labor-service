@@ -348,6 +348,28 @@ if (aiOn) {
 } else {
   ok(r.status === 503 && r.body?.detail?.code === 'AI_NOT_CONFIGURED', 'AI 키가 없으면 503 연결 전', r.body);
 }
+// ── 카카오톡 나에게 보내기 — 키가 없으면 연결 전, 토큰 표는 브라우저에서 못 읽는다 ──
+r = await api('health', owner);
+const kakaoOn = r.body?.kakao === true;
+ok(typeof r.body?.kakao === 'boolean', `health가 카카오 알림 연결 여부를 알려 줌 (kakao=${r.body?.kakao})`);
+r = await api('owner/kakao', owner);
+ok(r.status === 200 && r.body?.connected === false && r.body?.configured === kakaoOn && r.body?.policyFrom === '2026-11-14', '카카오 알림 상태: 연결 안 됨', r.body);
+r = await api('owner/kakao/start', emp, { method: 'POST', body: {} });
+ok(r.status === 404, '사업장 없는 계정은 카카오 알림을 연결할 수 없음', r.status);
+r = await api('owner/kakao/start', owner, { method: 'POST', body: { returnTo: 'https://evil.example/x' } });
+if (!kakaoOn) ok(r.status === 503 && r.body?.detail?.code === 'KAKAO_NOT_CONFIGURED', '카카오 키가 없으면 503 연결 전', r.body);
+else if (r.status === 409) ok(r.body?.detail?.code === 'KAKAO_POLICY_PENDING', '처리방침 시행일 전에는 409', r.body);
+else ok(r.status === 200 && new URL(r.body.url).host === 'kauth.kakao.com' && new URL(r.body.url).searchParams.get('scope') === 'talk_message', '카카오 동의 주소(talk_message)', r.body);
+r = await api('owner/kakao/disconnect', owner, { method: 'POST', body: {} });
+ok(r.status === 200 && r.body?.connected === false, '카카오 알림 연결 끊기 (연결이 없어도 성공)', r.body);
+r = await rest('kakao_links?select=user_id', owner);
+ok(r.status === 401 || r.status === 403 || (r.status === 200 && Array.isArray(r.body) && r.body.length === 0), '카카오 토큰 표는 브라우저에서 읽을 수 없음', r.status);
+{
+  const cb = await fetch(`${BASE}/functions/v1/public-api/kakao/callback?code=x&state=forged.sig`, { headers: { apikey: KEY }, redirect: 'manual' });
+  const loc = cb.headers.get('location') ?? '';
+  ok(cb.status === 302 && loc.startsWith('https://ai-labor-management.github.io/') && /kakao=(error|expired)/.test(loc), '카카오 콜백: 위조 state는 사이트로 돌려보내고 저장하지 않음', `${cb.status} ${loc}`);
+}
+
 r = await rest('notifications?recipient=eq.owner&select=kind,text', owner);
 ok(r.status === 200, '사장님 알림 조회', r.body.length);
 

@@ -9,6 +9,7 @@ import { type Db, kstNowHHMM, kstToday, loadWorkplace, must, ownerWorkplace, pus
 import { bad, conflict, corsHeaders, forbidden, handleError, HttpError, int, json, notFound, oneOf, readJson, str, subPath, text, uuid } from '../_shared/http.ts';
 
 import { AI_DAILY_LIMIT, aiConfigured, askClaude } from './ai.ts';
+import * as K from '../_shared/kakao.ts';
 
 type Body = Record<string, unknown>;
 type User = { id: string; email: string | null; token: string };
@@ -438,10 +439,40 @@ async function consultAnswer(db: Db, user: User, body: Body) {
   return { ...answer, usedToday: used as number, dailyLimit: AI_DAILY_LIMIT };
 }
 
+/** 카카오톡 나에게 보내기 — 상태·연결 시작·끊기·시험 발송 (사장님만) */
+async function kakaoRoutes(req: Request, db: Db, user: User, path: string, body: Body): Promise<Response | null> {
+  const m = req.method;
+  if (m === 'GET' && path === 'kakao') return json(req, await K.linkStatus(db, user.id));
+  if (m === 'POST' && path === 'kakao/disconnect') {
+    await must(db.from('kakao_links').delete().eq('user_id', user.id).select('user_id'));
+    return json(req, { connected: false });
+  }
+  if (m !== 'POST' || (path !== 'kakao/start' && path !== 'kakao/test')) return null;
+  if (!(await ownerWorkplace(db, user.id))) throw notFound('사업장이 없어요. 먼저 사업장을 만들어 주세요');
+  if (!K.kakaoConfigured()) throw new HttpError(503, '카카오톡 알림이 아직 연결되지 않았어요. 지금은 앱 안 알림과 캘린더 파일을 이용해 주세요.', { code: 'KAKAO_NOT_CONFIGURED' });
+  if (kstToday() < K.KAKAO_POLICY_FROM)
+    throw new HttpError(409, `카카오톡 알림은 개인정보 처리방침 변경 시행일(${K.KAKAO_POLICY_FROM})부터 연결할 수 있어요`, { code: 'KAKAO_POLICY_PENDING' });
+  if (path === 'kakao/start') return json(req, { url: await K.authorizeUrl(user.id, K.safeReturn(body.returnTo)) });
+  try {
+    await K.sendMemo(db, user.id, '[사람샘각] 카카오톡 알림 연결을 확인했어요. 처리할 노무 일이 있는 날 아침 9시에 이렇게 알려 드려요.');
+    await K.recordResult(db, user.id, kstToday(), null);
+    return json(req, { sent: true });
+  } catch (e) {
+    if (!(e instanceof K.KakaoError)) throw e;
+    await K.recordResult(db, user.id, kstToday(), e);
+    throw new HttpError(502, e.code === 'TOKEN_EXPIRED' ? '카카오 연결이 만료됐어요. 다시 연결해 주세요' : '카카오톡으로 보내지 못했어요. 잠시 뒤 다시 시도해 주세요', { code: `KAKAO_${e.code}` });
+  }
+}
+
 async function ownerRoutes(req: Request, db: Db, user: User, path: string, body: Body, url: URL): Promise<Response> {
   const m = req.method;
   if (m === 'POST' && path === 'seed-demo') return json(req, await seedDemo(db, user, body), 201);
   if (m === 'POST' && path === 'consult/answer') return json(req, await consultAnswer(db, user, body));
+  if (path === 'kakao' || path.startsWith('kakao/')) {
+    const r = await kakaoRoutes(req, db, user, path, body);
+    if (r) return r;
+    throw notFound(`없는 경로예요: owner/${path}`);
+  }
   const ctx = await ownerCtx(db, user);
   const { state, base, wp } = ctx;
   const date = url.searchParams.get('date') ? iso(url.searchParams.get('date'), 'date') : base;
@@ -643,7 +674,7 @@ export async function handler(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(req) });
   try {
     const path = subPath(req, 'api');
-    if (path === 'health' || path === '') return json(req, { ok: true, function: 'api', time: new Date().toISOString(), kstToday: kstToday(), ai: aiConfigured() });
+    if (path === 'health' || path === '') return json(req, { ok: true, function: 'api', time: new Date().toISOString(), kstToday: kstToday(), ai: aiConfigured(), kakao: K.kakaoConfigured() });
     const user = await requireUser(req);
     const db = serviceClient();
     const body = (await readJson<Body>(req)) ?? {};

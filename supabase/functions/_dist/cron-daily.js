@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/cron-daily/handler.ts (npm run build:functions)
-// sha256:9f1849d54b2c
+// sha256:0ef6edd64ca4
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -5412,9 +5412,9 @@ function cc() {
 function serviceKey() {
   const legacy = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (legacy) return legacy;
-  const keys = Deno.env.get("SUPABASE_SECRET_KEYS");
-  if (keys) {
-    const parsed = JSON.parse(keys);
+  const keys2 = Deno.env.get("SUPABASE_SECRET_KEYS");
+  if (keys2) {
+    const parsed = JSON.parse(keys2);
     const first = parsed.default ?? Object.values(parsed)[0];
     if (first) return first;
   }
@@ -5450,6 +5450,77 @@ async function loadWorkplace(db, workplaceId, today = kstToday()) {
   return { rows, state: rowsToState(rows) };
 }
 
+// supabase/functions/_shared/kakao-core.ts
+var STATE_TTL_MS = 10 * 6e4;
+function memoTemplate(text, siteUrl, path) {
+  const url = `${siteUrl}${path}`;
+  return { object_type: "text", text: text.slice(0, 200), link: { web_url: url, mobile_web_url: url }, button_title: "사람샘각에서 보기" };
+}
+var tokenErrorCode = (error) => error === "invalid_grant" ? "TOKEN_EXPIRED" : "TOKEN_FAILED";
+
+// supabase/functions/_shared/kakao.ts
+var SITE_URL = (Deno.env.get("SITE_URL") ?? "https://ai-labor-management.github.io/saram-saemgak-site").replace(/\/$/, "");
+var AUTH_HOST = "https://kauth.kakao.com";
+var API_HOST = "https://kapi.kakao.com";
+function keys() {
+  return { restKey: Deno.env.get("KAKAO_REST_KEY") ?? "", secret: Deno.env.get("KAKAO_CLIENT_SECRET") ?? "" };
+}
+function kakaoConfigured() {
+  const k = keys();
+  return !!k.restKey && !!k.secret;
+}
+var KakaoError = class extends Error {
+  constructor(code, message) {
+    super(message);
+    this.code = code;
+  }
+  code;
+};
+async function tokenRequest(params) {
+  const r = await fetch(`${AUTH_HOST}/oauth/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded;charset=utf-8" },
+    body: new URLSearchParams({ client_id: keys().restKey, client_secret: keys().secret, ...params }),
+    signal: AbortSignal.timeout(15e3)
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || j.error) throw new KakaoError(tokenErrorCode(j.error), `${j.error ?? r.status} ${j.error_description ?? ""}`.trim());
+  return j;
+}
+async function accessToken(db, userId) {
+  const { data: refresh, error } = await db.rpc("kakao_link_token", { p_user: userId });
+  if (error) throw error;
+  if (!refresh) throw new HttpError(404, "카카오톡 알림이 연결돼 있지 않아요", { code: "KAKAO_NOT_LINKED" });
+  const t = await tokenRequest({ grant_type: "refresh_token", refresh_token: refresh });
+  if (t.refresh_token) {
+    const { error: e2 } = await db.rpc("kakao_link_save", { p_user: userId, p_refresh: t.refresh_token, p_expires_in: t.refresh_token_expires_in ?? null, p_connect: false });
+    if (e2) throw e2;
+  }
+  if (!t.access_token) throw new KakaoError("TOKEN_FAILED", "접근 토큰을 받지 못했어요");
+  return t.access_token;
+}
+async function refreshLink(db, userId) {
+  await accessToken(db, userId);
+}
+async function sendMemo(db, userId, text, path = "/owner/deadlines") {
+  const token = await accessToken(db, userId);
+  const r = await fetch(`${API_HOST}/v2/api/talk/memo/default/send`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/x-www-form-urlencoded;charset=utf-8" },
+    body: new URLSearchParams({ template_object: JSON.stringify(memoTemplate(text, SITE_URL, path)) }),
+    signal: AbortSignal.timeout(15e3)
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || j.result_code !== 0) throw new KakaoError("SEND_FAILED", `${j.code ?? r.status} ${j.msg ?? ""}`.trim());
+}
+async function recordResult(db, userId, on, e) {
+  if (e instanceof KakaoError && e.code === "TOKEN_EXPIRED") {
+    await db.from("kakao_links").delete().eq("user_id", userId);
+    return;
+  }
+  await db.from("kakao_links").update({ last_sent_on: on, last_status: e ? "failed" : "sent", last_detail: e ? String(e instanceof Error ? e.message : e).slice(0, 300) : "" }).eq("user_id", userId);
+}
+
 // supabase/functions/cron-daily/handler.ts
 async function handler(req) {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
@@ -5460,8 +5531,10 @@ async function handler(req) {
     if (error) throw error;
     if (!ok) throw new HttpError(401, "cron 비밀 값이 맞지 않아요");
     const today = kstToday();
-    const kakao = (await must(db.from("app_settings").select("value").eq("key", "kakao_enabled")))[0]?.value === true;
-    const workplaces = await must(db.from("workplaces").select("id, base_date_override"));
+    const kakaoSwitch = (await must(db.from("app_settings").select("value").eq("key", "kakao_enabled")))[0]?.value === true;
+    const kakaoOn = kakaoSwitch && kakaoConfigured();
+    const linked = new Set(kakaoOn ? (await must(db.from("kakao_links").select("user_id"))).map((l) => l.user_id) : []);
+    const workplaces = await must(db.from("workplaces").select("id, owner_id, base_date_override"));
     const summary = [];
     for (const wp of workplaces) {
       const base = wp.base_date_override ?? today;
@@ -5469,7 +5542,6 @@ async function handler(req) {
       const due = engine.computeDeadlines(state, base).filter(
         (d) => d.status !== "done" && d.status !== "onboarding" && (d.alerts.includes(base) || d.days === -1)
       );
-      let alerts = 0;
       let skipped = 0;
       const fresh = [];
       for (const d of due) {
@@ -5478,26 +5550,57 @@ async function handler(req) {
           skipped++;
           continue;
         }
-        await db.from("notification_log").insert({ workplace_id: wp.id, deadline_key: d.key, channel: "kakao", sent_on: base, status: kakao ? "failed" : "not-connected", detail: kakao ? "발송 모듈 미구현" : "카카오 연결 대기 — 보내지 않음" });
         fresh.push(d);
-        alerts++;
       }
+      let kakao = null;
       if (fresh.length) {
         const first = fresh[0];
+        const text = `오늘 처리할 노무 일 ${fresh.length}건: ${first.title} ${first.status === "overdue" ? "(기한 지남)" : first.dLabel}${fresh.length > 1 ? ` 외 ${fresh.length - 1}건` : ""}`;
+        let detail = "카카오 연결 대기 — 보내지 않음";
+        kakao = "not-connected";
+        if (kakaoOn && linked.has(wp.owner_id)) {
+          try {
+            await sendMemo(db, wp.owner_id, `[사람샘각] ${text}`);
+            await recordResult(db, wp.owner_id, base, null);
+            kakao = "sent";
+            detail = "";
+          } catch (e) {
+            await recordResult(db, wp.owner_id, base, e);
+            kakao = "failed";
+            detail = String(e instanceof Error ? e.message : e).slice(0, 200);
+          }
+        }
+        await db.from("notification_log").insert(
+          fresh.map((d) => ({ workplace_id: wp.id, deadline_key: d.key, channel: "kakao", sent_on: base, status: kakao === "sent" ? "delivered" : kakao, detail }))
+        );
         await must(db.from("notifications").insert({
           workplace_id: wp.id,
           recipient: "owner",
           kind: "dailyDigest",
-          text: `오늘 처리할 노무 일 ${fresh.length}건: ${first.title} ${first.status === "overdue" ? "(기한 지남)" : first.dLabel}${fresh.length > 1 ? ` 외 ${fresh.length - 1}건` : ""}`,
+          text,
           link: "/owner/deadlines",
-          kakao_status: "not-connected"
+          kakao_status: kakao
         }));
       }
-      summary.push({ workplaceId: wp.id, alerts, skipped });
+      summary.push({ workplaceId: wp.id, alerts: fresh.length, skipped, kakao });
+    }
+    let kakaoRefreshed = 0;
+    if (kakaoOn) {
+      const soon = new Date(Date.now() + 31 * 864e5).toISOString();
+      const stale = await must(db.from("kakao_links").select("user_id, last_sent_on").lt("refresh_expires_at", soon));
+      for (const l of stale) {
+        if (l.last_sent_on === today) continue;
+        try {
+          await refreshLink(db, l.user_id);
+          kakaoRefreshed++;
+        } catch (e) {
+          if (e instanceof KakaoError && e.code === "TOKEN_EXPIRED") await db.from("kakao_links").delete().eq("user_id", l.user_id);
+        }
+      }
     }
     const { data: retention, error: re } = await db.rpc("run_retention");
     if (re) throw re;
-    return json(req, { ok: true, date: today, workplaces: summary.length, summary, retention });
+    return json(req, { ok: true, date: today, workplaces: summary.length, summary, kakao: { on: kakaoOn, linked: linked.size, refreshed: kakaoRefreshed }, retention });
   } catch (e) {
     return handleError(req, e);
   }

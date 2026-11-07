@@ -4,8 +4,31 @@ import { engine as E } from '../_shared/engine.ts';
 import type { AgeBand, Industry, ScaleBand } from '../_shared/domain-types.ts';
 import { kstToday, serviceClient } from '../_shared/db.ts';
 import { bad, corsHeaders, handleError, int, json, notFound, oneOf, readJson, str, subPath } from '../_shared/http.ts';
+import * as K from '../_shared/kakao.ts';
 
 type Body = Record<string, unknown>;
+
+const redirect = (to: string) => new Response(null, { status: 302, headers: { Location: to, 'Cache-Control': 'no-store' } });
+
+/** 카카오 동의 화면에서 돌아오는 곳 (카카오 앱 Redirect URI에 등록) → 갱신 토큰 저장 → 사이트로 돌려보낸다 (?kakao=결과) */
+async function kakaoCallback(url: URL): Promise<Response> {
+  const fallback = K.safeReturn(null);
+  if (!K.kakaoConfigured()) return redirect(K.withParam(fallback, 'kakao', 'error'));
+  const st = await K.readState(url.searchParams.get('state') ?? '');
+  if (!st) return redirect(K.withParam(fallback, 'kakao', 'expired'));
+  const back = K.safeReturn(st.returnTo);
+  const err = url.searchParams.get('error');
+  if (err) return redirect(K.withParam(back, 'kakao', err === 'access_denied' ? 'denied' : 'error'));
+  const code = url.searchParams.get('code');
+  if (!code || kstToday() < K.KAKAO_POLICY_FROM) return redirect(K.withParam(back, 'kakao', 'error'));
+  try {
+    await K.connectWithCode(serviceClient(), st.userId, code);
+    return redirect(K.withParam(back, 'kakao', 'connected'));
+  } catch (e) {
+    console.error('kakao callback', e instanceof Error ? e.message : e);
+    return redirect(K.withParam(back, 'kakao', e instanceof K.KakaoError && e.code === 'NO_SCOPE' ? 'noscope' : 'error'));
+  }
+}
 
 function precheck(body: Body) {
   const date = body.date && E.isISODate(body.date) ? (body.date as string) : kstToday();
@@ -46,6 +69,7 @@ export async function handler(req: Request): Promise<Response> {
     if (m === 'GET' && path === 'faq') return json(req, E.FAQS, 200, { 'Cache-Control': 'public, max-age=300' });
     if (m === 'GET' && path === 'checklist-items') return json(req, E.CHECKLIST_ITEMS, 200, { 'Cache-Control': 'public, max-age=300' });
     if (m === 'GET' && path === 'holidays') return json(req, { source: E.HOLIDAY_SOURCE, holidays: E.HOLIDAYS });
+    if (m === 'GET' && path === 'kakao/callback') return await kakaoCallback(url);
     const body = await readJson<Body>(req);
     if (m === 'POST' && path === 'diagnosis') return json(req, { ...E.diagnose(body.answers ?? body), stored: false });
     if (m === 'POST' && path === 'precheck') return json(req, precheck(body));

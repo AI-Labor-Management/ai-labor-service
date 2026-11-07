@@ -7,7 +7,7 @@
 | 항목 | 값 |
 |---|---|
 | 프로젝트 | `nomu-service-seoul` · ref `smbxhspzflnvncatdgjs` · **`ap-northeast-2` (서울)**. 처음 쓰던 시드니 프로젝트 `nomu-service`(`htdnyekvbuncuweeqpmn`)는 가입자·데이터 0인 상태에서 2026-11-06 옮긴 뒤 일시정지 |
-| 마이그레이션 | `supabase/migrations/20261106000001` ~ `20261107000011` 11개 적용 (10 = 노무법인·관리자 2단계 인증 강제·관리자 접속 기록 1년, 11 = AI 상담 하루 이용 횟수 `ai_usage`·30일 정리) |
+| 마이그레이션 | `supabase/migrations/20261106000001` ~ `20261107000012` 12개 적용 (10 = 노무법인·관리자 2단계 인증 강제·관리자 접속 기록 1년, 11 = AI 상담 하루 이용 횟수 `ai_usage`·30일 정리, 12 = 카카오톡 알림 연결 `kakao_links`(갱신 토큰 Vault 키로 암호화)) |
 | 프론트엔드 | GitHub Pages 빌드(`deploy.yml`)와 사람샘각(`AI-Labor-Management/saram-saemgak`의 `.env.production`)에 `VITE_SUPABASE_URL`·`VITE_SUPABASE_ANON_KEY`(공개 값) 포함 → 시작 화면에서 서버 모드 선택 가능 |
 | Edge Functions | `api` v4 (verify_jwt on, 비밀 값 `ANTHROPIC_API_KEY`가 있으면 AI 상담 열림), `public-api` v2 (off), `cron-daily` v2 (off, 비밀 헤더 검사) — 서울 프로젝트 |
 | 함수 코드 기준 커밋 | 세 함수 모두 `462deb245e6afa07a713fa0f4eb5916bb04d022b` (2026-11-07, 공휴일 목록을 2026·2027 월력요항·노동절/제헌절 개정에 맞춤). `api` 진입점은 `npm:@anthropic-ai/sdk@1.3.0`을 `setAnthropic`으로 넣는다. 이전: `api` v3 = `6ff14dc`, `public-api`·`cron-daily` v1 = `b88498a`. jsDelivr 고정 URL, 아래 3-B |
@@ -142,4 +142,4 @@ SUPABASE_URL=https://<ref>.supabase.co SB_KEY=<publishable key> E2E_PASSWORD=<pa
 update public.app_settings set value = 'true' where key = 'guest_consult_intake';
 ```
 
-`kakao_enabled`, `ai_enabled`는 발송·상담 모듈을 만든 뒤에 켭니다. `client_clock_time_allowed`는 운영에서 항상 `false`(서버 시각 사용).
+`kakao_enabled`는 카카오톡 알림 비상 스위치(마이그레이션 12에서 `true`) — 실제 발송은 함수 비밀 값 `KAKAO_REST_KEY`·`KAKAO_CLIENT_SECRET`과 사장님 연결이 있을 때만. `ai_enabled`는 쓰지 않습니다(AI는 `ANTHROPIC_API_KEY`). `client_clock_time_allowed`는 운영에서 항상 `false`(서버 시각 사용).
