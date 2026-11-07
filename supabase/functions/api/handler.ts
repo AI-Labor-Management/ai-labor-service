@@ -9,7 +9,7 @@ import { type Db, kstNowHHMM, kstToday, loadWorkplace, must, ownerWorkplace, pus
 import { bad, conflict, corsHeaders, forbidden, handleError, HttpError, int, json, notFound, oneOf, readJson, str, subPath, text, uuid } from '../_shared/http.ts';
 
 import { AI_DAILY_LIMIT, aiConfigured, aiProvider, askClaude } from './ai.ts';
-import { askGemini } from './gemini.ts';
+import { askGemini, checkGemini, GEMINI_POLICY_FROM } from './gemini.ts';
 import { buildCorpus } from './ai-ground.ts';
 import * as K from '../_shared/kakao.ts';
 
@@ -694,7 +694,12 @@ export async function handler(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(req) });
   try {
     const path = subPath(req, 'api');
-    if (path === 'health' || path === '') return json(req, { ok: true, function: 'api', time: new Date().toISOString(), kstToday: kstToday(), ai: aiConfigured(kstToday()), aiProvider: aiProvider(kstToday()), kakao: K.kakaoConfigured() });
+    if (path === 'health' || path === '') {
+      const today = kstToday();
+      // ?check=ai: Gemini 키·모델 사전 점검 (모델 정보만 조회 — 사용자 질문은 보내지 않음)
+      const aiCheck = new URL(req.url).searchParams.get('check') === 'ai' ? await checkGemini() : undefined;
+      return json(req, { ok: true, function: 'api', time: new Date().toISOString(), kstToday: today, ai: aiConfigured(today), aiProvider: aiProvider(today), aiFrom: GEMINI_POLICY_FROM, ...(aiCheck ? { aiCheck } : {}), kakao: K.kakaoConfigured() });
+    }
     const user = await requireUser(req);
     const db = serviceClient();
     const body = (await readJson<Body>(req)) ?? {};

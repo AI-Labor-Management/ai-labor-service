@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/api/handler.ts (npm run build:functions)
-// sha256:2bd9f98e1d54
+// sha256:c0092b4f2ad5
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -5952,6 +5952,23 @@ var SYSTEM = (docs) => `너는 한국 소상공인 사장님을 돕는 인사·�
 
 근거 자료:
 ${corpusText(docs)}`;
+var lastCheck = null;
+async function checkGemini() {
+  const key = Deno.env.get("GEMINI_API_KEY");
+  const model = geminiModel();
+  if (!key) return { ok: false, model, detail: "GEMINI_API_KEY 없음" };
+  if (lastCheck && Date.now() - lastCheck.at < 6e5) return lastCheck.result;
+  let result;
+  try {
+    const r = await fetch(`${ENDPOINT}/${encodeURIComponent(model)}`, { headers: { "x-goog-api-key": key }, signal: AbortSignal.timeout(1e4) });
+    const j = await r.json().catch(() => ({}));
+    result = r.ok ? { ok: true, model, detail: j.displayName ?? "" } : { ok: false, model, detail: `${r.status} ${j.error?.status ?? ""}`.trim() };
+  } catch {
+    result = { ok: false, model, detail: "연결 실패" };
+  }
+  lastCheck = { at: Date.now(), result };
+  return result;
+}
 async function askGemini(question, context, checkedAt, docs) {
   const key = Deno.env.get("GEMINI_API_KEY");
   if (!key) throw new HttpError(503, "AI 상담이 아직 연결되지 않았어요. 자주 묻는 질문이나 노무 전문가 상담을 이용해 주세요.", { code: "AI_NOT_CONFIGURED" });
@@ -6872,7 +6889,11 @@ async function handler(req) {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
   try {
     const path = subPath(req, "api");
-    if (path === "health" || path === "") return json(req, { ok: true, function: "api", time: (/* @__PURE__ */ new Date()).toISOString(), kstToday: kstToday(), ai: aiConfigured(kstToday()), aiProvider: aiProvider(kstToday()), kakao: kakaoConfigured() });
+    if (path === "health" || path === "") {
+      const today = kstToday();
+      const aiCheck = new URL(req.url).searchParams.get("check") === "ai" ? await checkGemini() : void 0;
+      return json(req, { ok: true, function: "api", time: (/* @__PURE__ */ new Date()).toISOString(), kstToday: today, ai: aiConfigured(today), aiProvider: aiProvider(today), aiFrom: GEMINI_POLICY_FROM, ...aiCheck ? { aiCheck } : {}, kakao: kakaoConfigured() });
+    }
     const user = await requireUser(req);
     const db = serviceClient();
     const body = await readJson(req) ?? {};
