@@ -38,6 +38,28 @@ const SYSTEM = (docs: Doc[]) => `너는 한국 소상공인 사장님을 돕는 
 근거 자료:
 ${corpusText(docs)}`;
 
+/**
+ * 키·모델 사전 점검 — 모델 정보만 조회한다(사용자 질문·개인정보는 보내지 않음). 처리방침 시행일 전에도 쓸 수 있다.
+ * health?check=ai 에서 부른다. 10분 동안 결과를 재사용한다.
+ */
+let lastCheck: { at: number; result: { ok: boolean; model: string; detail: string } } | null = null;
+export async function checkGemini(): Promise<{ ok: boolean; model: string; detail: string }> {
+  const key = Deno.env.get('GEMINI_API_KEY');
+  const model = geminiModel();
+  if (!key) return { ok: false, model, detail: 'GEMINI_API_KEY 없음' };
+  if (lastCheck && Date.now() - lastCheck.at < 600_000) return lastCheck.result;
+  let result: { ok: boolean; model: string; detail: string };
+  try {
+    const r = await fetch(`${ENDPOINT}/${encodeURIComponent(model)}`, { headers: { 'x-goog-api-key': key }, signal: AbortSignal.timeout(10_000) });
+    const j = (await r.json().catch(() => ({}))) as { displayName?: string; error?: { status?: string } };
+    result = r.ok ? { ok: true, model, detail: j.displayName ?? '' } : { ok: false, model, detail: `${r.status} ${j.error?.status ?? ''}`.trim() };
+  } catch {
+    result = { ok: false, model, detail: '연결 실패' };
+  }
+  lastCheck = { at: Date.now(), result };
+  return result;
+}
+
 interface GeminiResponse {
   candidates?: { content?: { parts?: { text?: string; thought?: boolean }[] }; finishReason?: string }[];
   promptFeedback?: { blockReason?: string };
