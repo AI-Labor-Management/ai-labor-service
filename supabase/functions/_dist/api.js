@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/api/handler.ts (npm run build:functions)
-// sha256:4fb5878b432f
+// sha256:1a1e3f1bc23e
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -4324,8 +4324,8 @@ function contractKind(e, c) {
   if (e.employmentType === "fixed") return "표준근로계약서 (기간 있음)";
   return "표준근로계약서 (기간 없음)";
 }
-function recordFor(state, key) {
-  return state.docRecords.find((r) => r.key === key) ?? null;
+function recordFor(state, key2) {
+  return state.docRecords.find((r) => r.key === key2) ?? null;
 }
 function levelForDue(due, base, e) {
   if (e && e.onboarding === "existing-pending" && due < e.registeredAt) return { level: null, text: "기존 직원 — 한 번에 체크로 정리", onboarding: true };
@@ -5355,8 +5355,8 @@ function rowsToState(r) {
     seq: w.seq
   };
 }
-function remapKey(key, ids) {
-  return key.split(":").map((part) => ids.get(part) ?? part).join(":");
+function remapKey(key2, ids) {
+  return key2.split(":").map((part) => ids.get(part) ?? part).join(":");
 }
 function stateToInsertPlan(s, ownerId, newId) {
   if (!s.workplace) throw new Error("사업장 정보가 없어요");
@@ -5956,13 +5956,13 @@ var SYSTEM = (docs) => `너는 한국 소상공인 사장님을 돕는 인사·�
 ${corpusText(docs)}`;
 var lastCheck = null;
 async function checkGemini() {
-  const key = Deno.env.get("GEMINI_API_KEY");
+  const key2 = Deno.env.get("GEMINI_API_KEY");
   const model = geminiModel();
-  if (!key) return { ok: false, model, detail: "GEMINI_API_KEY 없음" };
+  if (!key2) return { ok: false, model, detail: "GEMINI_API_KEY 없음" };
   if (lastCheck && Date.now() - lastCheck.at < 6e5) return lastCheck.result;
   let result;
   try {
-    const r = await fetch(`${ENDPOINT}/${encodeURIComponent(model)}`, { headers: { "x-goog-api-key": key }, signal: AbortSignal.timeout(1e4) });
+    const r = await fetch(`${ENDPOINT}/${encodeURIComponent(model)}`, { headers: { "x-goog-api-key": key2 }, signal: AbortSignal.timeout(1e4) });
     const j = await r.json().catch(() => ({}));
     result = r.ok ? { ok: true, model, detail: j.displayName ?? "" } : { ok: false, model, detail: `${r.status} ${j.error?.status ?? ""}`.trim() };
   } catch {
@@ -5971,12 +5971,12 @@ async function checkGemini() {
   lastCheck = { at: Date.now(), result };
   return result;
 }
-async function callModel(key, model, body, timeoutMs) {
+async function callModel(key2, model, body, timeoutMs) {
   let r;
   try {
     r = await fetch(`${ENDPOINT}/${encodeURIComponent(model)}:generateContent`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+      headers: { "Content-Type": "application/json", "x-goog-api-key": key2 },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(timeoutMs)
     });
@@ -5998,8 +5998,8 @@ async function callModel(key, model, body, timeoutMs) {
   return { ok: false, retryable: r.status >= 500, error: new HttpError(502, "AI 답변을 받지 못했어요. 잠시 뒤 다시 시도해 주세요.", { code: "AI_ERROR", status: r.status }) };
 }
 async function askGemini(question, context, checkedAt, docs) {
-  const key = Deno.env.get("GEMINI_API_KEY");
-  if (!key) throw new HttpError(503, "AI 상담이 아직 연결되지 않았어요. 자주 묻는 질문이나 노무 전문가 상담을 이용해 주세요.", { code: "AI_NOT_CONFIGURED" });
+  const key2 = Deno.env.get("GEMINI_API_KEY");
+  if (!key2) throw new HttpError(503, "AI 상담이 아직 연결되지 않았어요. 자주 묻는 질문이나 노무 전문가 상담을 이용해 주세요.", { code: "AI_NOT_CONFIGURED" });
   const primary = geminiModel();
   const bodyFor = (model) => ({
     systemInstruction: { parts: [{ text: SYSTEM(docs) }] },
@@ -6014,9 +6014,9 @@ async function askGemini(question, context, checkedAt, docs) {
       .../^gemini-([3-9]|\d\d)/.test(model) ? { thinkingConfig: { thinkingLevel: "LOW" } } : {}
     }
   });
-  let res = await callModel(key, primary, bodyFor(primary), PRIMARY_TIMEOUT_MS);
+  let res = await callModel(key2, primary, bodyFor(primary), PRIMARY_TIMEOUT_MS);
   if (!res.ok && res.retryable && primary !== FALLBACK_GEMINI_MODEL) {
-    res = await callModel(key, FALLBACK_GEMINI_MODEL, bodyFor(FALLBACK_GEMINI_MODEL), FALLBACK_TIMEOUT_MS);
+    res = await callModel(key2, FALLBACK_GEMINI_MODEL, bodyFor(FALLBACK_GEMINI_MODEL), FALLBACK_TIMEOUT_MS);
   }
   if (!res.ok) throw res.error;
   const j = res.json;
@@ -6157,8 +6157,8 @@ var RETURN_ORIGINS = ["https://ai-labor-management.github.io", "http://localhost
 var STATE_TTL_MS = 10 * 6e4;
 var b64url = (b) => btoa(String.fromCharCode(...b)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 async function hmac(secret, data) {
-  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(`kakao-state:${secret}`), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  return b64url(new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(data))));
+  const key2 = await crypto.subtle.importKey("raw", new TextEncoder().encode(`kakao-state:${secret}`), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return b64url(new Uint8Array(await crypto.subtle.sign("HMAC", key2, new TextEncoder().encode(data))));
 }
 async function signState(secret, userId, returnTo, now = Date.now()) {
   const body = b64url(new TextEncoder().encode(JSON.stringify({ u: userId, r: returnTo, e: now + STATE_TTL_MS })));
@@ -6282,6 +6282,47 @@ async function linkStatus(db, userId) {
     lastStatus: data?.last_status ?? null,
     lastDetail: data?.last_detail ?? ""
   };
+}
+
+// supabase/functions/_shared/datagokr.ts
+var dataGoKrConfigured = () => !!Deno.env.get("DATA_GO_KR_KEY");
+var key = () => Deno.env.get("DATA_GO_KR_KEY") ?? "";
+async function getJson(url, params) {
+  const q = new URLSearchParams({ serviceKey: key(), _type: "json", ...params });
+  const r = await fetch(`${url}?${q}`, { signal: AbortSignal.timeout(15e3) });
+  const text2 = await r.text();
+  let body = null;
+  try {
+    body = JSON.parse(text2);
+  } catch {
+    body = null;
+  }
+  return { status: r.status, body, text: text2.replaceAll(key(), "***").slice(0, 1500) };
+}
+async function checkDataGoKr() {
+  if (!dataGoKrConfigured()) return { ok: false, detail: "DATA_GO_KR_KEY 없음" };
+  const out = {};
+  try {
+    const h = await getJson("https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo", { solYear: "2026", numOfRows: "50", pageNo: "1" });
+    out.holidays = { status: h.status, sample: h.text };
+  } catch (e) {
+    out.holidays = { error: e instanceof Error ? e.message : String(e) };
+  }
+  try {
+    const f = await getJson("https://apis.data.go.kr/B551011/KorService2/searchFestival2", {
+      MobileOS: "ETC",
+      MobileApp: "saram-saemgak",
+      eventStartDate: "20261101",
+      areaCode: "1",
+      numOfRows: "3",
+      pageNo: "1",
+      arrange: "A"
+    });
+    out.festivals = { status: f.status, sample: f.text };
+  } catch (e) {
+    out.festivals = { error: e instanceof Error ? e.message : String(e) };
+  }
+  return { ok: true, ...out };
 }
 
 // supabase/functions/api/handler.ts
@@ -6950,7 +6991,9 @@ async function handler(req) {
         kakao: kakaoConfigured(),
         kakaoFrom: KAKAO_POLICY_FROM,
         // ?check=kakao: 카카오 키 사전 점검 (가짜 코드로 토큰 요청 — 사용자 정보 없음)
-        ...check === "kakao" ? { kakaoCheck: await checkKakaoKeys() } : {}
+        ...check === "kakao" ? { kakaoCheck: await checkKakaoKeys() } : {},
+        // ?check=datagokr: 공공데이터 API 응답 확인 (공휴일·지역 행사, 사용자 정보 없음)
+        ...check === "datagokr" ? { dataGoKr: await checkDataGoKr() } : {}
       });
     }
     const user = await requireUser(req);
