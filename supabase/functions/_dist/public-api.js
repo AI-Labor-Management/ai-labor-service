@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/public-api/handler.ts (npm run build:functions)
-// sha256:dd5e30c8d507
+// sha256:47b4f6b6115d
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -20,6 +20,7 @@ __export(domain_exports, {
   STATUS_LABEL: () => STATUS_LABEL,
   TYPE_LABEL: () => TYPE_LABEL,
   VERDICT_LABEL: () => VERDICT_LABEL,
+  WEEKEND_HOLIDAYS: () => WEEKEND_HOLIDAYS,
   addDays: () => addDays,
   addMonthsYM: () => addMonthsYM,
   alertDates: () => alertDates,
@@ -61,6 +62,7 @@ __export(domain_exports, {
   premiumTotals: () => premiumTotals,
   premiums: () => premiums,
   quickWage: () => quickWage,
+  registerHolidays: () => registerHolidays,
   resolveRule: () => resolveRule,
   searchFaq: () => searchFaq,
   severanceAmount: () => severanceAmount,
@@ -2995,6 +2997,15 @@ var MAP = new Map([...HOLIDAYS, ...WEEKEND_HOLIDAYS].map((h) => [h.date, h]));
 function holidayOn(date) {
   return MAP.get(date);
 }
+function registerHolidays(list) {
+  let added = 0;
+  for (const h of list) {
+    if (MAP.has(h.date) || !/^\d{4}-\d{2}-\d{2}$/.test(h.date)) continue;
+    MAP.set(h.date, { date: h.date, name: h.name, substitute: /대체/.test(h.name) });
+    added++;
+  }
+  return added;
+}
 var isUnder5 = (scale) => scale === "1-4";
 function conditionAt(conditions, employeeId, date) {
   let hit = null;
@@ -5260,6 +5271,22 @@ async function connectWithCode(db, userId, code) {
   if (error) throw error;
 }
 
+// supabase/functions/_shared/datagokr-core.ts
+function diffHolidays(builtIn, api, year) {
+  const y = String(year);
+  const a = new Set(builtIn.filter((d) => d.startsWith(y)));
+  const b = new Set(api.map((h) => h.date).filter((d) => d.startsWith(y)));
+  return { onlyBuiltIn: [...a].filter((d) => !b.has(d)).sort(), onlyApi: [...b].filter((d) => !a.has(d)).sort() };
+}
+
+// supabase/functions/_shared/datagokr.ts
+async function holidayDiff(db, years) {
+  const { data } = await db.from("holidays_api").select("date, name").order("date");
+  const api = data ?? [];
+  const builtIn = [...engine.HOLIDAYS, ...engine.WEEKEND_HOLIDAYS].map((h) => h.date);
+  return years.map((y) => ({ year: y, ...diffHolidays(builtIn, api, y) }));
+}
+
 // supabase/functions/public-api/handler.ts
 var redirect = (to) => new Response(null, { status: 302, headers: { Location: to, "Cache-Control": "no-store" } });
 async function kakaoCallback(url) {
@@ -5317,7 +5344,14 @@ async function handler(req) {
     }
     if (m === "GET" && path === "faq") return json(req, engine.FAQS, 200, { "Cache-Control": "public, max-age=300" });
     if (m === "GET" && path === "checklist-items") return json(req, engine.CHECKLIST_ITEMS, 200, { "Cache-Control": "public, max-age=300" });
-    if (m === "GET" && path === "holidays") return json(req, { source: engine.HOLIDAY_SOURCE, holidays: engine.HOLIDAYS });
+    if (m === "GET" && path === "holidays") {
+      const db = serviceClient();
+      const { data } = await db.from("holidays_api").select("date, name").order("date");
+      const builtIn = new Set([...engine.HOLIDAYS, ...engine.WEEKEND_HOLIDAYS].map((h) => h.date));
+      const extra = (data ?? []).filter((h) => !builtIn.has(h.date));
+      const year = Number(kstToday().slice(0, 4));
+      return json(req, { source: engine.HOLIDAY_SOURCE, holidays: engine.HOLIDAYS, extra, check: url.searchParams.get("check") ? await holidayDiff(db, [year, year + 1]) : void 0 }, 200, { "Cache-Control": "public, max-age=3600" });
+    }
     if (m === "GET" && path === "kakao/callback") return await kakaoCallback(url);
     const body = await readJson(req);
     if (m === "POST" && path === "diagnosis") return json(req, { ...engine.diagnose(body.answers ?? body), stored: false });

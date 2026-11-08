@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/cron-daily/handler.ts (npm run build:functions)
-// sha256:0ef6edd64ca4
+// sha256:55c47eb5a38a
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -20,6 +20,7 @@ __export(domain_exports, {
   STATUS_LABEL: () => STATUS_LABEL,
   TYPE_LABEL: () => TYPE_LABEL,
   VERDICT_LABEL: () => VERDICT_LABEL,
+  WEEKEND_HOLIDAYS: () => WEEKEND_HOLIDAYS,
   addDays: () => addDays,
   addMonthsYM: () => addMonthsYM,
   alertDates: () => alertDates,
@@ -61,6 +62,7 @@ __export(domain_exports, {
   premiumTotals: () => premiumTotals,
   premiums: () => premiums,
   quickWage: () => quickWage,
+  registerHolidays: () => registerHolidays,
   resolveRule: () => resolveRule,
   searchFaq: () => searchFaq,
   severanceAmount: () => severanceAmount,
@@ -2995,6 +2997,15 @@ var MAP = new Map([...HOLIDAYS, ...WEEKEND_HOLIDAYS].map((h) => [h.date, h]));
 function holidayOn(date) {
   return MAP.get(date);
 }
+function registerHolidays(list) {
+  let added = 0;
+  for (const h of list) {
+    if (MAP.has(h.date) || !/^\d{4}-\d{2}-\d{2}$/.test(h.date)) continue;
+    MAP.set(h.date, { date: h.date, name: h.name, substitute: /대체/.test(h.name) });
+    added++;
+  }
+  return added;
+}
 var isUnder5 = (scale) => scale === "1-4";
 function conditionAt(conditions, employeeId, date) {
   let hit = null;
@@ -4324,8 +4335,8 @@ function contractKind(e, c) {
   if (e.employmentType === "fixed") return "표준근로계약서 (기간 있음)";
   return "표준근로계약서 (기간 없음)";
 }
-function recordFor(state, key) {
-  return state.docRecords.find((r) => r.key === key) ?? null;
+function recordFor(state, key2) {
+  return state.docRecords.find((r) => r.key === key2) ?? null;
 }
 function levelForDue(due, base, e) {
   if (e && e.onboarding === "existing-pending" && due < e.registeredAt) return { level: null, text: "기존 직원 — 한 번에 체크로 정리", onboarding: true };
@@ -5521,6 +5532,79 @@ async function recordResult(db, userId, on, e) {
   await db.from("kakao_links").update({ last_sent_on: on, last_status: e ? "failed" : "sent", last_detail: e ? String(e instanceof Error ? e.message : e).slice(0, 300) : "" }).eq("user_id", userId);
 }
 
+// supabase/functions/_shared/datagokr-core.ts
+function itemsOf(json2) {
+  const body = json2?.response?.body;
+  const items = body?.items;
+  if (!items || typeof items !== "object") return [];
+  const it = items.item;
+  if (Array.isArray(it)) return it;
+  return it && typeof it === "object" ? [it] : [];
+}
+function resultCode(json2) {
+  const h = json2?.response?.header;
+  return h?.resultCode != null ? String(h.resultCode) : null;
+}
+function parseHolidays(json2) {
+  const seen = /* @__PURE__ */ new Map();
+  for (const it of itemsOf(json2)) {
+    if (String(it.isHoliday ?? "Y") !== "Y") continue;
+    const d = String(it.locdate ?? "");
+    if (!/^\d{8}$/.test(d)) continue;
+    const date = `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`;
+    const name = String(it.dateName ?? "").trim() || "공휴일";
+    seen.set(date, seen.has(date) ? `${seen.get(date)}·${name}` : name);
+  }
+  return [...seen].sort(([a], [b]) => a.localeCompare(b)).map(([date, name]) => ({ date, name }));
+}
+
+// supabase/functions/_shared/datagokr.ts
+var dataGoKrConfigured = () => !!Deno.env.get("DATA_GO_KR_KEY");
+var key = () => Deno.env.get("DATA_GO_KR_KEY") ?? "";
+var HOLIDAY_URL = "https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo";
+async function getJson(url, params) {
+  const q = new URLSearchParams({ serviceKey: key(), _type: "json", ...params });
+  const r = await fetch(`${url}?${q}`, { signal: AbortSignal.timeout(15e3) });
+  const text = await r.text();
+  let body = null;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    body = null;
+  }
+  return { status: r.status, body, text: key() ? text.replaceAll(key(), "***").slice(0, 1500) : text.slice(0, 1500) };
+}
+async function fetchHolidayYear(year) {
+  const r = await getJson(HOLIDAY_URL, { solYear: String(year), numOfRows: "100", pageNo: "1" });
+  if (r.status !== 200 || resultCode(r.body) !== "00") throw new Error(`특일정보 ${year}: HTTP ${r.status} ${r.text.slice(0, 200)}`);
+  return parseHolidays(r.body);
+}
+async function syncHolidays(db, thisYear) {
+  const out = [];
+  for (const year of [thisYear, thisYear + 1]) {
+    const list = await fetchHolidayYear(year);
+    if (!list.length) {
+      out.push({ year, count: 0 });
+      continue;
+    }
+    const { error: e1 } = await db.from("holidays_api").delete().gte("date", `${year}-01-01`).lte("date", `${year}-12-31`);
+    if (e1) throw e1;
+    const { error: e2 } = await db.from("holidays_api").insert(list.map((h) => ({ date: h.date, name: h.name.slice(0, 60), fetched_at: (/* @__PURE__ */ new Date()).toISOString() })));
+    if (e2) throw e2;
+    out.push({ year, count: list.length });
+  }
+  loadedAt = 0;
+  return out;
+}
+var loadedAt = 0;
+async function ensureHolidays(db) {
+  if (Date.now() - loadedAt < 36e5) return;
+  loadedAt = Date.now();
+  const { data, error } = await db.from("holidays_api").select("date, name").order("date");
+  if (error || !data) return;
+  engine.registerHolidays(data);
+}
+
 // supabase/functions/cron-daily/handler.ts
 async function handler(req) {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
@@ -5531,6 +5615,19 @@ async function handler(req) {
     if (error) throw error;
     if (!ok) throw new HttpError(401, "cron 비밀 값이 맞지 않아요");
     const today = kstToday();
+    let holidaySync = null;
+    if (dataGoKrConfigured()) {
+      const year = Number(today.slice(0, 4));
+      const { count } = await db.from("holidays_api").select("date", { count: "exact", head: true }).gte("date", `${year + 1}-01-01`);
+      if (today.endsWith("-01") || !count) {
+        try {
+          holidaySync = await syncHolidays(db, year);
+        } catch (e) {
+          holidaySync = { error: String(e instanceof Error ? e.message : e).slice(0, 300) };
+        }
+      }
+    }
+    await ensureHolidays(db);
     const kakaoSwitch = (await must(db.from("app_settings").select("value").eq("key", "kakao_enabled")))[0]?.value === true;
     const kakaoOn = kakaoSwitch && kakaoConfigured();
     const linked = new Set(kakaoOn ? (await must(db.from("kakao_links").select("user_id"))).map((l) => l.user_id) : []);
@@ -5600,7 +5697,7 @@ async function handler(req) {
     }
     const { data: retention, error: re } = await db.rpc("run_retention");
     if (re) throw re;
-    return json(req, { ok: true, date: today, workplaces: summary.length, summary, kakao: { on: kakaoOn, linked: linked.size, refreshed: kakaoRefreshed }, retention });
+    return json(req, { ok: true, date: today, workplaces: summary.length, summary, kakao: { on: kakaoOn, linked: linked.size, refreshed: kakaoRefreshed }, holidaySync, retention });
   } catch (e) {
     return handleError(req, e);
   }

@@ -928,6 +928,24 @@ export type Database = {
         }
         Relationships: []
       }
+      holidays_api: {
+        Row: {
+          date: string
+          fetched_at: string
+          name: string
+        }
+        Insert: {
+          date: string
+          fetched_at?: string
+          name: string
+        }
+        Update: {
+          date?: string
+          fetched_at?: string
+          name?: string
+        }
+        Relationships: []
+      }
       invites: {
         Row: {
           created_at: string

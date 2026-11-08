@@ -80,3 +80,17 @@ export function holidayOn(date: ISODate): Holiday | undefined {
 
 export const HOLIDAY_YEARS = [2026, 2027];
 
+/**
+ * 특일정보 API 등에서 받은 공휴일을 더한다. 내장 목록(원문과 대조한 값)에 있는 날짜는 건드리지 않고,
+ * 내장 목록에 없는 날짜(2028년부터 등)만 더한다. 더한 개수를 돌려준다. 여러 번 불러도 같다.
+ */
+export function registerHolidays(list: { date: ISODate; name: string }[]): number {
+  let added = 0;
+  for (const h of list) {
+    if (MAP.has(h.date) || !/^\d{4}-\d{2}-\d{2}$/.test(h.date)) continue;
+    MAP.set(h.date, { date: h.date, name: h.name, substitute: /대체/.test(h.name) });
+    added++;
+  }
+  return added;
+}
+

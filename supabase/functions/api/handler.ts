@@ -12,7 +12,7 @@ import { AI_DAILY_LIMIT, aiConfigured, aiProvider, askClaude } from './ai.ts';
 import { askGemini, checkGemini, GEMINI_POLICY_FROM } from './gemini.ts';
 import { buildCorpus } from './ai-ground.ts';
 import * as K from '../_shared/kakao.ts';
-import { checkDataGoKr } from '../_shared/datagokr.ts';
+import { checkDataGoKr, ensureHolidays } from '../_shared/datagokr.ts';
 
 type Body = Record<string, unknown>;
 type User = { id: string; email: string | null; token: string };
@@ -738,6 +738,7 @@ export async function handler(req: Request): Promise<Response> {
     }
     const user = await requireUser(req);
     const db = serviceClient();
+    await ensureHolidays(db);
     const body = (await readJson<Body>(req)) ?? {};
     const url = new URL(req.url);
     const [area, ...rest] = path.split('/');

@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: src/domain, src/data (npm run build:functions)
-// sha256:253e56ed1213
+// sha256:e781bf7fd2cc
 // src/data/rules.json
 var rules_default = {
   schema: "bix-rules/1",
@@ -2935,6 +2935,15 @@ var MAP = new Map([...HOLIDAYS, ...WEEKEND_HOLIDAYS].map((h) => [h.date, h]));
 function holidayOn(date) {
   return MAP.get(date);
 }
+function registerHolidays(list) {
+  let added = 0;
+  for (const h of list) {
+    if (MAP.has(h.date) || !/^\d{4}-\d{2}-\d{2}$/.test(h.date)) continue;
+    MAP.set(h.date, { date: h.date, name: h.name, substitute: /대체/.test(h.name) });
+    added++;
+  }
+  return added;
+}
 
 // src/domain/work.ts
 var isUnder5 = (scale) => scale === "1-4";
@@ -5052,6 +5061,7 @@ export {
   STATUS_LABEL,
   TYPE_LABEL,
   VERDICT_LABEL,
+  WEEKEND_HOLIDAYS,
   addDays,
   addMonthsYM,
   alertDates,
@@ -5093,6 +5103,7 @@ export {
   premiumTotals,
   premiums,
   quickWage,
+  registerHolidays,
   resolveRule,
   searchFaq,
   severanceAmount,
