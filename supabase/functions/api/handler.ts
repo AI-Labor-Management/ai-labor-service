@@ -12,6 +12,7 @@ import { AI_DAILY_LIMIT, aiConfigured, aiProvider, askClaude } from './ai.ts';
 import { askGemini, checkGemini, GEMINI_POLICY_FROM } from './gemini.ts';
 import { buildCorpus } from './ai-ground.ts';
 import * as K from '../_shared/kakao.ts';
+import { checkDataGoKr } from '../_shared/datagokr.ts';
 
 type Body = Record<string, unknown>;
 type User = { id: string; email: string | null; token: string };
@@ -731,6 +732,8 @@ export async function handler(req: Request): Promise<Response> {
         kakaoFrom: K.KAKAO_POLICY_FROM,
         // ?check=kakao: 카카오 키 사전 점검 (가짜 코드로 토큰 요청 — 사용자 정보 없음)
         ...(check === 'kakao' ? { kakaoCheck: await K.checkKakaoKeys() } : {}),
+        // ?check=datagokr: 공공데이터 API 응답 확인 (공휴일·지역 행사, 사용자 정보 없음)
+        ...(check === 'datagokr' ? { dataGoKr: await checkDataGoKr() } : {}),
       });
     }
     const user = await requireUser(req);
