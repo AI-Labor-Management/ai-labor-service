@@ -13,6 +13,7 @@ import { askGemini, checkGemini, GEMINI_POLICY_FROM } from './gemini.ts';
 import { buildCorpus } from './ai-ground.ts';
 import * as K from '../_shared/kakao.ts';
 import { checkDataGoKr, ensureHolidays } from '../_shared/datagokr.ts';
+import { checkLawApi } from '../_shared/lawapi.ts';
 
 type Body = Record<string, unknown>;
 type User = { id: string; email: string | null; token: string };
@@ -734,6 +735,8 @@ export async function handler(req: Request): Promise<Response> {
         ...(check === 'kakao' ? { kakaoCheck: await K.checkKakaoKeys() } : {}),
         // ?check=datagokr: 공공데이터 API 응답 확인 (공휴일·지역 행사, 사용자 정보 없음)
         ...(check === 'datagokr' ? { dataGoKr: await checkDataGoKr() } : {}),
+        // ?check=law: 법제처 OPEN API 호출 확인 (근로기준법 검색, 사용자 정보 없음)
+        ...(check === 'law' ? { law: await checkLawApi() } : {}),
       });
     }
     const user = await requireUser(req);
