@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/api/handler.ts (npm run build:functions)
-// sha256:c50c83b11dfd
+// sha256:d272af35e3b4
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -6364,6 +6364,32 @@ async function checkDataGoKr() {
   return { ok: true, ...out };
 }
 
+// supabase/functions/_shared/lawapi.ts
+var lawApiConfigured = () => !!Deno.env.get("LAW_API_OC");
+var oc = () => Deno.env.get("LAW_API_OC") ?? "";
+var REFERER = `${Deno.env.get("SUPABASE_URL") ?? "https://smbxhspzflnvncatdgjs.supabase.co"}/`;
+async function drf(path, params, withReferer) {
+  const q = new URLSearchParams({ OC: oc(), type: "JSON", ...params });
+  const r = await fetch(`https://www.law.go.kr/DRF/${path}?${q}`, {
+    headers: withReferer ? { Referer: REFERER } : {},
+    signal: AbortSignal.timeout(15e3)
+  });
+  const text2 = await r.text();
+  return { status: r.status, text: (oc() ? text2.replaceAll(oc(), "***") : text2).slice(0, 800) };
+}
+async function checkLawApi() {
+  if (!lawApiConfigured()) return { ok: false, detail: "LAW_API_OC 없음" };
+  const out = { ok: true };
+  for (const withReferer of [true, false]) {
+    try {
+      out[withReferer ? "withReferer" : "noReferer"] = await drf("lawSearch.do", { target: "law", query: "근로기준법", display: "3" }, withReferer);
+    } catch (e) {
+      out[withReferer ? "withReferer" : "noReferer"] = { error: e instanceof Error ? e.message : String(e) };
+    }
+  }
+  return out;
+}
+
 // supabase/functions/api/handler.ts
 var iso = (v, name) => {
   if (!engine.isISODate(v)) throw bad(`${name}은(는) YYYY-MM-DD 형식이어야 해요`);
@@ -7032,7 +7058,9 @@ async function handler(req) {
         // ?check=kakao: 카카오 키 사전 점검 (가짜 코드로 토큰 요청 — 사용자 정보 없음)
         ...check === "kakao" ? { kakaoCheck: await checkKakaoKeys() } : {},
         // ?check=datagokr: 공공데이터 API 응답 확인 (공휴일·지역 행사, 사용자 정보 없음)
-        ...check === "datagokr" ? { dataGoKr: await checkDataGoKr() } : {}
+        ...check === "datagokr" ? { dataGoKr: await checkDataGoKr() } : {},
+        // ?check=law: 법제처 OPEN API 호출 확인 (근로기준법 검색, 사용자 정보 없음)
+        ...check === "law" ? { law: await checkLawApi() } : {}
       });
     }
     const user = await requireUser(req);
