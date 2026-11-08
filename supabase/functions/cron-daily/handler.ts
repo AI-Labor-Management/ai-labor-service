@@ -6,6 +6,7 @@ import { engine as E } from '../_shared/engine.ts';
 import { kstToday, loadWorkplace, must, serviceClient } from '../_shared/db.ts';
 import { corsHeaders, handleError, HttpError, json } from '../_shared/http.ts';
 import * as K from '../_shared/kakao.ts';
+import { dataGoKrConfigured, ensureHolidays, syncHolidays } from '../_shared/datagokr.ts';
 
 export async function handler(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(req) });
@@ -17,6 +18,20 @@ export async function handler(req: Request): Promise<Response> {
     if (!ok) throw new HttpError(401, 'cron 비밀 값이 맞지 않아요');
 
     const today = kstToday();
+    // 공휴일: 매달 1일, 또는 내년 자료가 아직 없으면 특일정보 API로 올해·내년을 받아 둔다 (실패해도 알림은 계속)
+    let holidaySync: unknown = null;
+    if (dataGoKrConfigured()) {
+      const year = Number(today.slice(0, 4));
+      const { count } = await db.from('holidays_api').select('date', { count: 'exact', head: true }).gte('date', `${year + 1}-01-01`);
+      if (today.endsWith('-01') || !count) {
+        try {
+          holidaySync = await syncHolidays(db, year);
+        } catch (e) {
+          holidaySync = { error: String(e instanceof Error ? e.message : e).slice(0, 300) };
+        }
+      }
+    }
+    await ensureHolidays(db);
     const kakaoSwitch = (await must(db.from('app_settings').select('value').eq('key', 'kakao_enabled')))[0]?.value === true;
     const kakaoOn = kakaoSwitch && K.kakaoConfigured();
     const linked = new Set(kakaoOn ? (await must(db.from('kakao_links').select('user_id'))).map((l) => l.user_id) : []);
@@ -90,7 +105,7 @@ export async function handler(req: Request): Promise<Response> {
     }
     const { data: retention, error: re } = await db.rpc('run_retention');
     if (re) throw re;
-    return json(req, { ok: true, date: today, workplaces: summary.length, summary, kakao: { on: kakaoOn, linked: linked.size, refreshed: kakaoRefreshed }, retention });
+    return json(req, { ok: true, date: today, workplaces: summary.length, summary, kakao: { on: kakaoOn, linked: linked.size, refreshed: kakaoRefreshed }, holidaySync, retention });
   } catch (e) {
     return handleError(req, e);
   }

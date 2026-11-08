@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/api/handler.ts (npm run build:functions)
-// sha256:1a1e3f1bc23e
+// sha256:c50c83b11dfd
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -20,6 +20,7 @@ __export(domain_exports, {
   STATUS_LABEL: () => STATUS_LABEL,
   TYPE_LABEL: () => TYPE_LABEL,
   VERDICT_LABEL: () => VERDICT_LABEL,
+  WEEKEND_HOLIDAYS: () => WEEKEND_HOLIDAYS,
   addDays: () => addDays,
   addMonthsYM: () => addMonthsYM,
   alertDates: () => alertDates,
@@ -61,6 +62,7 @@ __export(domain_exports, {
   premiumTotals: () => premiumTotals,
   premiums: () => premiums,
   quickWage: () => quickWage,
+  registerHolidays: () => registerHolidays,
   resolveRule: () => resolveRule,
   searchFaq: () => searchFaq,
   severanceAmount: () => severanceAmount,
@@ -2994,6 +2996,15 @@ var WEEKEND_HOLIDAYS = [
 var MAP = new Map([...HOLIDAYS, ...WEEKEND_HOLIDAYS].map((h) => [h.date, h]));
 function holidayOn(date) {
   return MAP.get(date);
+}
+function registerHolidays(list) {
+  let added = 0;
+  for (const h of list) {
+    if (MAP.has(h.date) || !/^\d{4}-\d{2}-\d{2}$/.test(h.date)) continue;
+    MAP.set(h.date, { date: h.date, name: h.name, substitute: /대체/.test(h.name) });
+    added++;
+  }
+  return added;
 }
 var isUnder5 = (scale) => scale === "1-4";
 function conditionAt(conditions, employeeId, date) {
@@ -6284,9 +6295,37 @@ async function linkStatus(db, userId) {
   };
 }
 
+// supabase/functions/_shared/datagokr-core.ts
+function itemsOf(json2) {
+  const body = json2?.response?.body;
+  const items = body?.items;
+  if (!items || typeof items !== "object") return [];
+  const it = items.item;
+  if (Array.isArray(it)) return it;
+  return it && typeof it === "object" ? [it] : [];
+}
+function resultCode(json2) {
+  const h = json2?.response?.header;
+  return h?.resultCode != null ? String(h.resultCode) : null;
+}
+function parseHolidays(json2) {
+  const seen = /* @__PURE__ */ new Map();
+  for (const it of itemsOf(json2)) {
+    if (String(it.isHoliday ?? "Y") !== "Y") continue;
+    const d = String(it.locdate ?? "");
+    if (!/^\d{8}$/.test(d)) continue;
+    const date = `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`;
+    const name = String(it.dateName ?? "").trim() || "공휴일";
+    seen.set(date, seen.has(date) ? `${seen.get(date)}·${name}` : name);
+  }
+  return [...seen].sort(([a], [b]) => a.localeCompare(b)).map(([date, name]) => ({ date, name }));
+}
+
 // supabase/functions/_shared/datagokr.ts
 var dataGoKrConfigured = () => !!Deno.env.get("DATA_GO_KR_KEY");
 var key = () => Deno.env.get("DATA_GO_KR_KEY") ?? "";
+var HOLIDAY_URL = "https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo";
+var FESTIVAL_URL = "https://apis.data.go.kr/B551011/KorService2/searchFestival2";
 async function getJson(url, params) {
   const q = new URLSearchParams({ serviceKey: key(), _type: "json", ...params });
   const r = await fetch(`${url}?${q}`, { signal: AbortSignal.timeout(15e3) });
@@ -6297,28 +6336,28 @@ async function getJson(url, params) {
   } catch {
     body = null;
   }
-  return { status: r.status, body, text: text2.replaceAll(key(), "***").slice(0, 1500) };
+  return { status: r.status, body, text: key() ? text2.replaceAll(key(), "***").slice(0, 1500) : text2.slice(0, 1500) };
+}
+var loadedAt = 0;
+async function ensureHolidays(db) {
+  if (Date.now() - loadedAt < 36e5) return;
+  loadedAt = Date.now();
+  const { data, error } = await db.from("holidays_api").select("date, name").order("date");
+  if (error || !data) return;
+  engine.registerHolidays(data);
 }
 async function checkDataGoKr() {
   if (!dataGoKrConfigured()) return { ok: false, detail: "DATA_GO_KR_KEY 없음" };
   const out = {};
   try {
-    const h = await getJson("https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo", { solYear: "2026", numOfRows: "50", pageNo: "1" });
-    out.holidays = { status: h.status, sample: h.text };
+    const h = await getJson(HOLIDAY_URL, { solYear: "2026", numOfRows: "50", pageNo: "1" });
+    out.holidays = { status: h.status, resultCode: resultCode(h.body), parsed: parseHolidays(h.body).length, sample: h.text.slice(0, 600) };
   } catch (e) {
     out.holidays = { error: e instanceof Error ? e.message : String(e) };
   }
   try {
-    const f = await getJson("https://apis.data.go.kr/B551011/KorService2/searchFestival2", {
-      MobileOS: "ETC",
-      MobileApp: "saram-saemgak",
-      eventStartDate: "20261101",
-      areaCode: "1",
-      numOfRows: "3",
-      pageNo: "1",
-      arrange: "A"
-    });
-    out.festivals = { status: f.status, sample: f.text };
+    const f = await getJson(FESTIVAL_URL, { MobileOS: "ETC", MobileApp: "saram-saemgak", eventStartDate: "20261101", areaCode: "1", numOfRows: "3", pageNo: "1", arrange: "A" });
+    out.festivals = { status: f.status, resultCode: resultCode(f.body), sample: f.text.slice(0, 900) };
   } catch (e) {
     out.festivals = { error: e instanceof Error ? e.message : String(e) };
   }
@@ -6998,6 +7037,7 @@ async function handler(req) {
     }
     const user = await requireUser(req);
     const db = serviceClient();
+    await ensureHolidays(db);
     const body = await readJson(req) ?? {};
     const url = new URL(req.url);
     const [area, ...rest] = path.split("/");

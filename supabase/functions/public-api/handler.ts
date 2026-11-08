@@ -5,6 +5,7 @@ import type { AgeBand, Industry, ScaleBand } from '../_shared/domain-types.ts';
 import { kstToday, serviceClient } from '../_shared/db.ts';
 import { bad, corsHeaders, handleError, int, json, notFound, oneOf, readJson, str, subPath } from '../_shared/http.ts';
 import * as K from '../_shared/kakao.ts';
+import { holidayDiff } from '../_shared/datagokr.ts';
 
 type Body = Record<string, unknown>;
 
@@ -68,7 +69,15 @@ export async function handler(req: Request): Promise<Response> {
     }
     if (m === 'GET' && path === 'faq') return json(req, E.FAQS, 200, { 'Cache-Control': 'public, max-age=300' });
     if (m === 'GET' && path === 'checklist-items') return json(req, E.CHECKLIST_ITEMS, 200, { 'Cache-Control': 'public, max-age=300' });
-    if (m === 'GET' && path === 'holidays') return json(req, { source: E.HOLIDAY_SOURCE, holidays: E.HOLIDAYS });
+    if (m === 'GET' && path === 'holidays') {
+      // 내장 목록 + 특일정보 API로 받아 둔 날 중 내장 목록에 없는 날(extra). 화면이 extra를 계산에 더한다
+      const db = serviceClient();
+      const { data } = await db.from('holidays_api').select('date, name').order('date');
+      const builtIn = new Set([...E.HOLIDAYS, ...E.WEEKEND_HOLIDAYS].map((h) => h.date));
+      const extra = (data ?? []).filter((h) => !builtIn.has(h.date));
+      const year = Number(kstToday().slice(0, 4));
+      return json(req, { source: E.HOLIDAY_SOURCE, holidays: E.HOLIDAYS, extra, check: url.searchParams.get('check') ? await holidayDiff(db, [year, year + 1]) : undefined }, 200, { 'Cache-Control': 'public, max-age=3600' });
+    }
     if (m === 'GET' && path === 'kakao/callback') return await kakaoCallback(url);
     const body = await readJson<Body>(req);
     if (m === 'POST' && path === 'diagnosis') return json(req, { ...E.diagnose(body.answers ?? body), stored: false });

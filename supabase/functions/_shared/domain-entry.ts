@@ -19,4 +19,4 @@ export { diagnose, diagnosisSteps, EMPTY_DIAG } from '../../../src/domain/diagno
 export { createSeed, createEmptyState } from '../../../src/data/seed';
 export { FAQS } from '../../../src/data/faq';
 export { CHECKLIST_ITEMS } from '../../../src/data/checklistItems';
-export { HOLIDAYS, HOLIDAY_SOURCE } from '../../../src/data/holidays';
+export { HOLIDAYS, HOLIDAY_SOURCE, WEEKEND_HOLIDAYS, registerHolidays } from '../../../src/data/holidays';

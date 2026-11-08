@@ -122,5 +122,7 @@ export interface Engine {
   FAQS: FaqLite[];
   CHECKLIST_ITEMS: { id: string; title: string }[];
   HOLIDAYS: { date: ISODate; name: string }[];
+  WEEKEND_HOLIDAYS: { date: ISODate; name: string }[];
   HOLIDAY_SOURCE: { label: string; note: string };
+  registerHolidays(list: { date: ISODate; name: string }[]): number;
 }
