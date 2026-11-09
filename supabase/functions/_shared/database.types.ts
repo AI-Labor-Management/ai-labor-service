@@ -946,6 +946,106 @@ export type Database = {
         }
         Relationships: []
       }
+      law_watch: {
+        Row: {
+          article: string | null
+          article_text: string | null
+          baseline_hash: string | null
+          baseline_no: string | null
+          checked_at: string
+          current_effective: string | null
+          current_no: string | null
+          detail: string
+          key: string
+          law: string
+          law_full: string
+          rule_ids: string[]
+          status: string
+          status_since: string
+          text_hash: string | null
+          upcoming: Json
+          url: string
+          verified_no: string | null
+        }
+        Insert: {
+          article?: string | null
+          article_text?: string | null
+          baseline_hash?: string | null
+          baseline_no?: string | null
+          checked_at?: string
+          current_effective?: string | null
+          current_no?: string | null
+          detail?: string
+          key: string
+          law: string
+          law_full: string
+          rule_ids?: string[]
+          status: string
+          status_since?: string
+          text_hash?: string | null
+          upcoming?: Json
+          url: string
+          verified_no?: string | null
+        }
+        Update: {
+          article?: string | null
+          article_text?: string | null
+          baseline_hash?: string | null
+          baseline_no?: string | null
+          checked_at?: string
+          current_effective?: string | null
+          current_no?: string | null
+          detail?: string
+          key?: string
+          law?: string
+          law_full?: string
+          rule_ids?: string[]
+          status?: string
+          status_since?: string
+          text_hash?: string | null
+          upcoming?: Json
+          url?: string
+          verified_no?: string | null
+        }
+        Relationships: []
+      }
+      law_watch_runs: {
+        Row: {
+          calls: number
+          checked: number
+          errors: number
+          flagged: number
+          id: number
+          ms: number | null
+          newly: string[]
+          notified: number
+          ran_at: string
+          trigger: string
+        }
+        Insert: {
+          calls?: number
+          checked?: number
+          errors?: number
+          flagged?: number
+          ms?: number | null
+          newly?: string[]
+          notified?: number
+          ran_at?: string
+          trigger: string
+        }
+        Update: {
+          calls?: number
+          checked?: number
+          errors?: number
+          flagged?: number
+          ms?: number | null
+          newly?: string[]
+          notified?: number
+          ran_at?: string
+          trigger?: string
+        }
+        Relationships: []
+      }
       invites: {
         Row: {
           created_at: string
@@ -1818,6 +1918,7 @@ export type Database = {
         Args: { p_condition_id: string; p_memo?: string; p_status: string }
         Returns: undefined
       }
+      admin_law_watch: { Args: never; Returns: Json }
       admin_stats: { Args: never; Returns: Json }
       ai_take: { Args: { p_limit: number; p_user: string }; Returns: number }
       kakao_link_save: {

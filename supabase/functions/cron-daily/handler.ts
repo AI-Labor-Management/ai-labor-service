@@ -7,6 +7,7 @@ import { kstToday, loadWorkplace, must, serviceClient } from '../_shared/db.ts';
 import { corsHeaders, handleError, HttpError, json } from '../_shared/http.ts';
 import * as K from '../_shared/kakao.ts';
 import { dataGoKrConfigured, ensureHolidays, syncHolidays } from '../_shared/datagokr.ts';
+import { lastLawWatchAt, lawApiConfigured, runLawWatch } from '../_shared/lawapi.ts';
 
 export async function handler(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(req) });
@@ -105,7 +106,17 @@ export async function handler(req: Request): Promise<Response> {
     }
     const { data: retention, error: re } = await db.rpc('run_retention');
     if (re) throw re;
-    return json(req, { ok: true, date: today, workplaces: summary.length, summary, kakao: { on: kakaoOn, linked: linked.size, refreshed: kakaoRefreshed }, holidaySync, retention });
+    // 법령 변경 감지: 7일마다 계산에 쓰는 조문을 법제처 원문과 대조한다 (실패해도 다른 일은 끝난 뒤라 영향 없음)
+    let lawWatch: unknown = null;
+    if (lawApiConfigured() && Date.now() - (await lastLawWatchAt(db)) > 6.5 * 86_400_000) {
+      try {
+        const s = await runLawWatch(db, 'cron');
+        lawWatch = { checked: s.checked, flagged: s.flagged, errors: s.errors, newly: s.newlyFlagged.length, notified: s.notified, ms: s.ms };
+      } catch (e) {
+        lawWatch = { error: String(e instanceof Error ? e.message : e).slice(0, 300) };
+      }
+    }
+    return json(req, { ok: true, date: today, workplaces: summary.length, summary, kakao: { on: kakaoOn, linked: linked.size, refreshed: kakaoRefreshed }, holidaySync, retention, lawWatch });
   } catch (e) {
     return handleError(req, e);
   }

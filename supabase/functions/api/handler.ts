@@ -13,7 +13,7 @@ import { askGemini, checkGemini, GEMINI_POLICY_FROM } from './gemini.ts';
 import { buildCorpus } from './ai-ground.ts';
 import * as K from '../_shared/kakao.ts';
 import { checkDataGoKr, ensureHolidays } from '../_shared/datagokr.ts';
-import { checkLawApi } from '../_shared/lawapi.ts';
+import { checkLawApi, lastLawWatchAt, lawApiConfigured, runLawWatch } from '../_shared/lawapi.ts';
 
 type Body = Record<string, unknown>;
 type User = { id: string; email: string | null; token: string };
@@ -579,6 +579,20 @@ async function ownerRoutes(req: Request, db: Db, user: User, path: string, body:
   throw notFound(`없는 경로예요: ${m} /owner/${path}`);
 }
 
+// ───────────────────────── 관리자 ─────────────────────────
+// 관리자 확인은 DB 함수(app.is_admin = admins 등록 + 2단계 인증 aal2)에 맡긴다 — 사용자 토큰으로 admin_law_watch를 불러 본다.
+async function adminRoutes(req: Request, db: Db, user: User, path: string): Promise<Response> {
+  if (req.method === 'POST' && path === 'law-watch/run') {
+    const { error } = await userClient(user.token).rpc('admin_law_watch');
+    if (error) throw forbidden('관리자(2단계 인증)만 실행할 수 있어요');
+    if (!lawApiConfigured()) throw bad('법제처 인증키(LAW_API_OC)가 없어요');
+    // 법제처 API를 아끼려고 10분에 한 번까지
+    if (Date.now() - (await lastLawWatchAt(db)) < 10 * 60_000) throw conflict('10분 안에 이미 감지했어요. 잠시 뒤에 다시 실행해 주세요.');
+    return json(req, await runLawWatch(db, 'manual'));
+  }
+  throw notFound();
+}
+
 // ───────────────────────── 직원 ─────────────────────────
 async function employeeCtx(db: Db, user: User, employeeId: string | null) {
   let q = db.from('employees').select('id, workplace_id').eq('user_id', user.id).eq('account_status', 'joined');
@@ -748,6 +762,7 @@ export async function handler(req: Request): Promise<Response> {
     if (path === 'me') return json(req, await me(db, user));
     if (path === 'account/delete' && req.method === 'POST') return json(req, await deleteAccount(db, user, body));
     if (area === 'owner') return await ownerRoutes(req, db, user, rest.join('/'), body, url);
+    if (area === 'admin') return await adminRoutes(req, db, user, rest.join('/'));
     if (area === 'employee') return await employeeRoutes(req, db, user, rest.join('/'), body, url);
     throw notFound(`없는 경로예요: ${path}`);
   } catch (e) {

@@ -2,15 +2,15 @@
 
 구조와 API는 [`BACKEND.md`](BACKEND.md)에 있습니다. 여기서는 **새 프로젝트에 다시 올리는 방법**과 **지금 배포된 상태**를 적습니다.
 
-## 0. 지금 배포된 상태 (2026-11-06)
+## 0. 지금 배포된 상태 (2026-11-10)
 
 | 항목 | 값 |
 |---|---|
 | 프로젝트 | `nomu-service-seoul` · ref `smbxhspzflnvncatdgjs` · **`ap-northeast-2` (서울)**. 처음 쓰던 시드니 프로젝트 `nomu-service`(`htdnyekvbuncuweeqpmn`)는 가입자·데이터 0인 상태에서 2026-11-06 옮긴 뒤 일시정지 |
-| 마이그레이션 | `supabase/migrations/20261106000001` ~ `20261107000012` 12개 적용 (10 = 노무법인·관리자 2단계 인증 강제·관리자 접속 기록 1년, 11 = AI 상담 하루 이용 횟수 `ai_usage`·30일 정리, 12 = 카카오톡 알림 연결 `kakao_links`(갱신 토큰 Vault 키로 암호화)) |
+| 마이그레이션 | `supabase/migrations/20261106000001` ~ `20261110000014` 14개 적용 (10 = 노무법인·관리자 2단계 인증 강제·관리자 접속 기록 1년, 11 = AI 상담 하루 이용 횟수 `ai_usage`·30일 정리, 12 = 카카오톡 알림 연결 `kakao_links`(갱신 토큰 Vault 키로 암호화), 13 = 특일정보 공휴일 `holidays_api`(공개 읽기), 14 = 법령 변경 감지 `law_watch`·`law_watch_runs`·`admin_law_watch()`(관리자·2단계 인증만)) |
 | 프론트엔드 | GitHub Pages 빌드(`deploy.yml`)와 사람샘각(`AI-Labor-Management/saram-saemgak`의 `.env.production`)에 `VITE_SUPABASE_URL`·`VITE_SUPABASE_ANON_KEY`(공개 값) 포함 → 시작 화면에서 서버 모드 선택 가능 |
-| Edge Functions | `api` v16 (AI 기본 = 무료 Gemini `gemini-3.6-flash`(실패 시 3.5 Flash-Lite), `GEMINI_API_KEY` 입력 — 사용자 질문은 2026-11-15부터, `health?check=ai`·`ai-answer`로 점검 / 카카오톡 알림 `KAKAO_REST_KEY`·`KAKAO_CLIENT_SECRET` 입력·2026-11-08 시행, `health?check=kakao`로 키 점검), `public-api` v5 (off, 카카오 콜백), `cron-daily` v3 (off, 비밀 헤더 검사) — 서울 프로젝트 |
-| 함수 코드 기준 커밋 | `api` v16 = `d14cb6b862108bb7313900d024fef777c90f6f4b`, `public-api` v5 = `e2d268dedfaeb6f44d0af696e968a29d5b54c1fd`, `cron-daily` v3 = `5b412adeac5fe46b713b7658a4833e9b2e2811fc` (2026-11-08). 카카오 앱 설정: 동의항목 talk_message '이용 중 동의', Redirect URI에 `…/functions/v1/public-api/kakao/callback` 추가, 웹 도메인 `https://ai-labor-management.github.io`. 운영자 계정이 카카오톡 알림 연결 완료(토큰 암호화 저장, 만료 2027-01-06). jsDelivr 고정 URL, 아래 3-B |
+| Edge Functions | `api` v24 (AI 기본 = 무료 Gemini `gemini-3.6-flash`(실패 시 3.5 Flash-Lite) — 사용자 질문은 2026-11-15부터 / 카카오톡 알림 2026-11-08 시행 / 관리자 `POST admin/law-watch/run`(10분에 한 번) / 점검 `health?check=ai·ai-answer·kakao·datagokr·law`), `public-api` v11 (공휴일 `holidays`·카카오 콜백), `cron-daily` v10 (기한 알림·카톡 발송·공휴일 매달 1일·법령 변경 감지 7일마다) — 서울 프로젝트. 함수 비밀 값: `GEMINI_API_KEY`, `KAKAO_REST_KEY`·`KAKAO_CLIENT_SECRET`, `DATA_GO_KR_KEY`(공공데이터포털 일반 인증키 — 앞뒤 공백은 서버가 지움), `LAW_API_OC`(법제처 OPEN API, 등록 도메인 `smbxhspzflnvncatdgjs.supabase.co`를 Referer로 보냄) |
+| 함수 코드 기준 커밋 | 세 함수 모두 PR #25(법령 변경 감지)의 병합 커밋 (2026-11-10). 그 전: `bcf3a42`(공공데이터 키 공백 처리·법제처 진단), `2abf9af`(공휴일 API). 카카오 앱 설정: 동의항목 talk_message '이용 중 동의', Redirect URI에 `…/functions/v1/public-api/kakao/callback` 추가, 웹 도메인 `https://ai-labor-management.github.io`. 운영자 계정이 카카오톡 알림 연결 완료(토큰 암호화 저장, 만료 2027-01-06). jsDelivr 고정 URL, 아래 3-B |
 | Auth | Site URL `https://ai-labor-management.github.io/saram-saemgak-site/` (사람샘각 최신 공개 체험, GitHub Pages), Redirect URLs: 그 주소 `/**`, `https://ai-labor-service-draft-sj.gold89765.chatgpt.site/**`, `https://ai-labor-management.github.io/ai-labor-service/**`, `http://localhost:5173/**`. **Confirm email 켜 둠** — 메일 발송: Resend SMTP `smtp.resend.com:465`, 아이디 `resend`, 비밀번호 = Resend API 키(대시보드에만), 보내는 사람 `사람샘각 <no-reply@saram.dreamhelixion.com>` — Cloudflare 하위 도메인, DKIM·SPF·DMARC는 사람샘각 `docs/MAIL_SETUP.md` (2026-11-07 네이버 SMTP에서 옮김). 가입 확인 메일 제목·본문 한국어. 카카오 로그인 켜짐("Allow users without an email" 켜짐) |
 | 서울 프로젝트 확인 (2026-11-07) | RLS 격리 53개, E2E 91개(2단계 인증·AI 상담 경로 포함), 프론트 실서버 시험(사람샘각 `tests/live`) 12개, 예약 실행 200 — 모두 통과 후 시험 계정 삭제. 함수 462deb2 재배포 뒤 E2E 91개·실서버 12개, 5b412ad(카카오) 재배포 뒤 E2E 98개·예약 실행 200, api v7(Gemini) 뒤 E2E 98개 다시 통과 |
 | 예약 실행 | `labor-daily-alerts` `0 0 * * *` (09:00 KST) 활성 |

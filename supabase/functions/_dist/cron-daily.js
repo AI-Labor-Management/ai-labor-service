@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/cron-daily/handler.ts (npm run build:functions)
-// sha256:fb93572f8e16
+// sha256:cbbf42082be0
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -2997,9 +2997,9 @@ var MAP = new Map([...HOLIDAYS, ...WEEKEND_HOLIDAYS].map((h) => [h.date, h]));
 function holidayOn(date) {
   return MAP.get(date);
 }
-function registerHolidays(list) {
+function registerHolidays(list2) {
   let added = 0;
-  for (const h of list) {
+  for (const h of list2) {
     if (MAP.has(h.date) || !/^\d{4}-\d{2}-\d{2}$/.test(h.date)) continue;
     MAP.set(h.date, { date: h.date, name: h.name, substitute: /대체/.test(h.name) });
     added++;
@@ -3016,9 +3016,9 @@ function conditionAt(conditions, employeeId, date) {
   return hit;
 }
 function conditionHistory(conditions, employeeId) {
-  const list = conditions.filter((c) => c.employeeId === employeeId).sort((a, b) => a.effectiveFrom < b.effectiveFrom ? -1 : a.effectiveFrom > b.effectiveFrom ? 1 : a.createdAt < b.createdAt ? -1 : 1);
+  const list2 = conditions.filter((c) => c.employeeId === employeeId).sort((a, b) => a.effectiveFrom < b.effectiveFrom ? -1 : a.effectiveFrom > b.effectiveFrom ? 1 : a.createdAt < b.createdAt ? -1 : 1);
   const dedup = [];
-  for (const c of list) {
+  for (const c of list2) {
     if (dedup.length && dedup[dedup.length - 1].effectiveFrom === c.effectiveFrom) dedup[dedup.length - 1] = c;
     else dedup.push(c);
   }
@@ -4057,14 +4057,14 @@ function buildIcs(deadlines, generatedAt = /* @__PURE__ */ new Date()) {
   const stamp = generatedAt.toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
   const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//ai-labor-service//draft//KO", "CALSCALE:GREGORIAN", "X-WR-CALNAME:노무 기한 (로컬 데모)"];
   for (const d of deadlines) {
-    const ymd = d.date.replace(/-/g, "");
+    const ymd2 = d.date.replace(/-/g, "");
     const next = new Date(Date.UTC(Number(d.date.slice(0, 4)), Number(d.date.slice(5, 7)) - 1, Number(d.date.slice(8, 10)) + 1));
-    const ymd2 = next.toISOString().slice(0, 10).replace(/-/g, "");
+    const ymd22 = next.toISOString().slice(0, 10).replace(/-/g, "");
     lines.push("BEGIN:VEVENT");
     lines.push(`UID:${esc(d.key)}@ai-labor-service.local`);
     lines.push(`DTSTAMP:${stamp}`);
-    lines.push(`DTSTART;VALUE=DATE:${ymd}`);
-    lines.push(`DTEND;VALUE=DATE:${ymd2}`);
+    lines.push(`DTSTART;VALUE=DATE:${ymd2}`);
+    lines.push(`DTEND;VALUE=DATE:${ymd22}`);
     lines.push(fold(`SUMMARY:${esc(d.title)}`));
     lines.push(fold(`DESCRIPTION:${esc(`${d.secondaryLabel ? d.secondaryLabel + "\n" : ""}계산 근거: ${d.origin}
 근거: ${d.basis}
@@ -5462,6 +5462,7 @@ async function loadWorkplace(db, workplaceId, today = kstToday()) {
 }
 
 // supabase/functions/_shared/kakao-core.ts
+var KAKAO_POLICY_FROM = "2026-11-08";
 var STATE_TTL_MS = 10 * 6e4;
 function memoTemplate(text, siteUrl, path) {
   const url = `${siteUrl}${path}`;
@@ -5592,16 +5593,16 @@ async function fetchHolidayYear(year) {
 async function syncHolidays(db, thisYear) {
   const out = [];
   for (const year of [thisYear, thisYear + 1]) {
-    const list = await fetchHolidayYear(year);
-    if (!list.length) {
+    const list2 = await fetchHolidayYear(year);
+    if (!list2.length) {
       out.push({ year, count: 0 });
       continue;
     }
     const { error: e1 } = await db.from("holidays_api").delete().gte("date", `${year}-01-01`).lte("date", `${year}-12-31`);
     if (e1) throw e1;
-    const { error: e2 } = await db.from("holidays_api").insert(list.map((h) => ({ date: h.date, name: h.name.slice(0, 60), fetched_at: (/* @__PURE__ */ new Date()).toISOString() })));
+    const { error: e2 } = await db.from("holidays_api").insert(list2.map((h) => ({ date: h.date, name: h.name.slice(0, 60), fetched_at: (/* @__PURE__ */ new Date()).toISOString() })));
     if (e2) throw e2;
-    out.push({ year, count: list.length });
+    out.push({ year, count: list2.length });
   }
   loadedAt = 0;
   return out;
@@ -5613,6 +5614,303 @@ async function ensureHolidays(db) {
   const { data, error } = await db.from("holidays_api").select("date, name").order("date");
   if (error || !data) return;
   engine.registerHolidays(data);
+}
+
+// supabase/functions/_shared/lawnames.ts
+var LAW_NAMES = {
+  퇴직급여법: "근로자퇴직급여 보장법",
+  징수법: "고용보험 및 산업재해보상보험의 보험료징수 등에 관한 법률",
+  "징수법 시행령": "고용보험 및 산업재해보상보험의 보험료징수 등에 관한 법률 시행령",
+  기간제법: "기간제 및 단시간근로자 보호 등에 관한 법률",
+  "기간제법 시행령": "기간제 및 단시간근로자 보호 등에 관한 법률 시행령",
+  외국인고용법: "외국인근로자의 고용 등에 관한 법률",
+  "남녀고용평등법 시행령": "남녀고용평등과 일ㆍ가정 양립 지원에 관한 법률 시행령",
+  건강진단규칙: "식품위생 분야 종사자의 건강진단 규칙",
+  공휴일규정: "관공서의 공휴일에 관한 규정"
+};
+var lawFullName = (law) => LAW_NAMES[law] ?? law;
+function lawUrl(law, article) {
+  const name = encodeURIComponent(lawFullName(law).replace(/\s+/g, ""));
+  return `https://www.law.go.kr/법령/${name}${article ? `/${encodeURIComponent(article)}` : ""}`;
+}
+
+// supabase/functions/_shared/lawwatch-core.ts
+var normNo = (no) => {
+  const s = String(no ?? "").trim();
+  return /^\d+$/.test(s) ? String(Number(s)) : s;
+};
+var noOf = (lawNumber) => {
+  const m = lawNumber?.match(/제(\d+)호/);
+  return m ? normNo(m[1]) : null;
+};
+function lawRefs(rules) {
+  const m = /* @__PURE__ */ new Map();
+  for (const r of rules)
+    for (const v of r.values)
+      for (const s of v.sources ?? []) {
+        if (s.type !== "law" || !s.law) continue;
+        const article = s.article?.trim() || null;
+        const key2 = `${s.law}#${article ?? ""}`;
+        const ref = m.get(key2) ?? { key: key2, law: s.law, lawFull: lawFullName(s.law), article, verifiedNo: null, scheduledFrom: [], ruleIds: [] };
+        if (s.check?.versionStatus === "scheduled") {
+          const from = s.check.versionFrom;
+          if (from && !ref.scheduledFrom.includes(from)) ref.scheduledFrom.push(from);
+        } else {
+          const no = noOf(s.check?.lawNumber);
+          if (no && (!ref.verifiedNo || Number(no) > Number(ref.verifiedNo))) ref.verifiedNo = no;
+        }
+        if (!ref.ruleIds.includes(r.id)) ref.ruleIds.push(r.id);
+        m.set(key2, ref);
+      }
+  return [...m.values()].sort((a, b) => a.key.localeCompare(b.key));
+}
+function joCode(article) {
+  const m = article.match(/^제(\d+)조(?:의(\d+))?$/);
+  return m ? m[1].padStart(4, "0") + (m[2] ?? "0").padStart(2, "0") : null;
+}
+var ymd = (s) => {
+  const d = String(s ?? "");
+  return /^\d{8}$/.test(d) ? `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}` : "";
+};
+var sameName = (a, b) => {
+  const n = (s) => s.replace(/\s+/g, "").replace(/[·ㆍ・]/g, "ㆍ");
+  return n(a) === n(b);
+};
+var list = (v) => v == null ? [] : Array.isArray(v) ? v : [v];
+function parseVersions(json2, fullName) {
+  const rows = list(json2?.LawSearch?.law);
+  const vs = rows.filter((x) => sameName(String(x["법령명한글"] ?? ""), fullName)).map((x) => ({
+    status: String(x["현행연혁코드"] ?? ""),
+    v: { mst: String(x["법령일련번호"] ?? ""), effective: ymd(x["시행일자"]), no: normNo(x["공포번호"]), promulgated: ymd(x["공포일자"]), kind: String(x["제개정구분명"] ?? "") }
+  })).filter((x) => x.v.mst && x.v.effective);
+  const current = vs.find((x) => x.status === "현행")?.v ?? null;
+  const seen = /* @__PURE__ */ new Set();
+  const upcoming = vs.filter((x) => x.status === "시행예정").map((x) => x.v).filter((v) => !seen.has(`${v.mst}@${v.effective}`) && !!seen.add(`${v.mst}@${v.effective}`)).sort((a, b) => a.effective.localeCompare(b.effective) || Number(a.no) - Number(b.no));
+  return { current, upcoming };
+}
+function articleOf(json2, article) {
+  const m = article.match(/^제(\d+)조(?:의(\d+))?$/);
+  if (!m) return null;
+  const law = json2?.["법령"];
+  const units = list(law?.["조문"]?.["조문단위"]);
+  const u = units.find(
+    (x) => x["조문여부"] === "조문" && String(x["조문번호"]) === String(Number(m[1])) && String(x["조문가지번호"] ?? "").replace(/^0+/, "") === (m[2] ? String(Number(m[2])) : "")
+  );
+  if (!u) return null;
+  const parts2 = [];
+  const add = (v) => {
+    for (const s of list(v)) if (typeof s === "string") parts2.push(s);
+    else if (Array.isArray(s)) s.forEach(add);
+  };
+  add(u["조문내용"]);
+  for (const h of list(u["항"])) {
+    add(h["항내용"]);
+    for (const ho of list(h["호"])) {
+      add(ho["호내용"]);
+      for (const mo of list(ho["목"])) add(mo["목내용"]);
+    }
+  }
+  const text = parts2.map((s) => s.replace(/\s+/g, " ").trim()).filter(Boolean).join("\n");
+  return text ? { text, changedFlag: u["조문변경여부"] === "Y" } : null;
+}
+async function hashText(text) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].slice(0, 8).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+var FLAGGED = ["changed", "amended", "upcoming", "missing"];
+function judge(ref, prev, now) {
+  let bh = prev?.baseline_hash ?? null;
+  let bn = prev?.baseline_no ?? null;
+  const { version: v, article: a } = now;
+  const target = ref.verifiedNo;
+  let note = "";
+  if (ref.article && a) {
+    if (target ? v.no === target && (bn !== target || !bh) : !bh) {
+      bh = a.hash;
+      bn = v.no;
+    } else if (bh && a.hash !== bh && ref.scheduledFrom.includes(v.effective)) {
+      bh = a.hash;
+      bn = v.no;
+      note = `${v.effective} 시행 예정이던 개정이 시행됐어요 (rules.json에 반영돼 있음).`;
+    }
+  }
+  const pending = now.upcoming.filter((u) => !u.known);
+  const soon = pending.length ? ` 또 ${pending.map((u) => `${u.effective}부터 바뀌는 개정(제${u.no}호)`).join("·")}이 공포됐어요.` : "";
+  const out = (status, detail) => ({ status, detail: detail.trim(), baseline_hash: bh, baseline_no: bn });
+  if (ref.article && !a) return out("missing", `지금 시행 중인 ${ref.lawFull}(제${v.no}호)에서 ${ref.article}를 찾지 못했어요. 삭제·이동됐는지 원문을 확인해 주세요.`);
+  if (a && bh && a.hash !== bh)
+    return out("changed", `검증한 원문(제${bn}호)과 지금 시행 중인 조문(제${v.no}호, ${v.effective} 시행)이 달라요. 원문을 확인하고 rules.json을 고쳐 주세요.${soon}`);
+  if (target && v.no !== target && !(a && bh))
+    return out(
+      "amended",
+      `검증 뒤 법령이 개정됐어요 (제${target}호 → 제${v.no}호, ${v.effective} 시행).${a ? a.changedFlag ? " 법제처 표시로는 이 조문도 바뀌었어요." : " 법제처 표시로는 이 조문은 그대로예요." : ""} 원문을 확인해 주세요.${soon}`
+    );
+  if (pending.length) return out("upcoming", `${pending.map((u) => `${u.effective}부터 이 조문이 바뀌어요 (제${u.no}호, ${u.promulgated} 공포)`).join(" · ")}. 시행 전에 rules.json에 반영해 주세요.`);
+  if (target && v.no !== target) note += ` 법령은 개정됐지만(제${v.no}호) 이 조문은 검증한 원문 그대로예요.`;
+  return out("ok", note || "검증한 원문과 같아요.");
+}
+async function pool(items, n, fn) {
+  let i = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(n, items.length) }, async () => {
+      while (i < items.length) await fn(items[i++]);
+    })
+  );
+}
+async function runWatch(refs, prev, drf, opts = {}) {
+  let calls = 0;
+  const call = (p, q) => {
+    calls++;
+    return drf(p, q);
+  };
+  const byLaw = /* @__PURE__ */ new Map();
+  for (const r of refs) byLaw.set(r.lawFull, [...byLaw.get(r.lawFull) ?? [], r]);
+  const versions = /* @__PURE__ */ new Map();
+  await pool([...byLaw.keys()], opts.concurrency ?? 4, async (full) => {
+    try {
+      versions.set(full, parseVersions(await call("lawSearch.do", { target: "eflaw", query: full, display: "100", nw: "1,2,3" }), full));
+    } catch (e) {
+      versions.set(full, e instanceof Error ? e : new Error(String(e)));
+    }
+  });
+  const texts = /* @__PURE__ */ new Map();
+  const fetchArticle = (v, article) => {
+    const k = `${v.mst}@${v.effective}#${article}`;
+    if (!texts.has(k)) texts.set(k, call("lawService.do", { target: "eflaw", MST: v.mst, efYd: v.effective.replaceAll("-", ""), JO: joCode(article) ?? "" }).then((j) => articleOf(j, article)));
+    return texts.get(k);
+  };
+  const rows = [];
+  let errors = 0;
+  await pool(refs, opts.concurrency ?? 4, async (ref) => {
+    const base = { key: ref.key, law: ref.law, article: ref.article, law_full: ref.lawFull, rule_ids: ref.ruleIds, verified_no: ref.verifiedNo, url: lawUrl(ref.law, ref.article) };
+    const p = prev.get(ref.key);
+    const fail = (detail) => {
+      errors++;
+      return { ...base, status: "error", detail, current_no: null, current_effective: null, text_hash: null, article_text: null, upcoming: p?.upcoming ?? [], baseline_hash: p?.baseline_hash ?? null, baseline_no: p?.baseline_no ?? null };
+    };
+    const vs = versions.get(ref.lawFull);
+    if (!vs || vs instanceof Error) return void rows.push(fail(`법령 목록을 받지 못했어요: ${vs instanceof Error ? vs.message : "응답 없음"}`.slice(0, 300)));
+    if (!vs.current) return void rows.push(fail(`국가법령정보센터에서 '${ref.lawFull}'의 현행 판을 찾지 못했어요. 법령 이름이 바뀌었는지 확인해 주세요.`));
+    if (ref.article && !joCode(ref.article)) return void rows.push(fail(`조문 번호 형식을 읽지 못했어요: ${ref.article}`));
+    try {
+      let article = null;
+      const upcoming = [];
+      if (ref.article) {
+        const cur = await fetchArticle(vs.current, ref.article);
+        article = cur ? { ...cur, hash: await hashText(cur.text) } : null;
+        let before = article?.hash ?? null;
+        for (const u of vs.upcoming) {
+          const next = await fetchArticle(u, ref.article);
+          const nextHash = next ? await hashText(next.text) : null;
+          if (nextHash === before) continue;
+          before = nextHash;
+          upcoming.push({ effective: u.effective, no: u.no, promulgated: u.promulgated, kind: u.kind, known: ref.scheduledFrom.includes(u.effective), text: next?.text.slice(0, 4e3) ?? null });
+        }
+      }
+      const j = judge(ref, p, { version: vs.current, article, upcoming });
+      rows.push({
+        ...base,
+        ...j,
+        current_no: vs.current.no,
+        current_effective: vs.current.effective,
+        text_hash: article?.hash ?? null,
+        article_text: article?.text.slice(0, 4e3) ?? null,
+        upcoming
+      });
+    } catch (e) {
+      rows.push(fail(`조문을 받지 못했어요: ${e instanceof Error ? e.message : String(e)}`.slice(0, 300)));
+    }
+  });
+  rows.sort((a, b) => a.key.localeCompare(b.key));
+  return { rows, calls, errors };
+}
+function newlyFlagged(rows, prev) {
+  return rows.filter((r) => {
+    if (!FLAGGED.includes(r.status)) return false;
+    const p = prev.get(r.key);
+    if (!p || p.status !== r.status) return true;
+    const before = new Set((p.upcoming ?? []).map((u) => `${u.no}@${u.effective}`));
+    return r.upcoming.some((u) => !u.known && !before.has(`${u.no}@${u.effective}`));
+  });
+}
+var STATUS_WORD = { ok: "그대로", changed: "원문 바뀜", amended: "법령 개정", upcoming: "개정 예정", missing: "조문 없음", error: "확인 실패" };
+function alertText(flagged) {
+  const first = flagged[0];
+  if (!first) return "";
+  const name = (r) => `${r.law}${r.article ? ` ${r.article}` : ""}(${STATUS_WORD[r.status]})`;
+  return `[사람샘각 관리자] 법령 변경 감지 ${flagged.length}건: ${name(first)}${flagged.length > 1 ? ` 외 ${flagged.length - 1}건` : ""}. 관리자 화면에서 원문을 확인해 주세요.`;
+}
+
+// supabase/functions/_shared/lawapi.ts
+var lawApiConfigured = () => !!Deno.env.get("LAW_API_OC");
+var oc = () => (Deno.env.get("LAW_API_OC") ?? "").trim();
+var REFERER = `${Deno.env.get("SUPABASE_URL") ?? "https://smbxhspzflnvncatdgjs.supabase.co"}/`;
+async function drfJson(path, params) {
+  const q = new URLSearchParams({ OC: oc(), type: "JSON", ...params });
+  const r = await fetch(`https://www.law.go.kr/DRF/${path}?${q}`, { headers: { Referer: REFERER }, signal: AbortSignal.timeout(2e4) });
+  const text = await r.text();
+  if (!r.ok) throw new Error(`법제처 ${path} HTTP ${r.status}`);
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(`법제처 응답을 읽지 못했어요: ${(oc() ? text.replaceAll(oc(), "***") : text).slice(0, 120)}`);
+  }
+}
+async function runLawWatch(db, trigger) {
+  if (!lawApiConfigured()) throw new Error("LAW_API_OC 없음");
+  const started = Date.now();
+  const refs = lawRefs(engine.allRules());
+  const { data: prevRows, error: e0 } = await db.from("law_watch").select("key, baseline_hash, baseline_no, status, upcoming");
+  if (e0) throw e0;
+  const prev = new Map((prevRows ?? []).map((r) => [r.key, r]));
+  const { rows, calls, errors } = await runWatch(refs, prev, drfJson, { concurrency: 4 });
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const fresh = newlyFlagged(rows, prev);
+  const changedStatus = new Set(rows.filter((r) => prev.get(r.key)?.status !== r.status).map((r) => r.key));
+  const { error: e1 } = await db.from("law_watch").upsert(
+    rows.map((r) => ({ ...r, upcoming: r.upcoming, checked_at: now, ...changedStatus.has(r.key) ? { status_since: now } : {} })),
+    { onConflict: "key" }
+  );
+  if (e1) throw e1;
+  const keep = new Set(rows.map((r) => r.key));
+  const gone = (prevRows ?? []).map((r) => r.key).filter((k) => !keep.has(k));
+  if (gone.length) await db.from("law_watch").delete().in("key", gone);
+  let notified = 0;
+  if (fresh.length) {
+    const sw = await db.from("app_settings").select("value").eq("key", "kakao_enabled").maybeSingle();
+    const today = new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 10);
+    if (sw.data?.value === true && kakaoConfigured() && today >= KAKAO_POLICY_FROM) {
+      const { data: admins } = await db.from("admins").select("user_id");
+      const ids = (admins ?? []).map((a) => a.user_id);
+      const { data: linked } = ids.length ? await db.from("kakao_links").select("user_id").in("user_id", ids) : { data: [] };
+      for (const l of linked ?? []) {
+        try {
+          await sendMemo(db, l.user_id, alertText(fresh), "/admin");
+          notified++;
+        } catch (e) {
+          if (e instanceof KakaoError && e.code === "TOKEN_EXPIRED") await recordResult(db, l.user_id, today, e);
+        }
+      }
+    }
+  }
+  const summary = {
+    ranAt: now,
+    trigger,
+    checked: rows.length,
+    flagged: rows.filter((r) => ["changed", "amended", "upcoming", "missing"].includes(r.status)).length,
+    errors,
+    calls,
+    ms: Date.now() - started,
+    newlyFlagged: fresh.map((r) => r.key),
+    notified
+  };
+  await db.from("law_watch_runs").insert({ ran_at: now, trigger, checked: summary.checked, flagged: summary.flagged, errors, calls, ms: summary.ms, notified, newly: summary.newlyFlagged });
+  await db.from("law_watch_runs").delete().lt("ran_at", new Date(Date.now() - 366 * 864e5).toISOString());
+  return summary;
+}
+async function lastLawWatchAt(db) {
+  const { data } = await db.from("law_watch_runs").select("ran_at").order("ran_at", { ascending: false }).limit(1);
+  return data?.[0]?.ran_at ? Date.parse(data[0].ran_at) : 0;
 }
 
 // supabase/functions/cron-daily/handler.ts
@@ -5707,7 +6005,16 @@ async function handler(req) {
     }
     const { data: retention, error: re } = await db.rpc("run_retention");
     if (re) throw re;
-    return json(req, { ok: true, date: today, workplaces: summary.length, summary, kakao: { on: kakaoOn, linked: linked.size, refreshed: kakaoRefreshed }, holidaySync, retention });
+    let lawWatch = null;
+    if (lawApiConfigured() && Date.now() - await lastLawWatchAt(db) > 6.5 * 864e5) {
+      try {
+        const s = await runLawWatch(db, "cron");
+        lawWatch = { checked: s.checked, flagged: s.flagged, errors: s.errors, newly: s.newlyFlagged.length, notified: s.notified, ms: s.ms };
+      } catch (e) {
+        lawWatch = { error: String(e instanceof Error ? e.message : e).slice(0, 300) };
+      }
+    }
+    return json(req, { ok: true, date: today, workplaces: summary.length, summary, kakao: { on: kakaoOn, linked: linked.size, refreshed: kakaoRefreshed }, holidaySync, retention, lawWatch });
   } catch (e) {
     return handleError(req, e);
   }
