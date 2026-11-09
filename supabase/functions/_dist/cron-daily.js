@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/cron-daily/handler.ts (npm run build:functions)
-// sha256:55c47eb5a38a
+// sha256:fb93572f8e16
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -5560,7 +5560,17 @@ function parseHolidays(json2) {
 
 // supabase/functions/_shared/datagokr.ts
 var dataGoKrConfigured = () => !!Deno.env.get("DATA_GO_KR_KEY");
-var key = () => Deno.env.get("DATA_GO_KR_KEY") ?? "";
+var rawKey = () => (Deno.env.get("DATA_GO_KR_KEY") ?? "").trim();
+var key = () => {
+  const k = rawKey();
+  if (!k.includes("%")) return k;
+  try {
+    return decodeURIComponent(k);
+  } catch {
+    return k;
+  }
+};
+var redact = (text) => [rawKey(), key()].filter(Boolean).reduce((t, k) => t.replaceAll(k, "***"), text);
 var HOLIDAY_URL = "https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo";
 async function getJson(url, params) {
   const q = new URLSearchParams({ serviceKey: key(), _type: "json", ...params });
@@ -5572,7 +5582,7 @@ async function getJson(url, params) {
   } catch {
     body = null;
   }
-  return { status: r.status, body, text: key() ? text.replaceAll(key(), "***").slice(0, 1500) : text.slice(0, 1500) };
+  return { status: r.status, body, text: redact(text).slice(0, 1500) };
 }
 async function fetchHolidayYear(year) {
   const r = await getJson(HOLIDAY_URL, { solYear: String(year), numOfRows: "100", pageNo: "1" });

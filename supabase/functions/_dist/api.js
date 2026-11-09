@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/api/handler.ts (npm run build:functions)
-// sha256:d272af35e3b4
+// sha256:8e048f748b65
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -6323,7 +6323,21 @@ function parseHolidays(json2) {
 
 // supabase/functions/_shared/datagokr.ts
 var dataGoKrConfigured = () => !!Deno.env.get("DATA_GO_KR_KEY");
-var key = () => Deno.env.get("DATA_GO_KR_KEY") ?? "";
+var rawKey = () => (Deno.env.get("DATA_GO_KR_KEY") ?? "").trim();
+var key = () => {
+  const k = rawKey();
+  if (!k.includes("%")) return k;
+  try {
+    return decodeURIComponent(k);
+  } catch {
+    return k;
+  }
+};
+var keyShape = () => {
+  const k = rawKey();
+  return { length: k.length, encodedForm: k.includes("%"), hasPlusSlashEq: /[+/=]/.test(k), hasSpace: /\s/.test(Deno.env.get("DATA_GO_KR_KEY") ?? "") };
+};
+var redact = (text2) => [rawKey(), key()].filter(Boolean).reduce((t, k) => t.replaceAll(k, "***"), text2);
 var HOLIDAY_URL = "https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo";
 var FESTIVAL_URL = "https://apis.data.go.kr/B551011/KorService2/searchFestival2";
 async function getJson(url, params) {
@@ -6336,7 +6350,7 @@ async function getJson(url, params) {
   } catch {
     body = null;
   }
-  return { status: r.status, body, text: key() ? text2.replaceAll(key(), "***").slice(0, 1500) : text2.slice(0, 1500) };
+  return { status: r.status, body, text: redact(text2).slice(0, 1500) };
 }
 var loadedAt = 0;
 async function ensureHolidays(db) {
@@ -6348,7 +6362,7 @@ async function ensureHolidays(db) {
 }
 async function checkDataGoKr() {
   if (!dataGoKrConfigured()) return { ok: false, detail: "DATA_GO_KR_KEY 없음" };
-  const out = {};
+  const out = { keyShape: keyShape() };
   try {
     const h = await getJson(HOLIDAY_URL, { solYear: "2026", numOfRows: "50", pageNo: "1" });
     out.holidays = { status: h.status, resultCode: resultCode(h.body), parsed: parseHolidays(h.body).length, sample: h.text.slice(0, 600) };
