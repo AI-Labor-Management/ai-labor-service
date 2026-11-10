@@ -88,14 +88,14 @@ Deno.serve(handler);
 
 ### CORS
 
-`api`·`public-api`는 `https://ai-labor-management.github.io`, `https://ai-labor-service-draft-sj.gold89765.chatgpt.site`(사람샘각), `http://localhost:5173`, `http://localhost:4173`만 허용합니다. 다른 주소를 더하려면 함수 비밀 값 `ALLOWED_ORIGINS`(쉼표 구분)를 넣습니다.
+`api`·`public-api`는 `https://saram.dreamhelixion.com`(사람샘각 공개 사이트, 2026-11-10~), `https://ai-labor-management.github.io`, `https://ai-labor-service-draft-sj.gold89765.chatgpt.site`(사람샘각), `http://localhost:5173`, `http://localhost:4173`만 허용합니다. 다른 주소를 더하려면 함수 비밀 값 `ALLOWED_ORIGINS`(쉼표 구분)를 넣습니다.
 
 ## 4. Auth (공개 사이트에서 가입하려면 꼭 필요)
 
 대시보드 → Authentication → URL Configuration:
 
-- Site URL: `https://ai-labor-management.github.io/saram-saemgak-site/` (사람샘각 최신 공개 체험 — 지금 설정된 값)
-- Redirect URLs: `https://ai-labor-management.github.io/saram-saemgak-site/**`, `https://ai-labor-service-draft-sj.gold89765.chatgpt.site/**`, `https://ai-labor-management.github.io/ai-labor-service/**`, `http://localhost:5173/**` (지금 설정된 값. 미리보기 4173을 쓰려면 `http://localhost:4173/**` 추가)
+- Site URL: `https://saram.dreamhelixion.com` (사람샘각 공개 사이트, 2026-11-10~). 함수의 `SITE_URL` 기본값도 이 주소 — 카카오 알림 버튼·출퇴근 QR 주소
+- Redirect URLs: `https://saram.dreamhelixion.com/**`, `https://ai-labor-management.github.io/saram-saemgak-site/**`, `https://ai-labor-service-draft-sj.gold89765.chatgpt.site/**`, `https://ai-labor-management.github.io/ai-labor-service/**`, `http://localhost:5173/**` (지금 설정된 값. 미리보기 4173을 쓰려면 `http://localhost:4173/**` 추가)
 
 설정 전에는 가입 확인 메일의 링크가 기본값(localhost)으로 가요. 또 Supabase 기본 메일 발송은 **조직 팀원 주소에만** 보내고 시간당 몇 통으로 제한돼요. 누구나 가입하게 하려면 Authentication → Emails → SMTP Settings에 발송 서비스를 연결하거나, 시험 기간에만 Sign In / Providers → Email의 "Confirm email"을 끄세요(끄면 아무 주소로나 가입 가능 — 운영 전 다시 켜기).
 

@@ -4,7 +4,7 @@ export const KAKAO_SCOPE = 'talk_message';
  *  2026-11-07에 알리고 원래 11-14 시행이었으나, 가입자가 운영자뿐이라 운영자 결정으로 2026-11-08 바로 시행 */
 export const KAKAO_POLICY_FROM = '2026-11-08';
 /** 연결 뒤 돌아갈 수 있는 사이트 (열린 리다이렉트 방지) */
-export const RETURN_ORIGINS = ['https://ai-labor-management.github.io', 'http://localhost:5173', 'http://localhost:4173', 'http://localhost:4175'];
+export const RETURN_ORIGINS = ['https://saram.dreamhelixion.com', 'https://ai-labor-management.github.io', 'http://localhost:5173', 'http://localhost:4173', 'http://localhost:4175'];
 export const STATE_TTL_MS = 10 * 60_000;
 
 const b64url = (b: Uint8Array) => btoa(String.fromCharCode(...b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');

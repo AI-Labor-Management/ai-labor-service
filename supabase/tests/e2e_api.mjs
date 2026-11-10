@@ -103,6 +103,8 @@ r = await api('nope', owner);
 ok(r.status === 404, '없는 경로 404', r.status);
 r = await call('api', 'health', null, { method: 'OPTIONS', origin: 'https://ai-labor-management.github.io' });
 ok(r.headers.get('access-control-allow-origin') === 'https://ai-labor-management.github.io', 'CORS: GitHub Pages 주소 허용', r.headers.get('access-control-allow-origin'));
+r = await call('api', 'health', null, { method: 'OPTIONS', origin: 'https://saram.dreamhelixion.com' });
+ok(r.headers.get('access-control-allow-origin') === 'https://saram.dreamhelixion.com', 'CORS: 사람샘각 자체 도메인 허용', r.headers.get('access-control-allow-origin'));
 r = await call('api', 'health', null, { origin: 'https://evil.example.com' });
 ok(r.headers.get('access-control-allow-origin') !== 'https://evil.example.com', 'CORS: 모르는 주소는 허용하지 않음', r.headers.get('access-control-allow-origin'));
 
@@ -380,7 +382,7 @@ ok(r.status === 401 || r.status === 403 || (r.status === 200 && Array.isArray(r.
 {
   const cb = await fetch(`${BASE}/functions/v1/public-api/kakao/callback?code=x&state=forged.sig`, { headers: { apikey: KEY }, redirect: 'manual' });
   const loc = cb.headers.get('location') ?? '';
-  ok(cb.status === 302 && loc.startsWith('https://ai-labor-management.github.io/') && /kakao=(error|expired)/.test(loc), '카카오 콜백: 위조 state는 사이트로 돌려보내고 저장하지 않음', `${cb.status} ${loc}`);
+  ok(cb.status === 302 && loc.startsWith('https://saram.dreamhelixion.com/') && /kakao=(error|expired)/.test(loc), '카카오 콜백: 위조 state는 사이트로 돌려보내고 저장하지 않음', `${cb.status} ${loc}`);
 }
 
 r = await rest('notifications?recipient=eq.owner&select=kind,text', owner);

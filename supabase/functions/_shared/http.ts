@@ -1,5 +1,8 @@
 // 공통 HTTP 처리: CORS, JSON 응답, 오류, 아주 작은 라우터
 const ALLOWED_ORIGINS = new Set([
+  // 사람샘각 공개 사이트 (2026-11-10~, GitHub Pages + 자체 도메인)
+  'https://saram.dreamhelixion.com',
+  // 예전 사람샘각 주소(새 주소로 넘어감)와 이 저장소의 체험 사이트
   'https://ai-labor-management.github.io',
   // 사람샘각 공개 사이트 (AI-Labor-Management/saram-saemgak, OpenAI Sites)
   'https://ai-labor-service-draft-sj.gold89765.chatgpt.site',

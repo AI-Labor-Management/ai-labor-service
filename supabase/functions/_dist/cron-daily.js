@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/cron-daily/handler.ts (npm run build:functions)
-// sha256:0ce5c482199a
+// sha256:43488b4804b5
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -5633,6 +5633,9 @@ function rowsToState(r) {
 
 // supabase/functions/_shared/http.ts
 var ALLOWED_ORIGINS = /* @__PURE__ */ new Set([
+  // 사람샘각 공개 사이트 (2026-11-10~, GitHub Pages + 자체 도메인)
+  "https://saram.dreamhelixion.com",
+  // 예전 사람샘각 주소(새 주소로 넘어감)와 이 저장소의 체험 사이트
   "https://ai-labor-management.github.io",
   // 사람샘각 공개 사이트 (AI-Labor-Management/saram-saemgak, OpenAI Sites)
   "https://ai-labor-service-draft-sj.gold89765.chatgpt.site",
@@ -5735,7 +5738,7 @@ function memoTemplate(text, siteUrl, path) {
 var tokenErrorCode = (error) => error === "invalid_grant" ? "TOKEN_EXPIRED" : "TOKEN_FAILED";
 
 // supabase/functions/_shared/kakao.ts
-var SITE_URL = (Deno.env.get("SITE_URL") ?? "https://ai-labor-management.github.io/saram-saemgak-site").replace(/\/$/, "");
+var SITE_URL = (Deno.env.get("SITE_URL") ?? "https://saram.dreamhelixion.com").replace(/\/$/, "");
 var AUTH_HOST = "https://kauth.kakao.com";
 var API_HOST = "https://kapi.kakao.com";
 function keys() {
