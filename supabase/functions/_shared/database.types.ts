@@ -303,6 +303,30 @@ export type Database = {
           },
         ]
       }
+      clock_qr_keys: {
+        Row: {
+          created_at: string
+          poster_issued_at: string
+          poster_token: string
+          secret: string
+          workplace_id: string
+        }
+        Insert: {
+          created_at?: string
+          poster_issued_at?: string
+          poster_token: string
+          secret: string
+          workplace_id: string
+        }
+        Update: {
+          created_at?: string
+          poster_issued_at?: string
+          poster_token?: string
+          secret?: string
+          workplace_id?: string
+        }
+        Relationships: []
+      }
       consult_requests: {
         Row: {
           consent_at: string

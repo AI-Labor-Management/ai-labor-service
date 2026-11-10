@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: src/domain, src/data (npm run build:functions)
-// sha256:9be0b4890e9f
+// sha256:746de0f0eede
 // src/data/rules.json
 var rules_default = {
   schema: "bix-rules/1",
@@ -3341,8 +3341,9 @@ function workedSegment(state, e, date) {
   }
   return { seg: null, pending: false, plan };
 }
-function classifyClock(plan, clockIn, clockOut, toleranceMin, gps) {
-  if (gps === "outside" || gps === "denied") return { status: "exception", reason: gps === "outside" ? "반경 밖 기록" : "위치 확인 거부 — 수동 기록" };
+function classifyClock(plan, clockIn, clockOut, toleranceMin, gps, how = "gps") {
+  if (gps === "outside" || gps === "denied")
+    return { status: "exception", reason: how === "qr" ? "QR 확인 없이 기록" : gps === "outside" ? "반경 밖 기록" : "위치 확인 거부 — 수동 기록" };
   if (!clockIn) return { status: "exception", reason: "출근 기록 없음" };
   if (!clockOut) return { status: "pending", reason: "퇴근 기록 전" };
   if (!plan.shift) return { status: "pending", reason: "예정에 없는 근무" };
@@ -5262,7 +5263,7 @@ function createSeed(base) {
       employeeId: A.id,
       date: d,
       original: { clockIn, clockOut },
-      source: "gps-demo",
+      source: "qr",
       gps: "inside",
       status: last ? "pending" : "confirmed",
       approval: null,

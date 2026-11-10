@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/public-api/handler.ts (npm run build:functions)
-// sha256:c77d649493ba
+// sha256:364e7b6e77a4
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -3401,8 +3401,9 @@ function workedSegment(state, e, date) {
   }
   return { seg: null, pending: false, plan };
 }
-function classifyClock(plan, clockIn, clockOut, toleranceMin, gps) {
-  if (gps === "outside" || gps === "denied") return { status: "exception", reason: gps === "outside" ? "반경 밖 기록" : "위치 확인 거부 — 수동 기록" };
+function classifyClock(plan, clockIn, clockOut, toleranceMin, gps, how = "gps") {
+  if (gps === "outside" || gps === "denied")
+    return { status: "exception", reason: how === "qr" ? "QR 확인 없이 기록" : gps === "outside" ? "반경 밖 기록" : "위치 확인 거부 — 수동 기록" };
   if (!clockIn) return { status: "exception", reason: "출근 기록 없음" };
   if (!clockOut) return { status: "pending", reason: "퇴근 기록 전" };
   if (!plan.shift) return { status: "pending", reason: "예정에 없는 근무" };
@@ -5288,7 +5289,7 @@ function createSeed(base) {
       employeeId: A.id,
       date: d,
       original: { clockIn, clockOut },
-      source: "gps-demo",
+      source: "qr",
       gps: "inside",
       status: last ? "pending" : "confirmed",
       approval: null,

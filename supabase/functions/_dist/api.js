@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/api/handler.ts (npm run build:functions)
-// sha256:433715a9884f
+// sha256:29004e13e61b
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -3337,16 +3337,16 @@ function dayPlan(state, e, date) {
     base.off = offOv.kind;
     return base;
   }
-  const pick = change ?? subIn ?? extra;
-  if (pick && pick.start && pick.end) {
+  const pick2 = change ?? subIn ?? extra;
+  if (pick2 && pick2.start && pick2.end) {
     base.shift = {
       employeeId: e.id,
       date,
-      start: pick.start,
-      end: pick.end,
-      breakMin: pick.breakMin,
-      kind: pick.kind === "subIn" ? "subIn" : pick.kind === "extra" ? "extra" : "change",
-      overrideId: pick.id
+      start: pick2.start,
+      end: pick2.end,
+      breakMin: pick2.breakMin,
+      kind: pick2.kind === "subIn" ? "subIn" : pick2.kind === "extra" ? "extra" : "change",
+      overrideId: pick2.id
     };
     return base;
   }
@@ -3401,8 +3401,9 @@ function workedSegment(state, e, date) {
   }
   return { seg: null, pending: false, plan };
 }
-function classifyClock(plan, clockIn, clockOut, toleranceMin, gps) {
-  if (gps === "outside" || gps === "denied") return { status: "exception", reason: gps === "outside" ? "반경 밖 기록" : "위치 확인 거부 — 수동 기록" };
+function classifyClock(plan, clockIn, clockOut, toleranceMin, gps, how = "gps") {
+  if (gps === "outside" || gps === "denied")
+    return { status: "exception", reason: how === "qr" ? "QR 확인 없이 기록" : gps === "outside" ? "반경 밖 기록" : "위치 확인 거부 — 수동 기록" };
   if (!clockIn) return { status: "exception", reason: "출근 기록 없음" };
   if (!clockOut) return { status: "pending", reason: "퇴근 기록 전" };
   if (!plan.shift) return { status: "pending", reason: "예정에 없는 근무" };
@@ -5288,7 +5289,7 @@ function createSeed(base) {
       employeeId: A.id,
       date: d,
       original: { clockIn, clockOut },
-      source: "gps-demo",
+      source: "qr",
       gps: "inside",
       status: last ? "pending" : "confirmed",
       approval: null,
@@ -6949,6 +6950,74 @@ async function lastLawWatchAt(db) {
   return data?.[0]?.ran_at ? Date.parse(data[0].ran_at) : 0;
 }
 
+// supabase/functions/_shared/clockqr-core.ts
+var STEP_SEC = 30;
+var ACCEPT_STEPS = 10;
+var ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+var CODE_RE = /^[23456789A-HJ-NP-Z]{8}$/;
+var POSTER_RE = /^P[23456789A-HJ-NP-Z]{11}$/;
+var stepAt = (ms) => Math.floor(ms / 1e3 / STEP_SEC);
+var normalizeCode = (c) => String(c ?? "").trim().toUpperCase().slice(0, 16);
+var isPosterToken = (c) => POSTER_RE.test(c);
+var pick = (bytes, n) => Array.from(bytes.slice(0, n), (b) => ALPHABET[b % 32]).join("");
+async function codeAt(secret, step) {
+  const key2 = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const mac = new Uint8Array(await crypto.subtle.sign("HMAC", key2, new TextEncoder().encode(`saram-clock:${step}`)));
+  return pick(mac, 8);
+}
+function newSecret() {
+  return Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+function newPosterToken() {
+  return `P${pick(crypto.getRandomValues(new Uint8Array(11)), 11)}`;
+}
+async function verifyCode(code, keys2, nowMs) {
+  const c = normalizeCode(code);
+  if (isPosterToken(c)) return c === keys2.poster_token ? "poster" : null;
+  if (!CODE_RE.test(c)) return null;
+  const now = stepAt(nowMs);
+  for (let s = now + 1; s >= now - ACCEPT_STEPS; s--) if (await codeAt(keys2.secret, s) === c) return "screen";
+  return null;
+}
+function clockUrl(siteUrl, code) {
+  return `${siteUrl.replace(/\/$/, "")}/employee?qr=${encodeURIComponent(code)}`;
+}
+
+// supabase/functions/_shared/clockqr.ts
+async function keysFor(db, workplaceId) {
+  const read = async () => {
+    const { data, error: error2 } = await db.from("clock_qr_keys").select("secret, poster_token, poster_issued_at").eq("workplace_id", workplaceId).maybeSingle();
+    if (error2) throw error2;
+    return data;
+  };
+  const have = await read();
+  if (have) return have;
+  const { error } = await db.from("clock_qr_keys").upsert({ workplace_id: workplaceId, secret: newSecret(), poster_token: newPosterToken() }, { onConflict: "workplace_id", ignoreDuplicates: true });
+  if (error) throw error;
+  const made = await read();
+  if (!made) throw new Error("QR 비밀 값을 만들지 못했어요");
+  return made;
+}
+async function ownerClockQr(db, workplaceId) {
+  const k = await keysFor(db, workplaceId);
+  const now = Date.now();
+  const code = await codeAt(k.secret, stepAt(now));
+  return {
+    screen: { code, url: clockUrl(SITE_URL, code), refreshInSec: STEP_SEC - Math.floor(now / 1e3) % STEP_SEC, validMinutes: 5 },
+    poster: { token: k.poster_token, url: clockUrl(SITE_URL, k.poster_token), issuedAt: k.poster_issued_at }
+  };
+}
+async function reissuePoster(db, workplaceId) {
+  await keysFor(db, workplaceId);
+  const { error } = await db.from("clock_qr_keys").update({ poster_token: newPosterToken(), poster_issued_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("workplace_id", workplaceId);
+  if (error) throw error;
+  return ownerClockQr(db, workplaceId);
+}
+async function verifyClockQr(db, workplaceId, code) {
+  if (code == null || code === "") return null;
+  return verifyCode(code, await keysFor(db, workplaceId), Date.now());
+}
+
 // supabase/functions/api/handler.ts
 var iso = (v, name) => {
   if (!engine.isISODate(v)) throw bad(`${name}은(는) YYYY-MM-DD 형식이어야 해요`);
@@ -7431,10 +7500,14 @@ async function ownerRoutes(req, db, user, path, body, url) {
         return json(req, { base: date, ...engine.evaluateRisk(state, date) });
       case "foreign":
         return json(req, { base: date, employees: state.employees.filter((e) => e.isForeign).map((e) => ({ employeeId: e.id, alias: e.alias, signal: engine.foreignSignal(state, e, date) })) });
+      case "clock-qr":
+        return json(req, await ownerClockQr(db, wp.id));
     }
   }
   if (m === "POST") {
     switch (path) {
+      case "clock-qr/poster":
+        return json(req, await reissuePoster(db, wp.id));
       case "payroll/confirm":
         return json(req, await confirmPayroll(db, ctx, body));
       case "payroll/edit":
@@ -7572,8 +7645,8 @@ function employeeState(state, e) {
 async function clock(db, ctx, body) {
   const { wp, state, e, base } = ctx;
   const kind = oneOf(body.kind, "kind", ["in", "out"]);
-  const consent = !!e.locationConsent && !e.locationConsent.revokedAt;
-  const gps = consent ? oneOf(body.gps ?? "inside", "gps", ["inside", "outside"]) : "denied";
+  const qr = await verifyClockQr(db, wp.id, body.qr);
+  const gps = qr ? "inside" : "outside";
   const allowClientTime = (await must(db.from("app_settings").select("value").eq("key", "client_clock_time_allowed")))[0]?.value === true;
   const time = body.time !== void 0 && allowClientTime ? hhmm(body.time, "time") : kstNowHHMM();
   const plan = engine.dayPlan(state, e, base);
@@ -7583,18 +7656,18 @@ async function clock(db, ctx, body) {
     if (existing) throw conflict("오늘 출근 기록이 이미 있어요");
     const { data: recordNo, error } = await db.rpc("next_record_no", { p_workplace_id: wp.id, p_date: base });
     if (error) throw error;
-    const cls2 = gps === "inside" ? { status: "pending", reason: "퇴근 기록 전" } : engine.classifyClock(plan, time, null, tolerance, gps);
-    const rec = await must(db.from("attendance_records").insert({ workplace_id: wp.id, employee_id: e.id, record_no: recordNo, date: base, original_clock_in: time, source: consent ? "gps-demo" : "manual", gps, status: cls2.status, reason: cls2.reason }).select("*").single());
+    const cls2 = gps === "inside" ? { status: "pending", reason: "퇴근 기록 전" } : engine.classifyClock(plan, time, null, tolerance, gps, "qr");
+    const rec = await must(db.from("attendance_records").insert({ workplace_id: wp.id, employee_id: e.id, record_no: recordNo, date: base, original_clock_in: time, source: qr ? "qr" : "manual", gps, status: cls2.status, reason: cls2.reason }).select("*").single());
     if (cls2.status === "exception") await pushNotification(db, { workplace_id: wp.id, recipient: "owner", kind: "attendance", text: `${e.alias} ${fmtMD2(base)} 출근 확인 요청 · ${cls2.reason}`, link: `/owner/work?tab=attendance&record=${rec.id}` });
-    return { receipt: { recordNo: rec.record_no, kind: "출근", time, gps, status: rec.status, reason: rec.reason, virtualLocation: consent } };
+    return { receipt: { recordNo: rec.record_no, kind: "출근", time, gps, qr, status: rec.status, reason: rec.reason } };
   }
   if (!existing || !existing.original.clockIn) throw bad("출근 기록이 없어요");
   if (existing.original.clockOut) throw conflict("이미 퇴근 기록이 있어요");
   const g = existing.gps === "inside" && gps === "inside" ? "inside" : existing.gps === "denied" || gps === "denied" ? "denied" : "outside";
-  const cls = engine.classifyClock(plan, existing.original.clockIn, time, tolerance, g);
+  const cls = engine.classifyClock(plan, existing.original.clockIn, time, tolerance, g, "qr");
   await must(db.from("attendance_records").update({ original_clock_out: time, gps: g, status: cls.status, reason: cls.reason, confirmed_at: cls.status === "confirmed" ? (/* @__PURE__ */ new Date()).toISOString() : null }).eq("id", existing.id));
   if (cls.status !== "confirmed") await pushNotification(db, { workplace_id: wp.id, recipient: "owner", kind: "attendance", text: `${e.alias} ${fmtMD2(base)} 출퇴근 확인 요청 · ${cls.reason}`, link: `/owner/work?tab=attendance&record=${existing.id}` });
-  return { receipt: { recordNo: existing.recordNo, kind: "퇴근", time, gps: g, status: cls.status, reason: cls.status === "confirmed" ? cls.reason : `${cls.reason} — 사장님 확인 대기`, virtualLocation: consent } };
+  return { receipt: { recordNo: existing.recordNo, kind: "퇴근", time, gps: g, status: cls.status, reason: cls.status === "confirmed" ? cls.reason : `${cls.reason} — 사장님 확인 대기`, qr } };
 }
 async function employeeRoutes(req, db, user, path, body, url) {
   const ctx = await employeeCtx(db, user, body.employeeId ?? url.searchParams.get("employeeId"));

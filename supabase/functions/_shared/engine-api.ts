@@ -76,7 +76,7 @@ export interface Engine {
   conditionAt(conditions: WorkCondition[], employeeId: string, date: ISODate): WorkCondition | null;
   dayPlan(state: Pick<AppState, 'conditions' | 'overrides' | 'workplace'>, e: Employee, date: ISODate): DayPlanLite;
   currentTimes(rec: AttendanceRecord, edits: AttendanceEdit[]): { clockIn: HHMM | null; clockOut: HHMM | null };
-  classifyClock(plan: DayPlanLite, clockIn: HHMM | null, clockOut: HHMM | null, toleranceMin: number, gps: AttendanceRecord['gps']): { status: AttendanceRecord['status']; reason: string };
+  classifyClock(plan: DayPlanLite, clockIn: HHMM | null, clockOut: HHMM | null, toleranceMin: number, gps: AttendanceRecord['gps'], how?: 'qr' | 'gps'): { status: AttendanceRecord['status']; reason: string };
   weeklyHours(c: WorkCondition | null): number;
   isUnder5(scale: ScaleBand | null | undefined): boolean;
 

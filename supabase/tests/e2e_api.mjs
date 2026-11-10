@@ -233,23 +233,29 @@ const delivery = ev.statements.at(-1).delivery;
 r = await rpc('mark_statement_viewed', emp, { p_delivery_id: delivery.id });
 ok(r.status === 200 || r.status === 204, 'mark_statement_viewed 수령 확인', r);
 
-// 출퇴근 (서버 시각 사용)
-r = await rpc('set_location_consent', emp, { p_employee_id: eA.id, p_consent: true });
-ok(r.status === 200 || r.status === 204, 'set_location_consent 위치 동의', r);
-r = await api('employee/clock', emp, { method: 'POST', body: { kind: 'in', gps: 'inside', time: '03:00' } });
+// 출퇴근 (가게 QR, 서버 시각 사용 — 위치는 받지 않음)
+r = await api('owner/clock-qr', owner);
+ok(r.status === 200 && /^[23456789A-HJ-NP-Z]{8}$/.test(r.body.screen?.code ?? '') && /^P/.test(r.body.poster?.token ?? '') && !JSON.stringify(r.body).includes('secret'), 'GET /owner/clock-qr 화면 QR·인쇄 QR (비밀 값은 안 보냄)', r.body);
+const qrCode = r.body.screen.code;
+const posterBefore = r.body.poster.token;
+r = await api('owner/clock-qr', emp);
+ok(r.status >= 400, '직원은 출퇴근 QR 코드를 받을 수 없음', r.status);
+r = await api('employee/clock', emp, { method: 'POST', body: { kind: 'in', qr: qrCode, time: '03:00' } });
 const todayRec = (await api('employee/me', emp)).body.attendance.find((a) => a.date === ev.base);
 if (ev.attendance.some((a) => a.date === ev.base)) {
   ok(r.status === 409, '이미 오늘 기록이 있으면 출근 409', r.body);
 } else {
-  ok(r.status === 201 && r.body.receipt.kind === '출근' && r.body.receipt.time !== '03:00', 'POST /employee/clock 출근 (기기 시각 무시, 서버 시각)', r.body);
-  r = await api('employee/clock', emp, { method: 'POST', body: { kind: 'in', gps: 'inside' } });
+  ok(r.status === 201 && r.body.receipt.kind === '출근' && r.body.receipt.time !== '03:00' && r.body.receipt.qr === 'screen' && r.body.receipt.gps === 'inside', 'POST /employee/clock 출근 — 가게 QR 확인 (기기 시각 무시, 서버 시각)', r.body);
+  r = await api('employee/clock', emp, { method: 'POST', body: { kind: 'in', qr: qrCode } });
   ok(r.status === 409, '두 번 출근 409', r.status);
-  r = await api('employee/clock', emp, { method: 'POST', body: { kind: 'out', gps: 'inside' } });
-  ok(r.status === 201 && r.body.receipt.kind === '퇴근', 'POST /employee/clock 퇴근', r.body);
-  r = await api('employee/clock', emp, { method: 'POST', body: { kind: 'out', gps: 'inside' } });
+  r = await api('employee/clock', emp, { method: 'POST', body: { kind: 'out', qr: 'ZZZZZZZZ', gps: 'inside' } });
+  ok(r.status === 201 && r.body.receipt.kind === '퇴근' && r.body.receipt.qr === null && r.body.receipt.gps === 'outside' && /QR 확인 없이/.test(r.body.receipt.reason), 'POST /employee/clock 퇴근 — 틀린 QR·가상 위치는 쓰지 않고 사장님 확인', r.body);
+  r = await api('employee/clock', emp, { method: 'POST', body: { kind: 'out', qr: qrCode } });
   ok(r.status === 409, '두 번 퇴근 409', r.status);
 }
 ok(!!todayRec, '출근 기록이 직원 화면에 보임', todayRec && { recordNo: todayRec.recordNo, status: todayRec.status });
+r = await api('owner/clock-qr/poster', owner, { method: 'POST', body: {} });
+ok(r.status === 200 && /^P/.test(r.body.poster?.token ?? '') && r.body.poster.token !== posterBefore, 'POST /owner/clock-qr/poster 인쇄용 QR 새로 발급 (예전 코드 무효)', r.body);
 
 // 사장님 출퇴근 처리
 const st2 = (await api('owner/state', owner)).body.state;
