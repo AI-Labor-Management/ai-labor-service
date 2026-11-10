@@ -71,15 +71,22 @@ export async function runLawWatch(db: Db, trigger: 'cron' | 'manual'): Promise<L
   if (!lawApiConfigured()) throw new Error('LAW_API_OC 없음');
   const started = Date.now();
   const refs = lawRefs(E.allRules() as unknown as RuleLike[]);
-  const { data: prevRows, error: e0 } = await db.from('law_watch').select('key, baseline_hash, baseline_no, status, upcoming');
+  const { data: prevRows, error: e0 } = await db.from('law_watch').select('key, baseline_hash, baseline_no, status, upcoming, status_since');
   if (e0) throw e0;
   const prev = new Map<string, WatchPrev>((prevRows ?? []).map((r): [string, WatchPrev] => [r.key, r as unknown as WatchPrev]));
   const { rows, calls, errors } = await runWatch(refs, prev, drfJson, { concurrency: 4 });
   const now = new Date().toISOString();
   const fresh = newlyFlagged(rows, prev);
-  const changedStatus = new Set(rows.filter((r) => prev.get(r.key)?.status !== r.status).map((r) => r.key));
+  // 여러 행을 한 번에 upsert하면 어느 행에 없는 칸은 null로 들어간다 — status_since는 모든 행에 넣는다
+  // (상태가 바뀐 행은 지금, 아니면 전에 기록한 시각)
+  const since = new Map((prevRows ?? []).map((r): [string, string] => [r.key, r.status_since]));
   const { error: e1 } = await db.from('law_watch').upsert(
-    rows.map((r: WatchRow) => ({ ...r, upcoming: r.upcoming as unknown as Json, checked_at: now, ...(changedStatus.has(r.key) ? { status_since: now } : {}) })),
+    rows.map((r: WatchRow) => ({
+      ...r,
+      upcoming: r.upcoming as unknown as Json,
+      checked_at: now,
+      status_since: prev.get(r.key)?.status === r.status ? (since.get(r.key) ?? now) : now,
+    })),
     { onConflict: 'key' },
   );
   if (e1) throw e1;

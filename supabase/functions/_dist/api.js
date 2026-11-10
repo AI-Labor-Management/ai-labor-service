@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/api/handler.ts (npm run build:functions)
-// sha256:4cdc62624d62
+// sha256:9327eb59cb9f
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -6627,15 +6627,20 @@ async function runLawWatch(db, trigger) {
   if (!lawApiConfigured()) throw new Error("LAW_API_OC 없음");
   const started = Date.now();
   const refs = lawRefs(engine.allRules());
-  const { data: prevRows, error: e0 } = await db.from("law_watch").select("key, baseline_hash, baseline_no, status, upcoming");
+  const { data: prevRows, error: e0 } = await db.from("law_watch").select("key, baseline_hash, baseline_no, status, upcoming, status_since");
   if (e0) throw e0;
   const prev = new Map((prevRows ?? []).map((r) => [r.key, r]));
   const { rows, calls, errors } = await runWatch(refs, prev, drfJson, { concurrency: 4 });
   const now = (/* @__PURE__ */ new Date()).toISOString();
   const fresh = newlyFlagged(rows, prev);
-  const changedStatus = new Set(rows.filter((r) => prev.get(r.key)?.status !== r.status).map((r) => r.key));
+  const since = new Map((prevRows ?? []).map((r) => [r.key, r.status_since]));
   const { error: e1 } = await db.from("law_watch").upsert(
-    rows.map((r) => ({ ...r, upcoming: r.upcoming, checked_at: now, ...changedStatus.has(r.key) ? { status_since: now } : {} })),
+    rows.map((r) => ({
+      ...r,
+      upcoming: r.upcoming,
+      checked_at: now,
+      status_since: prev.get(r.key)?.status === r.status ? since.get(r.key) ?? now : now
+    })),
     { onConflict: "key" }
   );
   if (e1) throw e1;
