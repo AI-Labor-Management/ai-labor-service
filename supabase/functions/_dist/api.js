@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/api/handler.ts (npm run build:functions)
-// sha256:29004e13e61b
+// sha256:41177f9c9602
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -6587,6 +6587,31 @@ function parseHolidays(json2) {
   }
   return [...seen].sort(([a], [b]) => a.localeCompare(b)).map(([date, name]) => ({ date, name }));
 }
+var iso8 = (v) => {
+  const d = String(v ?? "");
+  return /^\d{8}$/.test(d) ? `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}` : "";
+};
+function parseRegions(json2, level) {
+  const out = [];
+  for (const it of itemsOf(json2)) {
+    const code = String(it.code ?? (level === "sido" ? it.lDongRegnCd : it.lDongSignguCd) ?? "").trim();
+    const name = String(it.name ?? (level === "sido" ? it.lDongRegnNm : it.lDongSignguNm) ?? "").trim();
+    if (!code || !name || !(level === "sido" ? /^\d{2}$/ : /^\d{3}$/).test(code)) continue;
+    if (!out.some((r) => r.code === code)) out.push({ code, name });
+  }
+  return out.sort((a, b) => a.code.localeCompare(b.code));
+}
+function parseFestivals(json2) {
+  const out = [];
+  for (const it of itemsOf(json2)) {
+    const start = iso8(it.eventstartdate);
+    const end = iso8(it.eventenddate) || start;
+    const title = String(it.title ?? "").trim();
+    if (!start || !title) continue;
+    out.push({ id: String(it.contentid ?? `${title}-${start}`), title: title.slice(0, 120), start, end, addr: [it.addr1, it.addr2].map((x) => String(x ?? "").trim()).filter(Boolean).join(" ").slice(0, 160) });
+  }
+  return out;
+}
 
 // supabase/functions/_shared/datagokr.ts
 var dataGoKrConfigured = () => !!Deno.env.get("DATA_GO_KR_KEY");
@@ -6607,6 +6632,8 @@ var keyShape = () => {
 var redact = (text2) => [rawKey(), key()].filter(Boolean).reduce((t, k) => t.replaceAll(k, "***"), text2);
 var HOLIDAY_URL = "https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo";
 var FESTIVAL_URL = "https://apis.data.go.kr/B551011/KorService2/searchFestival2";
+var LDONG_URL = "https://apis.data.go.kr/B551011/KorService2/ldongCode2";
+var TOUR = { MobileOS: "ETC", MobileApp: "saram-saemgak" };
 async function getJson(url, params) {
   const q = new URLSearchParams({ serviceKey: key(), _type: "json", ...params });
   const r = await fetch(`${url}?${q}`, { signal: AbortSignal.timeout(15e3) });
@@ -6637,8 +6664,10 @@ async function checkDataGoKr() {
     out.holidays = { error: e instanceof Error ? e.message : String(e) };
   }
   try {
-    const f = await getJson(FESTIVAL_URL, { MobileOS: "ETC", MobileApp: "saram-saemgak", eventStartDate: "20261101", areaCode: "1", numOfRows: "3", pageNo: "1", arrange: "A" });
-    out.festivals = { status: f.status, resultCode: resultCode(f.body), sample: f.text.slice(0, 900) };
+    const f = await getJson(FESTIVAL_URL, { ...TOUR, eventStartDate: "20261101", lDongRegnCd: "11", numOfRows: "3", pageNo: "1", arrange: "A" });
+    out.festivals = { status: f.status, resultCode: resultCode(f.body), parsed: parseFestivals(f.body).length, sample: f.text.slice(0, 900) };
+    const g = await getJson(LDONG_URL, { ...TOUR, numOfRows: "3", pageNo: "1", lDongRegnCd: "11" });
+    out.regions = { status: g.status, resultCode: resultCode(g.body), parsed: parseRegions(g.body, "sigungu").length, sample: g.text.slice(0, 500) };
   } catch (e) {
     out.festivals = { error: e instanceof Error ? e.message : String(e) };
   }

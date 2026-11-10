@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/public-api/handler.ts (npm run build:functions)
-// sha256:364e7b6e77a4
+// sha256:b788059a7db6
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -4599,8 +4599,8 @@ function contractKind(e, c) {
   if (e.employmentType === "fixed") return "표준근로계약서 (기간 있음)";
   return "표준근로계약서 (기간 없음)";
 }
-function recordFor(state, key) {
-  return state.docRecords.find((r) => r.key === key) ?? null;
+function recordFor(state, key2) {
+  return state.docRecords.find((r) => r.key === key2) ?? null;
 }
 function levelForDue(due, base, e) {
   if (e && e.onboarding === "existing-pending" && due < e.registeredAt) return { level: null, text: "기존 직원 — 한 번에 체크로 정리", onboarding: true };
@@ -5462,8 +5462,8 @@ var STATE_TTL_MS = 10 * 6e4;
 var b64url = (b) => btoa(String.fromCharCode(...b)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 var fromB64url = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
 async function hmac(secret, data) {
-  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(`kakao-state:${secret}`), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  return b64url(new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(data))));
+  const key2 = await crypto.subtle.importKey("raw", new TextEncoder().encode(`kakao-state:${secret}`), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return b64url(new Uint8Array(await crypto.subtle.sign("HMAC", key2, new TextEncoder().encode(data))));
 }
 async function readState(secret, state, now = Date.now()) {
   const [body, sig] = state.split(".");
@@ -5486,9 +5486,9 @@ function safeReturn(v, siteUrl) {
   }
   return `${siteUrl}/owner/deadlines`;
 }
-function withParam(url, key, value) {
+function withParam(url, key2, value) {
   const u = new URL(url);
-  u.searchParams.set(key, value);
+  u.searchParams.set(key2, value);
   return u.toString();
 }
 var hasMessageScope = (scope) => (scope ?? "").split(/[\s,]+/).includes(KAKAO_SCOPE);
@@ -5536,19 +5536,120 @@ async function connectWithCode(db, userId, code) {
 }
 
 // supabase/functions/_shared/datagokr-core.ts
+function itemsOf(json2) {
+  const body = json2?.response?.body;
+  const items = body?.items;
+  if (!items || typeof items !== "object") return [];
+  const it = items.item;
+  if (Array.isArray(it)) return it;
+  return it && typeof it === "object" ? [it] : [];
+}
+function resultCode(json2) {
+  const h = json2?.response?.header;
+  return h?.resultCode != null ? String(h.resultCode) : null;
+}
 function diffHolidays(builtIn, api, year) {
   const y = String(year);
   const a = new Set(builtIn.filter((d) => d.startsWith(y)));
   const b = new Set(api.map((h) => h.date).filter((d) => d.startsWith(y)));
   return { onlyBuiltIn: [...a].filter((d) => !b.has(d)).sort(), onlyApi: [...b].filter((d) => !a.has(d)).sort() };
 }
+var iso8 = (v) => {
+  const d = String(v ?? "");
+  return /^\d{8}$/.test(d) ? `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}` : "";
+};
+function parseRegions(json2, level) {
+  const out = [];
+  for (const it of itemsOf(json2)) {
+    const code = String(it.code ?? (level === "sido" ? it.lDongRegnCd : it.lDongSignguCd) ?? "").trim();
+    const name = String(it.name ?? (level === "sido" ? it.lDongRegnNm : it.lDongSignguNm) ?? "").trim();
+    if (!code || !name || !(level === "sido" ? /^\d{2}$/ : /^\d{3}$/).test(code)) continue;
+    if (!out.some((r) => r.code === code)) out.push({ code, name });
+  }
+  return out.sort((a, b) => a.code.localeCompare(b.code));
+}
+function parseFestivals(json2) {
+  const out = [];
+  for (const it of itemsOf(json2)) {
+    const start = iso8(it.eventstartdate);
+    const end = iso8(it.eventenddate) || start;
+    const title = String(it.title ?? "").trim();
+    if (!start || !title) continue;
+    out.push({ id: String(it.contentid ?? `${title}-${start}`), title: title.slice(0, 120), start, end, addr: [it.addr1, it.addr2].map((x) => String(x ?? "").trim()).filter(Boolean).join(" ").slice(0, 160) });
+  }
+  return out;
+}
+function eventsBetween(events, from, to) {
+  return events.filter((e) => e.start <= to && e.end >= from).sort((a, b) => a.start.localeCompare(b.start) || a.title.localeCompare(b.title));
+}
 
 // supabase/functions/_shared/datagokr.ts
+var dataGoKrConfigured = () => !!Deno.env.get("DATA_GO_KR_KEY");
+var rawKey = () => (Deno.env.get("DATA_GO_KR_KEY") ?? "").trim();
+var key = () => {
+  const k = rawKey();
+  if (!k.includes("%")) return k;
+  try {
+    return decodeURIComponent(k);
+  } catch {
+    return k;
+  }
+};
+var redact = (text) => [rawKey(), key()].filter(Boolean).reduce((t, k) => t.replaceAll(k, "***"), text);
+var FESTIVAL_URL = "https://apis.data.go.kr/B551011/KorService2/searchFestival2";
+var LDONG_URL = "https://apis.data.go.kr/B551011/KorService2/ldongCode2";
+var TOUR = { MobileOS: "ETC", MobileApp: "saram-saemgak" };
+async function getJson(url, params) {
+  const q = new URLSearchParams({ serviceKey: key(), _type: "json", ...params });
+  const r = await fetch(`${url}?${q}`, { signal: AbortSignal.timeout(15e3) });
+  const text = await r.text();
+  let body = null;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    body = null;
+  }
+  return { status: r.status, body, text: redact(text).slice(0, 1500) };
+}
 async function holidayDiff(db, years) {
   const { data } = await db.from("holidays_api").select("date, name").order("date");
   const api = data ?? [];
   const builtIn = [...engine.HOLIDAYS, ...engine.WEEKEND_HOLIDAYS].map((h) => h.date);
   return years.map((y) => ({ year: y, ...diffHolidays(builtIn, api, y) }));
+}
+var tourCache = /* @__PURE__ */ new Map();
+async function remember(key2, ttlMs, fn) {
+  const hit = tourCache.get(key2);
+  if (hit && Date.now() - hit.at < ttlMs) return hit.v;
+  const v = await fn();
+  if (tourCache.size > 500) tourCache.clear();
+  tourCache.set(key2, { at: Date.now(), v });
+  return v;
+}
+var ymd8 = (iso) => iso.replaceAll("-", "");
+var addDaysIso = (iso, n) => new Date(Date.parse(`${iso}T00:00:00Z`) + n * 864e5).toISOString().slice(0, 10);
+async function tourRegions(sido) {
+  return remember(`regions:${sido ?? ""}`, 24 * 36e5, async () => {
+    const r = await getJson(LDONG_URL, { ...TOUR, numOfRows: "100", pageNo: "1", ...sido ? { lDongRegnCd: sido } : {} });
+    if (r.status !== 200 || resultCode(r.body) !== "0000") throw new Error(`지역 목록: HTTP ${r.status} ${r.text.slice(0, 160)}`);
+    return parseRegions(r.body, sido ? "sigungu" : "sido");
+  });
+}
+async function tourEvents(sido, sigungu, from, days) {
+  const to = addDaysIso(from, days);
+  return remember(`events:${sido}:${sigungu ?? ""}:${from}:${days}`, 6 * 36e5, async () => {
+    const r = await getJson(FESTIVAL_URL, {
+      ...TOUR,
+      eventStartDate: ymd8(from),
+      lDongRegnCd: sido,
+      ...sigungu ? { lDongSignguCd: sigungu } : {},
+      numOfRows: "300",
+      pageNo: "1",
+      arrange: "A"
+    });
+    if (r.status !== 200 || resultCode(r.body) !== "0000") throw new Error(`지역 행사: HTTP ${r.status} ${r.text.slice(0, 160)}`);
+    return eventsBetween(parseFestivals(r.body), from, to);
+  });
 }
 
 // supabase/functions/public-api/handler.ts
@@ -5617,6 +5718,21 @@ async function handler(req) {
       return json(req, { source: engine.HOLIDAY_SOURCE, holidays: engine.HOLIDAYS, extra, check: url.searchParams.get("check") ? await holidayDiff(db, [year, year + 1]) : void 0 }, 200, { "Cache-Control": "public, max-age=3600" });
     }
     if (m === "GET" && path === "kakao/callback") return await kakaoCallback(url);
+    if (m === "GET" && (path === "events" || path === "events/regions")) {
+      if (!dataGoKrConfigured()) return json(req, { configured: false, regions: [], events: [] });
+      const q = url.searchParams;
+      const sido = q.get("sido");
+      if (sido !== null && !/^\d{2}$/.test(sido)) throw bad("sido는 시도 코드 2자리예요");
+      const source = "한국관광공사 TourAPI (공공누리)";
+      if (path === "events/regions") return json(req, { configured: true, source, regions: await tourRegions(sido ?? void 0) }, 200, { "Cache-Control": "public, max-age=86400" });
+      if (!sido) throw bad("sido(시도 코드)가 필요해요");
+      const sigungu = q.get("sigungu");
+      if (sigungu !== null && sigungu !== "" && !/^\d{3}$/.test(sigungu)) throw bad("sigungu는 시군구 코드 3자리예요");
+      const from = q.get("from") ?? kstToday();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(from)) throw bad("from은 YYYY-MM-DD");
+      const days = int(q.get("days") ?? "35", "days", 1, 62);
+      return json(req, { configured: true, source, from, days, events: await tourEvents(sido, sigungu || null, from, days) }, 200, { "Cache-Control": "public, max-age=3600" });
+    }
     const body = await readJson(req);
     if (m === "POST" && path === "diagnosis") return json(req, { ...engine.diagnose(body.answers ?? body), stored: false });
     if (m === "POST" && path === "precheck") return json(req, precheck(body));

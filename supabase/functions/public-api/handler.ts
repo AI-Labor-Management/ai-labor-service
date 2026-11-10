@@ -5,7 +5,7 @@ import type { AgeBand, Industry, ScaleBand } from '../_shared/domain-types.ts';
 import { kstToday, serviceClient } from '../_shared/db.ts';
 import { bad, corsHeaders, handleError, int, json, notFound, oneOf, readJson, str, subPath } from '../_shared/http.ts';
 import * as K from '../_shared/kakao.ts';
-import { holidayDiff } from '../_shared/datagokr.ts';
+import { dataGoKrConfigured, holidayDiff, tourEvents, tourRegions } from '../_shared/datagokr.ts';
 
 type Body = Record<string, unknown>;
 
@@ -79,6 +79,22 @@ export async function handler(req: Request): Promise<Response> {
       return json(req, { source: E.HOLIDAY_SOURCE, holidays: E.HOLIDAYS, extra, check: url.searchParams.get('check') ? await holidayDiff(db, [year, year + 1]) : undefined }, 200, { 'Cache-Control': 'public, max-age=3600' });
     }
     if (m === 'GET' && path === 'kakao/callback') return await kakaoCallback(url);
+    // 지역 행사 (한국관광공사 TourAPI, 공개 정보) — 사장님이 고른 지역 코드만 받는다. 지역은 사장님 브라우저에만 저장된다
+    if (m === 'GET' && (path === 'events' || path === 'events/regions')) {
+      if (!dataGoKrConfigured()) return json(req, { configured: false, regions: [], events: [] });
+      const q = url.searchParams;
+      const sido = q.get('sido');
+      if (sido !== null && !/^\d{2}$/.test(sido)) throw bad('sido는 시도 코드 2자리예요');
+      const source = '한국관광공사 TourAPI (공공누리)';
+      if (path === 'events/regions') return json(req, { configured: true, source, regions: await tourRegions(sido ?? undefined) }, 200, { 'Cache-Control': 'public, max-age=86400' });
+      if (!sido) throw bad('sido(시도 코드)가 필요해요');
+      const sigungu = q.get('sigungu');
+      if (sigungu !== null && sigungu !== '' && !/^\d{3}$/.test(sigungu)) throw bad('sigungu는 시군구 코드 3자리예요');
+      const from = q.get('from') ?? kstToday();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(from)) throw bad('from은 YYYY-MM-DD');
+      const days = int(q.get('days') ?? '35', 'days', 1, 62);
+      return json(req, { configured: true, source, from, days, events: await tourEvents(sido, sigungu || null, from, days) }, 200, { 'Cache-Control': 'public, max-age=3600' });
+    }
     const body = await readJson<Body>(req);
     if (m === 'POST' && path === 'diagnosis') return json(req, { ...E.diagnose(body.answers ?? body), stored: false });
     if (m === 'POST' && path === 'precheck') return json(req, precheck(body));

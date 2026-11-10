@@ -42,3 +42,52 @@ export function diffHolidays(builtIn: string[], api: ApiHoliday[], year: number)
   const b = new Set(api.map((h) => h.date).filter((d) => d.startsWith(y)));
   return { onlyBuiltIn: [...a].filter((d) => !b.has(d)).sort(), onlyApi: [...b].filter((d) => !a.has(d)).sort() };
 }
+
+// ───────────────────────── 한국관광공사 TourAPI (국문 관광정보 서비스_GW, KorService2) ─────────────────────────
+
+export interface TourRegion {
+  code: string; // 시도 2자리 또는 시군구 3자리 (법정동 코드)
+  name: string;
+}
+export interface TourEvent {
+  id: string;
+  title: string;
+  start: string; // YYYY-MM-DD
+  end: string;
+  addr: string;
+}
+
+const iso8 = (v: unknown) => {
+  const d = String(v ?? '');
+  return /^\d{8}$/.test(d) ? `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}` : '';
+};
+
+/** ldongCode2 응답 → 지역 목록. 응답 칸 이름이 code/name 이거나 lDong…Cd/lDong…Nm 이어도 읽는다 */
+export function parseRegions(json: unknown, level: 'sido' | 'sigungu'): TourRegion[] {
+  const out: TourRegion[] = [];
+  for (const it of itemsOf(json)) {
+    const code = String(it.code ?? (level === 'sido' ? it.lDongRegnCd : it.lDongSignguCd) ?? '').trim();
+    const name = String(it.name ?? (level === 'sido' ? it.lDongRegnNm : it.lDongSignguNm) ?? '').trim();
+    if (!code || !name || !(level === 'sido' ? /^\d{2}$/ : /^\d{3}$/).test(code)) continue;
+    if (!out.some((r) => r.code === code)) out.push({ code, name });
+  }
+  return out.sort((a, b) => a.code.localeCompare(b.code));
+}
+
+/** searchFestival2 응답 → 행사 목록 (제목·기간·주소만 — 사진은 이용 조건이 따로 있어 쓰지 않는다) */
+export function parseFestivals(json: unknown): TourEvent[] {
+  const out: TourEvent[] = [];
+  for (const it of itemsOf(json)) {
+    const start = iso8(it.eventstartdate);
+    const end = iso8(it.eventenddate) || start;
+    const title = String(it.title ?? '').trim();
+    if (!start || !title) continue;
+    out.push({ id: String(it.contentid ?? `${title}-${start}`), title: title.slice(0, 120), start, end, addr: [it.addr1, it.addr2].map((x) => String(x ?? '').trim()).filter(Boolean).join(' ').slice(0, 160) });
+  }
+  return out;
+}
+
+/** 기간 [from, to] 와 겹치는 행사만, 시작일 순 */
+export function eventsBetween(events: TourEvent[], from: string, to: string): TourEvent[] {
+  return events.filter((e) => e.start <= to && e.end >= from).sort((a, b) => a.start.localeCompare(b.start) || a.title.localeCompare(b.title));
+}

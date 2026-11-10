@@ -131,6 +131,8 @@ Postgres
 | GET | `health` | 상태 + 규칙 파일 정보(44개) |
 | GET | `rules?date=` | 규칙 원본, 또는 기준일의 값 |
 | GET | `faq`, `checklist-items`, `holidays` | 정적 데이터 |
+| GET | `events/regions[?sido=11]` | 지역 행사 — 시도 목록 또는 그 시도의 시군구 목록 (한국관광공사 ldongCode2, 24시간 기억) |
+| GET | `events?sido=26&sigungu=500&from=YYYY-MM-DD&days=35` | 지역 행사 — 그 기간에 열리는(진행 중 포함) 축제·행사, 제목·기간·주소만 (6시간 기억, 지역은 저장하지 않음) |
 | POST | `diagnosis` | 7문항 자가진단 (저장 안 함) |
 | POST | `precheck` `{hourlyWage, schedule[7], scale?, industry?, ageBand?, contractTerm?, isForeign?}` | 채용 전 점검: 주휴·월 예상·4대보험 (저장 안 함) |
 | POST | `guest-consult` `{nickname, phone, contactTime, topic?, summary?, consentCollect, consentProvide}` | 비회원 상담. `guest_consult_intake`가 꺼져 있으면 저장하지 않고 `{mode:"demo"}` |
