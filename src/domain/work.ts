@@ -217,15 +217,20 @@ export function workedSegment(state: AppState, e: Employee, date: ISODate): { se
   return { seg: null, pending: false, plan };
 }
 
-/** 예정보다 일찍 출근/늦게 퇴근, 퇴근 누락, 반경 밖 → 확인 대기로 분류 */
+/**
+ * 예정보다 일찍 출근/늦게 퇴근, 퇴근 누락, 현장 확인 안 됨 → 확인 대기로 분류.
+ * gps는 '현장 확인' 결과 — how 'qr'(가게 QR, 2026-11-10부터)이면 outside = QR 확인 없이 기록, 'gps'(예전 가상 위치)면 반경 밖.
+ */
 export function classifyClock(
   plan: DayPlan,
   clockIn: HHMM | null,
   clockOut: HHMM | null,
   toleranceMin: number,
   gps: AttendanceRecord['gps'],
+  how: 'qr' | 'gps' = 'gps',
 ): { status: AttendanceRecord['status']; reason: string } {
-  if (gps === 'outside' || gps === 'denied') return { status: 'exception', reason: gps === 'outside' ? '반경 밖 기록' : '위치 확인 거부 — 수동 기록' };
+  if (gps === 'outside' || gps === 'denied')
+    return { status: 'exception', reason: how === 'qr' ? 'QR 확인 없이 기록' : gps === 'outside' ? '반경 밖 기록' : '위치 확인 거부 — 수동 기록' };
   if (!clockIn) return { status: 'exception', reason: '출근 기록 없음' };
   if (!clockOut) return { status: 'pending', reason: '퇴근 기록 전' };
   if (!plan.shift) return { status: 'pending', reason: '예정에 없는 근무' };

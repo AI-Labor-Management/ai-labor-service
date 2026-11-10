@@ -120,7 +120,9 @@ Postgres
 | POST | `owner/consult` `{topic, question, shareItems[], employeeIds[], consent:true}` | 노무법인에 보내기(고른 항목만 스냅샷). 질문에 전화번호·주민번호 등이 있으면 거절 |
 | GET | `employee/me?employeeId=` | 직원 본인 화면 데이터(일정·근로조건·출퇴근·명세서·연차·대타·알림). 다른 직원 정보 없음 |
 | GET | `employee/state?employeeId=` | 서버 모드 직원 화면용 `AppState` — 본인 데이터만, 다른 직원은 대타 요청에 보이는 별칭만. 서류·보험·상담은 비움 |
-| POST | `employee/clock` `{kind: in\|out, gps?: inside\|outside}` | 출퇴근. **시각은 서버(KST)** — `client_clock_time_allowed`가 켜져야 `time`을 받음. 위치 판정은 지금 기기 값(가상) |
+| POST | `employee/clock` `{kind: in\|out, qr?: 코드}` | 출퇴근. **시각은 서버(KST)** — `client_clock_time_allowed`가 켜져야 `time`을 받음. **가게 QR**(2026-11-10부터): 직원이 찍어 온 코드(화면 QR 5분 안·지금 유효한 인쇄 QR)를 서버가 확인하면 `source qr`·`gps inside`로 바로 판정, 없거나 틀리면 `manual`·`outside` → 사장님 확인. 위치(좌표·반경)는 받지 않음 — 예전 `gps` 값은 무시 |
+| GET | `owner/clock-qr` | 사장님 · 지금 화면 QR 코드(30초마다 바뀜)·주소, 인쇄용 코드. 비밀 값(`clock_qr_keys.secret`)은 내보내지 않음 |
+| POST | `owner/clock-qr/poster` | 사장님 · 인쇄용 QR 새로 발급 (예전 인쇄물 무효) |
 
 ## 6. Edge Function `public-api` (로그인 없음)
 

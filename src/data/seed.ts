@@ -1,4 +1,4 @@
-// 가상 시드 데이터 — 실제 사업장·인물과 무관. "카페 샘터"는 기획 시안에서 쓴 시연용 가상 가게 이름이다.
+// 가상 시드 데이터 — 실제 사업장·인물과 무관. "카페 샘터"는 시연용 가상 가게 이름이며 노무법인 샘터와 관계가 없다.
 // 기준일(base)에 맞춰 날짜를 상대적으로 만들어, 언제 실행해도 시연 흐름(위험·임박·확인 필요)이 보이게 한다.
 import { addDays, addMonths, listDates, weekday, fromParts } from '../domain/dates';
 import { payrollPeriodFor, draftLines } from '../domain/payroll';
@@ -137,7 +137,7 @@ export function createSeed(base: ISODate): AppState {
   }
   s.overrides = ovs;
 
-  // A의 GPS 출퇴근 기록 (가상 위치)
+  // A의 출퇴근 기록 (가게 QR로 확인)
   let seq = 0;
   const recent = listDates(addDays(base, -16), addDays(base, -1)).filter((d) => [0, 1, 3, 4].includes(weekday(d)));
   recent.forEach((d, i) => {
@@ -152,7 +152,7 @@ export function createSeed(base: ISODate): AppState {
       employeeId: A.id,
       date: d,
       original: { clockIn, clockOut },
-      source: 'gps-demo',
+      source: 'qr',
       gps: 'inside',
       status: last ? 'pending' : 'confirmed',
       approval: null,

@@ -128,7 +128,7 @@ export interface AttendanceRecord {
   date: ISODate;
   /** 원래 기록 — 절대 덮어쓰지 않는다 */
   original: { clockIn: HHMM | null; clockOut: HHMM | null };
-  source: 'gps-demo' | 'manual' | 'owner';
+  source: 'gps-demo' | 'manual' | 'owner' | 'qr'; // qr = 가게 QR 확인 (2026-11-10부터)
   gps: 'inside' | 'outside' | 'denied' | null;
   status: AttendanceStatus;
   /** 사장님 판단: 예정보다 일찍/늦게 기록된 시간을 근무로 인정할지 */

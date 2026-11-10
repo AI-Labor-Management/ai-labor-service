@@ -14,6 +14,7 @@ import { buildCorpus } from './ai-ground.ts';
 import * as K from '../_shared/kakao.ts';
 import { checkDataGoKr, ensureHolidays } from '../_shared/datagokr.ts';
 import { checkLawApi, lastLawWatchAt, lawApiConfigured, runLawWatch } from '../_shared/lawapi.ts';
+import { ownerClockQr, reissuePoster, verifyClockQr } from '../_shared/clockqr.ts';
 
 type Body = Record<string, unknown>;
 type User = { id: string; email: string | null; token: string };
@@ -550,10 +551,16 @@ async function ownerRoutes(req: Request, db: Db, user: User, path: string, body:
         return json(req, { base: date, ...E.evaluateRisk(state, date) });
       case 'foreign':
         return json(req, { base: date, employees: state.employees.filter((e) => e.isForeign).map((e) => ({ employeeId: e.id, alias: e.alias, signal: E.foreignSignal(state, e, date) })) });
+      case 'clock-qr':
+        // 가게 QR 출퇴근 — 지금 화면 QR 코드(30초마다 바뀜)와 인쇄용 코드
+        return json(req, await ownerClockQr(db, wp.id));
     }
   }
   if (m === 'POST') {
     switch (path) {
+      case 'clock-qr/poster':
+        // 인쇄용 QR 새로 발급 — 예전 인쇄물은 그때부터 통하지 않는다
+        return json(req, await reissuePoster(db, wp.id));
       case 'payroll/confirm':
         return json(req, await confirmPayroll(db, ctx, body));
       case 'payroll/edit':
@@ -688,9 +695,10 @@ function employeeState(state: AppState, e: Employee): AppState {
 async function clock(db: Db, ctx: Awaited<ReturnType<typeof employeeCtx>>, body: Body) {
   const { wp, state, e, base } = ctx;
   const kind = oneOf(body.kind, 'kind', ['in', 'out'] as const);
-  const consent = !!e.locationConsent && !e.locationConsent.revokedAt;
-  // 실제 좌표 판정은 카카오맵 연결 후. 지금은 기기에서 판정한 결과(가상 위치)만 받는다
-  const gps = consent ? oneOf(body.gps ?? 'inside', 'gps', ['inside', 'outside'] as const) : ('denied' as const);
+  // 가게 QR(화면 QR 5분 안 또는 지금 유효한 인쇄 QR)을 찍고 왔으면 '가게에서 확인', 없거나 틀리면 사장님 확인으로 넘긴다.
+  // 위치(좌표·반경)는 받지 않는다 — 예전 가상 위치(gps 값)를 보내도 쓰지 않는다 (2026-11-10 QR 출퇴근으로 바꿈)
+  const qr = await verifyClockQr(db, wp.id, body.qr);
+  const gps = qr ? ('inside' as const) : ('outside' as const);
   const allowClientTime = (await must(db.from('app_settings').select('value').eq('key', 'client_clock_time_allowed')))[0]?.value === true;
   const time = body.time !== undefined && allowClientTime ? hhmm(body.time, 'time') : kstNowHHMM();
   const plan = E.dayPlan(state, e, base);
@@ -700,18 +708,18 @@ async function clock(db: Db, ctx: Awaited<ReturnType<typeof employeeCtx>>, body:
     if (existing) throw conflict('오늘 출근 기록이 이미 있어요');
     const { data: recordNo, error } = await db.rpc('next_record_no', { p_workplace_id: wp.id, p_date: base });
     if (error) throw error;
-    const cls = gps === 'inside' ? { status: 'pending' as const, reason: '퇴근 기록 전' } : E.classifyClock(plan, time, null, tolerance, gps);
-    const rec = await must(db.from('attendance_records').insert({ workplace_id: wp.id, employee_id: e.id, record_no: recordNo as string, date: base, original_clock_in: time, source: consent ? 'gps-demo' : 'manual', gps, status: cls.status, reason: cls.reason }).select('*').single());
+    const cls = gps === 'inside' ? { status: 'pending' as const, reason: '퇴근 기록 전' } : E.classifyClock(plan, time, null, tolerance, gps, 'qr');
+    const rec = await must(db.from('attendance_records').insert({ workplace_id: wp.id, employee_id: e.id, record_no: recordNo as string, date: base, original_clock_in: time, source: qr ? 'qr' : 'manual', gps, status: cls.status, reason: cls.reason }).select('*').single());
     if (cls.status === 'exception') await pushNotification(db, { workplace_id: wp.id, recipient: 'owner', kind: 'attendance', text: `${e.alias} ${fmtMD(base)} 출근 확인 요청 · ${cls.reason}`, link: `/owner/work?tab=attendance&record=${rec.id}` });
-    return { receipt: { recordNo: rec.record_no, kind: '출근', time, gps, status: rec.status, reason: rec.reason, virtualLocation: consent } };
+    return { receipt: { recordNo: rec.record_no, kind: '출근', time, gps, qr, status: rec.status, reason: rec.reason } };
   }
   if (!existing || !existing.original.clockIn) throw bad('출근 기록이 없어요');
   if (existing.original.clockOut) throw conflict('이미 퇴근 기록이 있어요');
   const g = existing.gps === 'inside' && gps === 'inside' ? 'inside' : existing.gps === 'denied' || gps === 'denied' ? 'denied' : 'outside';
-  const cls = E.classifyClock(plan, existing.original.clockIn, time, tolerance, g);
+  const cls = E.classifyClock(plan, existing.original.clockIn, time, tolerance, g, 'qr');
   await must(db.from('attendance_records').update({ original_clock_out: time, gps: g, status: cls.status, reason: cls.reason, confirmed_at: cls.status === 'confirmed' ? new Date().toISOString() : null }).eq('id', existing.id));
   if (cls.status !== 'confirmed') await pushNotification(db, { workplace_id: wp.id, recipient: 'owner', kind: 'attendance', text: `${e.alias} ${fmtMD(base)} 출퇴근 확인 요청 · ${cls.reason}`, link: `/owner/work?tab=attendance&record=${existing.id}` });
-  return { receipt: { recordNo: existing.recordNo, kind: '퇴근', time, gps: g, status: cls.status, reason: cls.status === 'confirmed' ? cls.reason : `${cls.reason} — 사장님 확인 대기`, virtualLocation: consent } };
+  return { receipt: { recordNo: existing.recordNo, kind: '퇴근', time, gps: g, status: cls.status, reason: cls.status === 'confirmed' ? cls.reason : `${cls.reason} — 사장님 확인 대기`, qr } };
 }
 
 async function employeeRoutes(req: Request, db: Db, user: User, path: string, body: Body, url: URL): Promise<Response> {
