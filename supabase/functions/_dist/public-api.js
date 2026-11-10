@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/public-api/handler.ts (npm run build:functions)
-// sha256:b788059a7db6
+// sha256:87de805e87fe
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -5345,6 +5345,9 @@ var engine = domain_exports;
 
 // supabase/functions/_shared/http.ts
 var ALLOWED_ORIGINS = /* @__PURE__ */ new Set([
+  // 사람샘각 공개 사이트 (2026-11-10~, GitHub Pages + 자체 도메인)
+  "https://saram.dreamhelixion.com",
+  // 예전 사람샘각 주소(새 주소로 넘어감)와 이 저장소의 체험 사이트
   "https://ai-labor-management.github.io",
   // 사람샘각 공개 사이트 (AI-Labor-Management/saram-saemgak, OpenAI Sites)
   "https://ai-labor-service-draft-sj.gold89765.chatgpt.site",
@@ -5457,7 +5460,7 @@ function kstToday() {
 // supabase/functions/_shared/kakao-core.ts
 var KAKAO_SCOPE = "talk_message";
 var KAKAO_POLICY_FROM = "2026-11-08";
-var RETURN_ORIGINS = ["https://ai-labor-management.github.io", "http://localhost:5173", "http://localhost:4173", "http://localhost:4175"];
+var RETURN_ORIGINS = ["https://saram.dreamhelixion.com", "https://ai-labor-management.github.io", "http://localhost:5173", "http://localhost:4173", "http://localhost:4175"];
 var STATE_TTL_MS = 10 * 6e4;
 var b64url = (b) => btoa(String.fromCharCode(...b)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 var fromB64url = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
@@ -5495,7 +5498,7 @@ var hasMessageScope = (scope) => (scope ?? "").split(/[\s,]+/).includes(KAKAO_SC
 var tokenErrorCode = (error) => error === "invalid_grant" ? "TOKEN_EXPIRED" : "TOKEN_FAILED";
 
 // supabase/functions/_shared/kakao.ts
-var SITE_URL = (Deno.env.get("SITE_URL") ?? "https://ai-labor-management.github.io/saram-saemgak-site").replace(/\/$/, "");
+var SITE_URL = (Deno.env.get("SITE_URL") ?? "https://saram.dreamhelixion.com").replace(/\/$/, "");
 var AUTH_HOST = "https://kauth.kakao.com";
 function keys() {
   return { restKey: Deno.env.get("KAKAO_REST_KEY") ?? "", secret: Deno.env.get("KAKAO_CLIENT_SECRET") ?? "" };

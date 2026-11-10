@@ -13,7 +13,7 @@ import {
 } from '../../supabase/functions/_shared/kakao-core';
 
 const SECRET = 'test-secret';
-const SITE = 'https://ai-labor-management.github.io/saram-saemgak-site';
+const SITE = 'https://saram.dreamhelixion.com';
 const BACK = `${SITE}/owner/deadlines`;
 
 describe('카카오 state', () => {

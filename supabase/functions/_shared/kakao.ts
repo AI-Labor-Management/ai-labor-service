@@ -11,7 +11,8 @@ import * as C from './kakao-core.ts';
 export { KAKAO_POLICY_FROM, KAKAO_SCOPE, withParam } from './kakao-core.ts';
 
 /** 알림 버튼이 여는 사이트 (카카오 앱 '플랫폼 → Web 사이트 도메인'에 등록돼 있어야 열린다) */
-export const SITE_URL = (Deno.env.get('SITE_URL') ?? 'https://ai-labor-management.github.io/saram-saemgak-site').replace(/\/$/, '');
+// 사람샘각 공개 사이트 — 카카오 알림 버튼, 출퇴근 QR 주소가 이 주소를 쓴다 (2026-11-10 자체 도메인으로)
+export const SITE_URL = (Deno.env.get('SITE_URL') ?? 'https://saram.dreamhelixion.com').replace(/\/$/, '');
 const AUTH_HOST = 'https://kauth.kakao.com';
 const API_HOST = 'https://kapi.kakao.com';
 
