@@ -4,7 +4,7 @@
 // 키 값은 응답·로그에 넣지 않는다. 응답 해석은 datagokr-core.ts(순수, 시험 있음).
 import type { Db } from './db.ts';
 import { engine as E } from './engine.ts';
-import { type ApiHoliday, diffHolidays, parseHolidays, resultCode } from './datagokr-core.ts';
+import { type ApiHoliday, diffHolidays, eventsBetween, parseFestivals, parseHolidays, parseRegions, resultCode, type TourEvent, type TourRegion } from './datagokr-core.ts';
 
 export const dataGoKrConfigured = () => !!Deno.env.get('DATA_GO_KR_KEY');
 const rawKey = () => (Deno.env.get('DATA_GO_KR_KEY') ?? '').trim();
@@ -28,6 +28,8 @@ const redact = (text: string) => [rawKey(), key()].filter(Boolean).reduce((t, k)
 
 const HOLIDAY_URL = 'https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo';
 const FESTIVAL_URL = 'https://apis.data.go.kr/B551011/KorService2/searchFestival2';
+const LDONG_URL = 'https://apis.data.go.kr/B551011/KorService2/ldongCode2';
+const TOUR = { MobileOS: 'ETC', MobileApp: 'saram-saemgak' };
 
 async function getJson(url: string, params: Record<string, string>): Promise<{ status: number; body: unknown; text: string }> {
   const q = new URLSearchParams({ serviceKey: key(), _type: 'json', ...params });
@@ -87,6 +89,46 @@ export async function holidayDiff(db: Db, years: number[]) {
   return years.map((y) => ({ year: y, ...diffHolidays(builtIn, api, y) }));
 }
 
+// ───────── 지역 행사 (한국관광공사 TourAPI) — 공개 정보라 로그인 없이 public-api가 내준다. 함수 인스턴스마다 잠시 기억해 호출을 아낀다
+const tourCache = new Map<string, { at: number; v: unknown }>();
+async function remember<T>(key: string, ttlMs: number, fn: () => Promise<T>): Promise<T> {
+  const hit = tourCache.get(key);
+  if (hit && Date.now() - hit.at < ttlMs) return hit.v as T;
+  const v = await fn();
+  if (tourCache.size > 500) tourCache.clear();
+  tourCache.set(key, { at: Date.now(), v });
+  return v;
+}
+const ymd8 = (iso: string) => iso.replaceAll('-', '');
+const addDaysIso = (iso: string, n: number) => new Date(Date.parse(`${iso}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+
+/** 시도 목록(sido 없이) 또는 그 시도의 시군구 목록 */
+export async function tourRegions(sido?: string): Promise<TourRegion[]> {
+  return remember(`regions:${sido ?? ''}`, 24 * 3_600_000, async () => {
+    const r = await getJson(LDONG_URL, { ...TOUR, numOfRows: '100', pageNo: '1', ...(sido ? { lDongRegnCd: sido } : {}) });
+    if (r.status !== 200 || resultCode(r.body) !== '0000') throw new Error(`지역 목록: HTTP ${r.status} ${r.text.slice(0, 160)}`);
+    return parseRegions(r.body, sido ? 'sigungu' : 'sido');
+  });
+}
+
+/** 그 지역에서 [from, from+days] 동안 열리는 축제·행사. 이미 시작해 진행 중인 행사도 넣으려고 90일 앞부터 찾아 기간으로 거른다 */
+export async function tourEvents(sido: string, sigungu: string | null, from: string, days: number): Promise<TourEvent[]> {
+  const to = addDaysIso(from, days);
+  return remember(`events:${sido}:${sigungu ?? ''}:${from}:${days}`, 6 * 3_600_000, async () => {
+    const r = await getJson(FESTIVAL_URL, {
+      ...TOUR,
+      eventStartDate: ymd8(addDaysIso(from, -90)),
+      lDongRegnCd: sido,
+      ...(sigungu ? { lDongSignguCd: sigungu } : {}),
+      numOfRows: '300',
+      pageNo: '1',
+      arrange: 'A',
+    });
+    if (r.status !== 200 || resultCode(r.body) !== '0000') throw new Error(`지역 행사: HTTP ${r.status} ${r.text.slice(0, 160)}`);
+    return eventsBetween(parseFestivals(r.body), from, to);
+  });
+}
+
 /** 진단 — 두 API의 실제 응답 앞부분 (health?check=datagokr). 사용자 정보는 보내지 않는다 */
 export async function checkDataGoKr() {
   if (!dataGoKrConfigured()) return { ok: false, detail: 'DATA_GO_KR_KEY 없음' };
@@ -98,8 +140,10 @@ export async function checkDataGoKr() {
     out.holidays = { error: e instanceof Error ? e.message : String(e) };
   }
   try {
-    const f = await getJson(FESTIVAL_URL, { MobileOS: 'ETC', MobileApp: 'saram-saemgak', eventStartDate: '20261101', areaCode: '1', numOfRows: '3', pageNo: '1', arrange: 'A' });
-    out.festivals = { status: f.status, resultCode: resultCode(f.body), sample: f.text.slice(0, 900) };
+    const f = await getJson(FESTIVAL_URL, { ...TOUR, eventStartDate: '20261101', lDongRegnCd: '11', numOfRows: '3', pageNo: '1', arrange: 'A' });
+    out.festivals = { status: f.status, resultCode: resultCode(f.body), parsed: parseFestivals(f.body).length, sample: f.text.slice(0, 900) };
+    const g = await getJson(LDONG_URL, { ...TOUR, numOfRows: '3', pageNo: '1', lDongRegnCd: '11' });
+    out.regions = { status: g.status, resultCode: resultCode(g.body), parsed: parseRegions(g.body, 'sigungu').length, sample: g.text.slice(0, 500) };
   } catch (e) {
     out.festivals = { error: e instanceof Error ? e.message : String(e) };
   }
