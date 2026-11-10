@@ -230,7 +230,7 @@ export function computeChecklist(state: AppState, base: ISODate): ChecklistRow[]
       const f3 = applyRecord(mk(itm('F3'), { key: `F3:${e.id}`, employeeId: e.id, alias: e.alias }));
       if (f3.status === 'todo') {
         f3.level = 'check';
-        f3.levelText = '대상·기한 원문 확인 전';
+        f3.levelText = '대상·기한 전문가 확인 필요';
       }
       rows.push(f3);
       if (f.visa === 'E-9') {
@@ -305,3 +305,4 @@ export function recentPayMonths(state: AppState, base: ISODate): { month: string
 }
 
 export const CHECKLIST_DEFS = CHECKLIST_ITEMS;
+

@@ -14,9 +14,9 @@ export interface Holiday {
 }
 
 export const HOLIDAY_SOURCE = {
-  label: '앱 내장 목록 (특일정보 API 연결 전)',
+  label: '정부 발표 대조 목록 + 이후 연도 자동 갱신',
   status: 'checked' as const,
-  note: '2026·2027년은 우주항공청 월력요항과 공휴일 규정 개정(노동절·제헌절)에 맞춰 확인했어요(2026-11-07). 2028년부터는 API 연결이나 목록 추가가 필요해요.',
+  note: '2026·2027년은 정부 발표와 대조했고, 이후 연도는 자동으로 받아 와요.',
 };
 
 export const HOLIDAYS: Holiday[] = [

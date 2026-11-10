@@ -301,7 +301,7 @@ export function weekWarnings(
   }
   if (e.isForeign && e.foreign && (e.foreign.visa === 'D-2' || e.foreign.visa === 'D-4')) {
     const permit = e.foreign.permitHours;
-    if (permit == null) out.push({ level: 'check', text: '유학생 허가시간이 입력되지 않았어요 (허가 시간 기준은 원문 미확인)', basis: [] });
+    if (permit == null) out.push({ level: 'check', text: '유학생 허가시간이 입력되지 않았어요 (허가서에 적힌 주당 시간을 입력해 주세요)', basis: [] });
     else if (hours + (e.foreign.otherWorkplaceHours || 0) > permit) out.push({ level: 'risk', text: `허가시간 초과: 이번 주 ${hours.toFixed(1)}h + 다른 사업장 ${e.foreign.otherWorkplaceHours}h > 허가 ${permit}h`, basis: [] });
   }
   if (!isUnder5(scale)) {

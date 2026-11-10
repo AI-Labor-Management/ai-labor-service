@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkMinimumWage, computePayrollLine, dailyWorkerIncomeTax, monthlyHours, quickWage, weeklyHolidayHours } from '../src/domain/wage';
+import { checkMinimumWage, computePayrollLine, dailyWorkerIncomeTax, localIncomeTax, monthlyHours, quickWage, RESIGN_WEEK_FLAG, weeklyHolidayHours } from '../src/domain/wage';
 import { draftLines, payrollLines, payrollPeriodFor } from '../src/domain/payroll';
 import { addEmployee, makeState, S, SCHED_18H, SCHED_40H } from './helpers';
 
@@ -137,13 +137,24 @@ describe('월 급여 계산', () => {
     expect(draftLines(s, '2026-10')[0].gross).not.toBe(before);
   });
 
-  it('퇴사하는 주의 주휴는 자동 포함하지 않고 확인 필요(C2)', () => {
+  it('퇴사하는 주의 주휴는 자동 포함하지 않고 확인 필요', () => {
     const s = makeState('1-4');
     const e = addEmployee(s, { id: 'r', hireDate: '2026-09-01', resignDate: '2026-10-21' }, { hourlyWage: 10320, schedule: SCHED_18H });
     const line = computePayrollLine({ state: s, employee: e, from: '2026-10-01', to: '2026-10-31', payDate: '2026-11-10', scale: '1-4' });
     const row = line.weeklyHolidayDetail.find((r) => r.weekStart === '2026-10-19')!;
     expect(row.included).toBe(false);
-    expect(line.warnings.some((w) => w.text.includes('C2'))).toBe(true);
+    expect(row.flags).toContain(RESIGN_WEEK_FLAG);
+    expect(line.warnings.some((w) => w.level === 'check' && w.text.startsWith('퇴사하는 주의 주휴수당'))).toBe(true);
+    // 내부 확인 코드는 화면 문구에 나오지 않는다
+    const texts = [...line.warnings.map((w) => w.text), ...line.weeklyHolidayDetail.flatMap((r) => r.flags)].join('\n');
+    expect(texts).not.toMatch(/\bC\d|노무사 확인/);
+  });
+
+  it('퇴사하지 않은 직원에게는 퇴사 주 경고가 없다', () => {
+    const s = makeState('1-4');
+    const e = addEmployee(s, { id: 'a', hireDate: '2026-09-01' }, { hourlyWage: 10320, schedule: SCHED_18H });
+    const line = computePayrollLine({ state: s, employee: e, from: '2026-10-01', to: '2026-10-31', payDate: '2026-11-10', scale: '1-4' });
+    expect(line.warnings.some((w) => w.text.startsWith('퇴사하는 주의 주휴수당'))).toBe(false);
   });
 
   it('지급일: 전월분 매달 10일, 말일 보정', () => {
@@ -161,3 +172,57 @@ describe('월 급여 계산', () => {
     expect(q2.breakIssues[0]).toContain('최소 30분');
   });
 });
+
+describe('지방소득세 (지방세법 제103조의13: 소득세의 10%, 10원 미만 절사)', () => {
+  const lineWith = (manual: { incomeTax: number | null; localTax: number | null }, opts: { employmentType?: 'regular' | 'daily'; hourlyWage?: number } = {}) => {
+    const s = makeState('1-4');
+    const e = addEmployee(s, { id: 'a', hireDate: '2026-10-01', employmentType: opts.employmentType ?? 'regular' }, { hourlyWage: opts.hourlyWage ?? 10320, schedule: SCHED_18H });
+    return computePayrollLine({ state: s, employee: e, from: '2026-10-01', to: '2026-10-31', payDate: '2026-11-10', scale: '1-4', manual: { employeeId: 'a', adjustments: [], ...manual } });
+  };
+  const ded = (line: ReturnType<typeof computePayrollLine>, code: string) => line.deductions.find((d) => d.code === code)!;
+
+  it('소득세 × 10% 후 10원 미만 절사', () => {
+    expect(localIncomeTax(12345)).toBe(1230);
+    expect(localIncomeTax(1350)).toBe(130);
+    expect(localIncomeTax(1300)).toBe(130);
+    expect(localIncomeTax(14580)).toBe(1450);
+    expect(localIncomeTax(99)).toBe(0);
+    expect(localIncomeTax(0)).toBe(0);
+    expect(localIncomeTax(-500)).toBe(0);
+  });
+
+  it('소득세를 입력하면 지방소득세를 자동으로 계산해 공제에 넣는다', () => {
+    const line = lineWith({ incomeTax: 12345, localTax: null });
+    const lt = ded(line, 'localTax');
+    expect(lt.amount).toBe(1230);
+    expect(lt.source).toBe('estimate');
+    expect(lt.note).toBe('소득세의 10%예요 (지방세법 제103조의13)');
+    expect(line.deductionTotal).toBe(line.deductions.reduce((a, d) => a + (d.amount ?? 0), 0));
+    expect(line.net).toBe(line.gross - line.deductionTotal);
+  });
+
+  it('사장님이 지방소득세를 직접 넣으면 그 값이 우선', () => {
+    const lt = ded(lineWith({ incomeTax: 12345, localTax: 1000 }), 'localTax');
+    expect(lt.amount).toBe(1000);
+    expect(lt.source).toBe('manual');
+  });
+
+  it('소득세가 없으면 미정으로 두고 입력을 안내한다', () => {
+    const line = lineWith({ incomeTax: null, localTax: null });
+    const lt = ded(line, 'localTax');
+    expect(lt.amount).toBeNull();
+    expect(lt.source).toBe('missing');
+    expect(lt.note).toBe('소득세를 입력하면 자동으로 계산해요');
+    expect(line.netComplete).toBe(false);
+  });
+
+  it('일용직은 일용 소득세 공식으로 나온 소득세의 10%', () => {
+    // 하루 4.5시간 × 40,000원 = 180,000원 → 소득세 810원/일, 10월 18일
+    const line = lineWith({ incomeTax: null, localTax: null }, { employmentType: 'daily', hourlyWage: 40000 });
+    const it = ded(line, 'incomeTax');
+    expect(it.source).toBe('dailyFormula');
+    expect(it.amount).toBe(810 * 18);
+    expect(ded(line, 'localTax').amount).toBe(1450);
+  });
+});
+

@@ -105,7 +105,7 @@ export function computeDeadlines(state: AppState, base: ISODate): Deadline[] {
       if (e.employmentType === 'fixed' && e.contractEnd)
         raws.push({ key: `contractEnd:${e.id}:${e.contractEnd}`, type: 'contractEnd', title: `${e.alias} 계약 만료`, employee: e, date: e.contractEnd, origin: `계약 종료일 ${e.contractEnd}`, link: empLink, basis: '직원 등록값 · 기간제법 제17조', actions: ['renewed', 'ended', 'unknown'] });
       if (e.isForeign && e.foreign?.expiry)
-        raws.push({ key: `visaExpiry:${e.id}:${e.foreign.expiry}`, type: 'visaExpiry', title: `${e.alias} 체류기간 만료`, employee: e, date: e.foreign.expiry, origin: `체류기간 만료일 ${e.foreign.expiry}`, link: empLink, basis: '외국인 정보 (출입국관리법 원문 확인 전)', actions: ['done'] });
+        raws.push({ key: `visaExpiry:${e.id}:${e.foreign.expiry}`, type: 'visaExpiry', title: `${e.alias} 체류기간 만료`, employee: e, date: e.foreign.expiry, origin: `체류기간 만료일 ${e.foreign.expiry}`, link: empLink, basis: '외국인 정보 (출입국관리법 · 전문가 확인 권장)', actions: ['done'] });
       const hc = state.docRecords.find((r) => r.key === `E5:${e.id}` && (r.status === 'done' || r.status === 'stored'));
       if (hc?.expiry) {
         raws.push({ key: `healthCert:${e.id}:${hc.expiry}`, type: 'healthCert', title: `${e.alias} 보건증 재검진`, employee: e, date: hc.expiry, origin: `보건증 유효기간 ${hc.expiry}`, link: `/owner/documents?item=E5&emp=${e.id}`, basis: '건강진단규칙 제2조', ruleIds: ['healthCertificate'], actions: ['done'], showFrom: addDays(hc.expiry, -30) });
@@ -222,3 +222,4 @@ export function computeDeadlines(state: AppState, base: ISODate): Deadline[] {
 export function handleDeadline(actions: DeadlineAction[], key: string, action: DeadlineAction['action'], date: ISODate, note = ''): DeadlineAction[] {
   return [...actions.filter((a) => a.key !== key), { key, action, at: new Date().toISOString(), date, note }];
 }
+

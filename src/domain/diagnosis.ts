@@ -35,8 +35,8 @@ export function diagnose(a: DiagAnswers): { items: DiagItem[]; showGuestConsult:
   if (a.weeklyHoliday === 'unknown') items.push({ level: 'check', title: '주휴수당 대상인지 확인이 필요해요', basis: '근로기준법 제18조③', join: '→ 가입하면 4주 평균 주 15시간 기준으로 자동 판단해요' });
   if (a.insurance === 'notYet') items.push({ level: 'risk', title: '4대보험을 아직 처리하지 않았어요', basis: '건강보험 14일 이내, 연금·고용·산재 다음 달 15일까지 신고', join: '→ 가입하면 직원별 신고 기한을 날짜로 알려줘요' });
   if (a.insurance === 'unknown') items.push({ level: 'check', title: '4대보험 처리 상태를 확인해 주세요', basis: '국민건강보험법 제8조② 등', join: '→ 가입하면 처리 방식(직접·맡김·이미 처리)을 직원별로 관리해요' });
-  if (a.concern === 'dismiss') items.push({ level: 'risk', title: '퇴사·내보내기 고민 — 전문가 확인을 권해요', basis: '근로기준법 제26조(해고 예고), 제27조(5명 이상 서면 통지)', join: '→ 가입하면 퇴사 처리 마법사와 노무사 연결을 쓸 수 있어요' });
-  if (a.kinds.includes('foreign') || a.concern === 'foreign') items.push({ level: 'check', title: '외국인·유학생 직원은 체류자격과 허가 시간 확인이 필요해요', basis: '출입국관리법 (원문 확인 전)', join: '→ 가입하면 체류기간 만료와 허가시간 초과를 미리 알려줘요' });
+  if (a.concern === 'dismiss') items.push({ level: 'risk', title: '퇴사·내보내기 고민 — 전문가 확인을 권해요', basis: '근로기준법 제26조(해고 예고), 제27조(5명 이상 서면 통지)', join: '→ 가입하면 퇴사 처리 마법사로 예고·통지 순서를 점검해요. 판단은 고용노동부 고객상담센터(☎ 1350)에 확인해 주세요' });
+  if (a.kinds.includes('foreign') || a.concern === 'foreign') items.push({ level: 'check', title: '외국인·유학생 직원은 체류자격과 허가 시간 확인이 필요해요', basis: '출입국관리법 (전문가 확인 권장)', join: '→ 가입하면 체류기간 만료와 허가시간 초과를 미리 알려줘요' });
   if (a.kinds.includes('minor')) items.push({ level: 'check', title: '18세 미만 직원은 친권자 동의서·가족관계증명서와 근로시간 한도가 있어요', basis: '근로기준법 제66조 · 제69조', join: '→ 가입하면 1일 7시간·주 35시간 초과와 야간·휴일 근무를 경고해요' });
   if (a.industry === 'food') items.push({ level: 'check', title: '음식점·카페는 보건증(매 1년)과 사장님 식품위생교육이 필요해요', basis: '식품위생법 제40조 · 제41조', join: '→ 가입하면 보건증 유효기간 30일 전부터 알려줘요' });
   if (a.staff === '5-9') items.push({ level: 'check', title: '5명 이상 사업장은 연장·야간·휴일 가산, 연차, 법령 게시가 적용돼요', basis: '근로기준법 시행령 별표 1', join: '→ 가입하면 규모에 맞는 항목만 보여줘요' });
@@ -52,3 +52,4 @@ export function diagnose(a: DiagAnswers): { items: DiagItem[]; showGuestConsult:
 }
 
 export const PREFILL_KEY = 'ai-labor-demo/diagnosis-prefill';
+

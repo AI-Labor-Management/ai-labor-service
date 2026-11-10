@@ -15,7 +15,7 @@ export const VISA_GUIDE: Record<string, string> = {
   'D-2': '유학 — 시간제취업 허가 여부·허가 시간, 다른 사업장 주당 시간 합계 확인',
   'D-4': '연수 — 시간제취업 허가 여부·허가 시간 확인',
   'E-9': '고용허가 — 허용 업종·근무처 제한 확인, 외국인고용법 표준근로계약서, 출국만기보험',
-  'H-2': '방문취업 — 취업 제한 업종 확인 (F-4 통합 여부는 법무부 원문 확인 전)',
+  'H-2': '방문취업 — 취업 제한 업종 확인 (F-4 통합 여부는 전문가와 확인)',
   'F-4': '재외동포 — 취업 제한 업종 확인',
   other: '기타 — 확인 필요',
 };
@@ -36,9 +36,9 @@ export function foreignSignal(state: AppState, e: Employee, baseDate: ISODate): 
     else if (f.permitted === null) items.push({ signal: 'check', text: '시간제취업 허가 여부 확인 필요' });
     else {
       const wh = weeklyHours(conditionAt(state.conditions, e.id, baseDate));
-      if (f.permitHours == null) items.push({ signal: 'check', text: '허가 시간 입력 필요 (유학생 허가 시간 기준은 원문 미확인)' });
-      else if (wh + (f.otherWorkplaceHours || 0) > f.permitHours) items.push({ signal: 'risk', text: `주 ${wh.toFixed(1)}h + 다른 사업장 ${f.otherWorkplaceHours}h가 허가 ${f.permitHours}h를 넘어요` });
-      else items.push({ signal: 'ok', text: `허가 ${f.permitHours}h 이내 (주 ${wh.toFixed(1)}h + 다른 사업장 ${f.otherWorkplaceHours}h)` });
+      if (f.permitHours == null) items.push({ signal: 'check', text: '허가 시간 입력 필요 (허가서에 적힌 주당 시간)' });
+      else if (wh + (f.otherWorkplaceHours || 0) > f.permitHours) items.push({ signal: 'risk', text: `주 ${wh.toFixed(1)}시간 + 다른 사업장 ${f.otherWorkplaceHours}시간이 허가 ${f.permitHours}시간을 넘어요` });
+      else items.push({ signal: 'ok', text: `허가 ${f.permitHours}시간 이내 (주 ${wh.toFixed(1)}시간 + 다른 사업장 ${f.otherWorkplaceHours}시간)` });
     }
   } else if (f.checkedAt) {
     items.push({ signal: 'ok', text: `체류자격·근무처 확인함 (${f.checkedAt})` });
@@ -48,3 +48,4 @@ export function foreignSignal(state: AppState, e: Employee, baseDate: ISODate): 
   const signal: Signal = items.some((i) => i.signal === 'risk') ? 'risk' : items.some((i) => i.signal === 'check') ? 'check' : 'ok';
   return { signal, items };
 }
+

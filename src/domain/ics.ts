@@ -17,7 +17,7 @@ function fold(line: string): string {
 
 export function buildIcs(deadlines: Deadline[], generatedAt: Date = new Date()): string {
   const stamp = generatedAt.toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
-  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//ai-labor-service//draft//KO', 'CALSCALE:GREGORIAN', 'X-WR-CALNAME:노무 기한 (로컬 데모)'];
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//saram-saemgak//KO', 'CALSCALE:GREGORIAN', 'X-WR-CALNAME:사람샘각 노무 기한'];
   for (const d of deadlines) {
     const ymd = d.date.replace(/-/g, '');
     const next = new Date(Date.UTC(Number(d.date.slice(0, 4)), Number(d.date.slice(5, 7)) - 1, Number(d.date.slice(8, 10)) + 1));
@@ -38,3 +38,4 @@ export function buildIcs(deadlines: Deadline[], generatedAt: Date = new Date()):
   lines.push('END:VCALENDAR');
   return lines.join('\r\n') + '\r\n';
 }
+

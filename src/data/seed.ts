@@ -88,14 +88,14 @@ export function createSeed(base: ISODate): AppState {
   const s = createEmptyState();
   const created = ts(addDays(base, -75));
   s.workplace = {
-    name: '카페 샘터 (가상)',
+    name: '카페 샘터 (예시)',
     industry: 'food',
     scale: '1-4',
     familyOnly: false,
     payDay: 10,
     payMonthBasis: 'previous',
     gpsEnabled: true,
-    address: '부산 남구 (가상 주소)',
+    address: '부산 남구 (예시 주소)',
     radiusM: 100,
     lateToleranceMin: 5,
     defaultInsuranceMethod: 'self',
@@ -213,5 +213,6 @@ export function createSeed(base: ISODate): AppState {
   return s;
 }
 
-export const SEED_NOTE = '가상 시드: 카페 샘터(가상) · 1~4명 · 음식점·카페 · 직원 A·B·C (실명·연락처 없음)';
+export const SEED_NOTE = '예시 가게: 카페 샘터 · 1~4명 · 음식점·카페 · 직원 A·B·C (실명·연락처 없음)';
 export { fromParts };
+
