@@ -63,4 +63,28 @@ describe('규칙 파일 (rules.json)', () => {
     expect(before.ok && before.value.waiver4hOnRequest).toBe(false);
     expect(after.ok && after.value.waiver4hOnRequest).toBe(true);
   });
+  it('공포된 시행 예정 개정 3건 — 값은 같고 시행일부터 근거가 새 판으로 바뀐다', () => {
+    const cases: [string, string, string, string][] = [
+      // [규칙, 시행 전날, 시행일, 새 판 공포번호]
+      ['sexualHarassmentEducation', '2026-11-26', '2026-11-27', '제21700호'],
+      ['insurance.reportDeadline', '2026-12-31', '2027-01-01', '제21472호'],
+      ['annualLeave.promotion', '2027-06-09', '2027-06-10', '제21784호'],
+    ];
+    for (const [id, before, from, no] of cases) {
+      const a = resolveRule(id, before);
+      const b = resolveRule(id, from);
+      expect(a.ok && b.ok, id).toBe(true);
+      if (!a.ok || !b.ok) continue;
+      expect(b.value, id).toEqual(a.value);
+      expect(b.effectiveFrom, id).toBe(from);
+      expect(b.note, id).toBeTruthy();
+      expect(
+        b.sources.some((s) => s.check?.versionStatus === 'scheduled' && s.check.versionFrom === from && !!s.check.lawNumber?.includes(no)),
+        id,
+      ).toBe(true);
+    }
+    // 성희롱 예방교육: 11월 27일부터 법인 대표자·상급자도 교육 대상 (법 제13조②)
+    const she = resolveRule('sexualHarassmentEducation', '2026-11-27');
+    expect(she.ok && she.sources.some((s) => s.law === '남녀고용평등법' && !!s.quote?.includes('법인의 대표자, 상급자'))).toBe(true);
+  });
 });

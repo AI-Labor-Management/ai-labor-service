@@ -934,7 +934,7 @@
       }
      },
      "effectiveFrom": "2020-03-31",
-     "effectiveTo": null,
+     "effectiveTo": "2027-06-09",
      "status": "verified",
      "verifiedAt": "2026-11-04",
      "verifiedBy": "지원",
@@ -988,6 +988,76 @@
        }
       }
      ]
+    },
+    {
+     "value": {
+      "overOneYear": {
+       "notifyMonthsBefore": 6,
+       "notifyWindowDays": 10,
+       "designateMonthsBefore": 2
+      },
+      "underOneYear": {
+       "notifyMonthsBefore": 3,
+       "notifyWindowDays": 10,
+       "designateMonthsBefore": 1,
+       "lateNotifyMonthsBefore": 1,
+       "lateNotifyWindowDays": 5,
+       "lateDesignateDaysBefore": 10
+      }
+     },
+     "effectiveFrom": "2027-06-10",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-10",
+     "verifiedBy": "Claude (법제처 OPEN API 원문 대조)",
+     "sources": [
+      {
+       "type": "law",
+       "law": "근로기준법",
+       "article": "제61조",
+       "quote": "끝나기 6개월 전을 기준으로 10일 이내에",
+       "paragraph": 1,
+       "ref": "근로기준법#제61조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2027-06-10",
+        "versionStatus": "scheduled",
+        "lawEffective": "2027-06-10",
+        "lawNumber": "법률 제21784호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "근로기준법",
+       "article": "제61조",
+       "quote": "끝나기 2개월 전까지",
+       "paragraph": 1,
+       "ref": "근로기준법#제61조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2027-06-10",
+        "versionStatus": "scheduled",
+        "lawEffective": "2027-06-10",
+        "lawNumber": "법률 제21784호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "근로기준법",
+       "article": "제61조",
+       "quote": "최초 1년의 근로기간이 끝나기 3개월 전을 기준으로 10일 이내에",
+       "paragraph": 2,
+       "ref": "근로기준법#제61조②",
+       "check": {
+        "ok": true,
+        "versionFrom": "2027-06-10",
+        "versionStatus": "scheduled",
+        "lawEffective": "2027-06-10",
+        "lawNumber": "법률 제21784호"
+       }
+      }
+     ],
+     "note": "2027-06-10 시행 근로기준법 개정(법률 제21784호)으로 제60조에 항이 하나 더해져, 촉진 대상 휴가의 소멸 조항이 제60조제7항에서 제8항으로 바뀜. 촉구·지정 시점(6개월·10일·2개월, 1년 미만 3개월·1개월)은 같음."
     }
    ],
    "appliesTo": {
@@ -2024,7 +2094,7 @@
       }
      },
      "effectiveFrom": "2026-01-01",
-     "effectiveTo": null,
+     "effectiveTo": "2026-12-31",
      "status": "verified",
      "verifiedAt": "2026-11-04",
      "verifiedBy": "지원",
@@ -2110,6 +2180,110 @@
        }
       }
      ]
+    },
+    {
+     "value": {
+      "health": {
+       "days": 14,
+       "from": "취득·상실일"
+      },
+      "pension": {
+       "rule": "다음 달 15일"
+      },
+      "employment": {
+       "rule": "다음 달 15일"
+      },
+      "industrial": {
+       "rule": "다음 달 15일"
+      }
+     },
+     "effectiveFrom": "2027-01-01",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-10",
+     "verifiedBy": "Claude (법제처 OPEN API 원문 대조)",
+     "sources": [
+      {
+       "type": "law",
+       "law": "국민건강보험법",
+       "article": "제8조",
+       "quote": "자격을 취득한 날부터 14일 이내에",
+       "paragraph": 2,
+       "ref": "국민건강보험법#제8조②",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-10-08",
+        "versionStatus": "current",
+        "hash": "ac1fc10e6b2c",
+        "lawEffective": "2026-10-08",
+        "lawNumber": "법률 제21522호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "국민건강보험법",
+       "article": "제10조",
+       "quote": "자격을 잃은 날부터 14일 이내에",
+       "paragraph": 2,
+       "ref": "국민건강보험법#제10조②",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-10-08",
+        "versionStatus": "current",
+        "hash": "5537754c83f5",
+        "lawEffective": "2026-10-08",
+        "lawNumber": "법률 제21522호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "국민연금법 시행규칙",
+       "article": "제6조",
+       "quote": "다음 달 15일까지",
+       "paragraph": 1,
+       "ref": "국민연금법 시행규칙#제6조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-02-13",
+        "versionStatus": "current",
+        "hash": "35499c16796d",
+        "lawEffective": "2026-02-13",
+        "lawNumber": "보건복지부령 제1157호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "고용보험법 시행령",
+       "article": "제7조",
+       "quote": "다음 달 15일까지",
+       "paragraph": 1,
+       "ref": "고용보험법 시행령#제7조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-09-18",
+        "versionStatus": "current",
+        "hash": "7697c44de3c7",
+        "lawEffective": "2026-09-18",
+        "lawNumber": "대통령령 제36588호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "징수법",
+       "article": "제16조의10",
+       "quote": "다음 달 15일까지",
+       "paragraph": 3,
+       "ref": "징수법#제16조의10③",
+       "check": {
+        "ok": true,
+        "versionFrom": "2027-01-01",
+        "versionStatus": "scheduled",
+        "lawEffective": "2027-01-01",
+        "lawNumber": "법률 제21472호"
+       }
+      }
+     ],
+     "note": "2027-01-01 시행 징수법 개정(법률 제21472호): 제16조의10이 '월 보수 등의 신고'로 바뀌어 사업주는 근로자의 월 보수·근로 내용을 매월 공단에 신고함(국세청에 소득자료를 내면 신고한 것으로 봄). 취득·상실 신고 기한(다음 달 15일)은 같고, 신고하지 않아도 되는 근로자 기준이 '월 60시간 미만'에서 고용보험법 제10조①2의 소득기준 미만으로 바뀜. 매월 신고의 기한·방법을 정할 징수법 시행령은 2026-11-10 현재 공포 전."
     }
    ],
    "note": "2027.1.1부터 징수법 제16조의10이 '월 보수 등의 신고'(매월)로 바뀜. 취득·상실 기한(③④)은 같음."
@@ -2302,7 +2476,7 @@
       "under10MayPostMaterials": true
      },
      "effectiveFrom": "2026-09-18",
-     "effectiveTo": null,
+     "effectiveTo": "2026-11-26",
      "status": "verified",
      "verifiedAt": "2026-11-04",
      "verifiedBy": "지원",
@@ -2338,8 +2512,97 @@
         "lawEffective": "2026-09-18",
         "lawNumber": "대통령령 제36589호"
        }
+      },
+      {
+       "type": "law",
+       "law": "남녀고용평등법",
+       "article": "제13조",
+       "quote": "사업주 및 근로자는 제1항에 따른 성희롱 예방 교육을 받아야 한다",
+       "paragraph": 2,
+       "ref": "남녀고용평등법#제13조②",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-09-18",
+        "versionStatus": "current",
+        "lawEffective": "2026-09-18",
+        "lawNumber": "법률 제21476호"
+       }
       }
      ]
+    },
+    {
+     "value": {
+      "perYear": 1,
+      "under10MayPostMaterials": true
+     },
+     "effectiveFrom": "2026-11-27",
+     "effectiveTo": null,
+     "status": "verified",
+     "verifiedAt": "2026-11-10",
+     "verifiedBy": "Claude (법제처 OPEN API 원문 대조)",
+     "sources": [
+      {
+       "type": "law",
+       "law": "남녀고용평등법 시행령",
+       "article": "제3조",
+       "quote": "연 1회 이상",
+       "paragraph": 1,
+       "ref": "남녀고용평등법 시행령#제3조①",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-11-27",
+        "versionStatus": "scheduled",
+        "lawEffective": "2026-11-27",
+        "lawNumber": "대통령령 제36816호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "남녀고용평등법 시행령",
+       "article": "제3조",
+       "quote": "10명 미만",
+       "paragraph": 4,
+       "ref": "남녀고용평등법 시행령#제3조④",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-11-27",
+        "versionStatus": "scheduled",
+        "lawEffective": "2026-11-27",
+        "lawNumber": "대통령령 제36816호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "남녀고용평등법 시행령",
+       "article": "제3조",
+       "quote": "교육대상자 모두가 남성 또는 여성 중 어느 한 성(性)으로 구성된 사업",
+       "paragraph": 4,
+       "ref": "남녀고용평등법 시행령#제3조④",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-11-27",
+        "versionStatus": "scheduled",
+        "lawEffective": "2026-11-27",
+        "lawNumber": "대통령령 제36816호"
+       }
+      },
+      {
+       "type": "law",
+       "law": "남녀고용평등법",
+       "article": "제13조",
+       "quote": "사업주, 법인의 대표자, 상급자 또는 근로자는 제1항에 따른 성희롱 예방 교육을 받아야 한다",
+       "paragraph": 2,
+       "ref": "남녀고용평등법#제13조②",
+       "check": {
+        "ok": true,
+        "versionFrom": "2026-11-27",
+        "versionStatus": "scheduled",
+        "lawEffective": "2026-11-27",
+        "lawNumber": "법률 제21700호"
+       }
+      }
+     ],
+     "note": "2026-11-27 시행: 교육을 받아야 하는 사람이 사업주·근로자에서 사업주·법인의 대표자·상급자·근로자로 넓어짐(법 제13조②, 법률 제21700호). 시행령(대통령령 제36816호)은 이들을 '교육대상자'로 부르고, 한 성(性)으로만 구성된 사업의 자료 게시 특례도 '교육대상자 모두' 기준으로 바뀜. 연 1회 이상·상시 10명 미만 자료 게시·배포 허용은 같음."
     }
    ]
   },
