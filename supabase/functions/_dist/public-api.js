@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/public-api/handler.ts (npm run build:functions)
-// sha256:e5b48b308552
+// sha256:b788059a7db6
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -5640,7 +5640,7 @@ async function tourEvents(sido, sigungu, from, days) {
   return remember(`events:${sido}:${sigungu ?? ""}:${from}:${days}`, 6 * 36e5, async () => {
     const r = await getJson(FESTIVAL_URL, {
       ...TOUR,
-      eventStartDate: ymd8(addDaysIso(from, -90)),
+      eventStartDate: ymd8(from),
       lDongRegnCd: sido,
       ...sigungu ? { lDongSignguCd: sigungu } : {},
       numOfRows: "300",

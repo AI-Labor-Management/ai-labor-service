@@ -111,13 +111,13 @@ export async function tourRegions(sido?: string): Promise<TourRegion[]> {
   });
 }
 
-/** 그 지역에서 [from, from+days] 동안 열리는 축제·행사. 이미 시작해 진행 중인 행사도 넣으려고 90일 앞부터 찾아 기간으로 거른다 */
+/** 그 지역에서 [from, from+days] 동안 열리는 축제·행사. eventStartDate를 주면 그날 이후 끝나는(진행 중 포함) 행사가 온다 — 기간으로 한 번 더 거른다 */
 export async function tourEvents(sido: string, sigungu: string | null, from: string, days: number): Promise<TourEvent[]> {
   const to = addDaysIso(from, days);
   return remember(`events:${sido}:${sigungu ?? ''}:${from}:${days}`, 6 * 3_600_000, async () => {
     const r = await getJson(FESTIVAL_URL, {
       ...TOUR,
-      eventStartDate: ymd8(addDaysIso(from, -90)),
+      eventStartDate: ymd8(from),
       lDongRegnCd: sido,
       ...(sigungu ? { lDongSignguCd: sigungu } : {}),
       numOfRows: '300',
