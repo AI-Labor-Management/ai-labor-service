@@ -38,7 +38,7 @@ export const CHECKLIST_ITEMS: ChecklistItemDef[] = [
   {
     id: 'W4', title: '성희롱 예방 교육 실시와 내용 게시', group: 'workplace', kind: '게시·교육', condition: '직원 1명 이상. 상시 10명 미만은 교육자료 게시·배포로 가능', cycle: '연 1회 이상',
     basis: '남녀고용평등법 제13조, 시행령 제3조①④', penalty: '500만 원 이하 과태료 (제39조③1의2·1의3)', evidence: 'verified',
-    plain: '1년에 한 번 이상 성희롱 예방 교육을 하고 내용을 게시해요.', todo: ['교육 실시 또는 자료 게시·배포(10명 미만)', '실시일 기록'], retention: '3년 권장', ruleIds: ['sexualHarassmentEducation'],
+    plain: '1년에 한 번 이상 성희롱 예방 교육을 하고 내용을 게시해요. 사장님도 함께 받아야 하고, 2026년 11월 27일부터는 법인 대표자·상급자도 교육 대상이에요.', todo: ['교육 실시 또는 자료 게시·배포(10명 미만)', '사장님·대표자·상급자 포함', '실시일 기록'], retention: '3년 권장', ruleIds: ['sexualHarassmentEducation'],
   },
   {
     id: 'W5', title: '식품위생교육 (영업자)', group: 'workplace', kind: '게시·교육', condition: '음식점·카페 영업자(사장님). 일반 종업원은 대상 아님', cycle: '매년 3시간',
