@@ -143,27 +143,34 @@ r = await api('owner/foreign', owner);
 ok(r.status === 200 && Array.isArray(r.body.employees), 'GET /owner/foreign', r.status);
 
 // ── 급여 ──
-r = await api('owner/payroll?month=2026-10', owner);
-ok(r.status === 200 && r.body.lines.length > 0 && r.body.confirmed === false, 'GET /owner/payroll 2026-10 초안', { status: r.status, lines: r.body?.lines?.length, pending: r.body?.pending?.length });
+// 시험할 달: 시드가 이미 확정한 마지막 달의 다음 달 (실행하는 날짜에 따라 달라짐 — 예전엔 2026-10 고정이라 11-10부터 실패)
+const PM = (() => {
+  const months = state.payrolls.filter((x) => x.status === 'confirmed').map((x) => x.month).sort();
+  const last = months.at(-1) ?? '2026-09';
+  const [y, m] = last.split('-').map(Number);
+  return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
+})();
+r = await api(`owner/payroll?month=${PM}`, owner);
+ok(r.status === 200 && r.body.lines.length > 0 && r.body.confirmed === false, `GET /owner/payroll ${PM} 초안`, { status: r.status, lines: r.body?.lines?.length, pending: r.body?.pending?.length });
 const draftGross = r.body.lines.reduce((s, l) => s + l.gross, 0);
 const pendingCount = r.body.pending.length;
-r = await api('owner/payroll/confirm', owner, { method: 'POST', body: { month: '2026-10' } });
+r = await api('owner/payroll/confirm', owner, { method: 'POST', body: { month: PM } });
 if (pendingCount > 0) {
   ok(r.status === 409, '확인 대기 근무가 있으면 확정 막음 (409)', r);
-  r = await api('owner/payroll/confirm', owner, { method: 'POST', body: { month: '2026-10', allowPending: true } });
+  r = await api('owner/payroll/confirm', owner, { method: 'POST', body: { month: PM, allowPending: true } });
 }
 ok(r.status === 200 && r.body.confirmed && r.body.gross === draftGross, 'POST /owner/payroll/confirm 확정 (초안과 같은 금액)', r.body);
 const confirmedLines = r.body.lines;
-r = await api('owner/payroll/confirm', owner, { method: 'POST', body: { month: '2026-10', allowPending: true } });
+r = await api('owner/payroll/confirm', owner, { method: 'POST', body: { month: PM, allowPending: true } });
 ok(r.status === 409, '두 번 확정하면 409', r.status);
-r = await api('owner/payroll?month=2026-10', owner);
+r = await api(`owner/payroll?month=${PM}`, owner);
 ok(r.status === 200 && r.body.confirmed === true && r.body.revision === 1 && r.body.lines.length === confirmedLines, '확정 후 조회 = 스냅샷', { confirmed: r.body.confirmed, revision: r.body.revision });
 const lineA = r.body.lines[0];
-r = await api('owner/payroll/edit', owner, { method: 'POST', body: { month: '2026-10', employeeId: lineA.employeeId, kind: 'adjust', label: '지각 벌금', amount: -10000, reason: '지각' } });
+r = await api('owner/payroll/edit', owner, { method: 'POST', body: { month: PM, employeeId: lineA.employeeId, kind: 'adjust', label: '지각 벌금', amount: -10000, reason: '지각' } });
 ok(r.status === 400, '지각 벌금 공제는 막음 (근로기준법)', r.body);
-r = await api('owner/payroll/edit', owner, { method: 'POST', body: { month: '2026-10', employeeId: lineA.employeeId, kind: 'adjust', label: '교통비 정산', amount: 15000, reason: '10월 교통비 누락분' } });
+r = await api('owner/payroll/edit', owner, { method: 'POST', body: { month: PM, employeeId: lineA.employeeId, kind: 'adjust', label: '교통비 정산', amount: 15000, reason: '10월 교통비 누락분' } });
 ok(r.status === 200 && r.body.revision === 2 && r.body.line.gross === lineA.gross + 15000, 'POST /owner/payroll/edit 수정 이력 (revision 2)', r.body && { revision: r.body.revision, gross: r.body.line?.gross, before: lineA.gross });
-r = await api('owner/payroll?month=2026-10', owner);
+r = await api(`owner/payroll?month=${PM}`, owner);
 const lineA2 = r.body.lines.find((l) => l.employeeId === lineA.employeeId);
 ok(r.body.revision === 2 && lineA2.gross === lineA.gross + 15000, '수정 후 최신 줄이 보임', { revision: r.body.revision, gross: lineA2?.gross });
 r = await rest(`payroll_edits?select=field,before_value,after_value,reason`, owner);
