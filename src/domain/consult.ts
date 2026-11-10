@@ -1,6 +1,16 @@
-// 상담 (16_상담). FAQ 먼저 → AI(연결 대기) → 노무 전문가 연결(고른 항목만, 동의 후, 철회 가능).
+// 상담 (16_상담). FAQ 먼저 → AI → 노무 전문가 연결(고른 항목만, 동의 후, 철회 가능).
 import { FAQS, type Faq } from '../data/faq';
 import type { AppState, ISODate } from './types';
+
+/**
+ * 상담 요청을 받는 협력 노무법인. 협약 전에는 null — 로그인한 계정(서버 저장)에서 "노무법인에 보내기"를 숨기고
+ * 고용노동부 상담센터 안내만 보여 준다. 협약하면 이름을 넣어 다시 배포한다 (예: { name: '○○노무법인' }).
+ * 둘러보기에서는 이 값과 상관없이 예시로 보내기를 보여 준다 (실제로 보내지 않음).
+ */
+export const PARTNER_FIRM: { name: string } | null = null;
+
+/** 협력 노무법인이 없을 때 사장님께 드리는 전문가 확인 안내 */
+export const EXPERT_HELP_LINE = '판단이 필요한 일은 고용노동부 고객상담센터(☎ 1350, 평일 9~18시)나 가까운 노무사에게 확인해 주세요.';
 
 export function searchFaq(query: string): { faq: Faq; score: number }[] {
   const q = query.replace(/\s+/g, ' ').trim();
@@ -50,7 +60,7 @@ export function buildMemo(state: AppState, question: string, faq: Faq | null, ba
   lines.push('  2. 사업장 규모별 적용 여부');
   lines.push('  3. 서비스 화면의 "확인 필요" 항목');
   lines.push('');
-  lines.push('※ 이 메모는 브라우저에서만 만들었고 저장되지 않아요. 직원 실명·번호는 넣지 마세요.');
+  lines.push('※ 직원 실명·연락처는 넣지 마세요.');
   return lines.join('\n');
 }
 
@@ -74,3 +84,4 @@ export function maskPhone(phone: string): string {
 export function isValidMobile(phone: string): boolean {
   return /^01[016789]-?\d{3,4}-?\d{4}$/.test(phone.trim());
 }
+

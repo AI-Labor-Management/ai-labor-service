@@ -44,6 +44,9 @@ describe('출퇴근 기록 → 확정 근무', () => {
     expect(classifyClock(p, '09:40', '15:00', 5, 'inside').status).toBe('pending');
     expect(classifyClock(p, '10:00', '15:40', 5, 'inside').status).toBe('pending');
     expect(classifyClock(p, '10:00', '15:00', 5, 'outside').status).toBe('exception');
+    // 가게 QR(2026-11-10부터): 확인 안 된 기록은 'QR 확인 없이 기록'으로 사장님 확인
+    expect(classifyClock(p, '10:00', '15:00', 5, 'outside', 'qr')).toEqual({ status: 'exception', reason: 'QR 확인 없이 기록' });
+    expect(classifyClock(p, '10:00', '15:00', 5, 'inside', 'qr').status).toBe('confirmed');
     expect(classifyClock(p, '10:12', '15:00', 5, 'inside')).toEqual({ status: 'confirmed', reason: '지각(일하지 않은 시간만 빼고 계산)' });
   });
   it('대타로 바뀐 주는 근무일 변경으로 처리하되 "확인 필요"(C3)', () => {
@@ -53,7 +56,8 @@ describe('출퇴근 기록 → 확정 근무', () => {
     const line = computePayrollLine({ state: s, employee: e, from: '2026-10-01', to: '2026-10-31', payDate: '2026-11-10', scale: '1-4' });
     const row = line.weeklyHolidayDetail.find((r) => r.weekEnd === '2026-10-18')!;
     expect(row.eligible).toBe(true);
-    expect(row.flags.join()).toContain('C3');
+    expect(row.flags.join()).toContain('대타로 바뀐 날 포함');
+    expect(row.flags.join()).toContain('확인 필요');
   });
   it('같은 적용일에 다시 저장하면 마지막 근로조건이 유효', () => {
     const s = makeState();
@@ -83,3 +87,4 @@ describe('비회원 자가진단', () => {
     expect(r.topic).toBe('퇴사·내보내기');
   });
 });
+

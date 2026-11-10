@@ -51,6 +51,16 @@ export function dailyWorkerIncomeTax(dailyPay: number, date: ISODate): number {
   return calc - Math.floor(round2(calc * r.taxCredit));
 }
 
+/** 지방소득세(특별징수) = 소득세 × 10%, 10원 미만 절사 (지방세법 제103조의13) */
+export function localIncomeTax(incomeTax: number): number {
+  // × 0.1 ÷ 10 대신 ÷ 100 — 부동소수 오차 없이 10원 미만을 버린다
+  return Math.floor(Math.max(0, incomeTax) / 100) * 10;
+}
+export const LOCAL_TAX_NOTE = '소득세의 10%예요 (지방세법 제103조의13)';
+
+/** 퇴사하는 주 주휴 플래그 — 경고 판정에 쓰는 고정 문구 */
+export const RESIGN_WEEK_FLAG = '퇴사하는 주 — 자동 포함하지 않음, 확인 필요';
+
 export interface DayCalc {
   date: ISODate;
   wage: number;
@@ -216,7 +226,7 @@ export function computePayrollLine(input: PayrollInput): PayrollLine {
     warnings.push({ level: 'risk', text: `최저임금 미달 ${belowDays.length}일 — 시급 ${belowDays[0].wage.toLocaleString('ko-KR')}원 < ${req?.toLocaleString('ko-KR')}원 (${fmtMD(belowDays[0].date)}부터)`, basis: ['minimumWage.hourly'] });
   }
   const noRuleDays = days.filter((d) => d.netMin > 0 && checkMinimumWage(d.wage, d.date).status === 'noRule');
-  if (noRuleDays.length) warnings.push({ level: 'check', text: `${fmtMD(noRuleDays[0].date)} 등 ${noRuleDays.length}일은 최저임금 기준이 규칙 파일에 없어요`, basis: ['minimumWage.hourly'] });
+  if (noRuleDays.length) warnings.push({ level: 'check', text: `${fmtMD(noRuleDays[0].date)} 등 ${noRuleDays.length}일은 최저임금 기준이 아직 발표되지 않았어요`, basis: ['minimumWage.hourly'] });
 
   // 주휴수당
   const whRows: WeeklyHolidayRow[] = [];
@@ -249,14 +259,14 @@ export function computePayrollLine(input: PayrollInput): PayrollLine {
     const plans = employedDays.map((d) => dayPlan(state, e, d.date));
     const absent = plans.some((p) => p.off === 'absent');
     const subs = plans.some((p) => p.overrides.some((o) => o.kind === 'subIn' || o.kind === 'subOut'));
-    if (subs) flags.push('대타로 바뀐 날 포함 — 근무일 변경으로 처리, 확인 필요 (C3)');
+    if (subs) flags.push('대타로 바뀐 날 포함 — 근무일 변경으로 처리, 확인 필요');
     const minH = ruleValue<number>('weeklyHoliday.minWeeklyHours', weekEnd);
     const eligible = avg4w >= minH && !absent && sched > 0;
     const hours = eligible ? (Math.min(sched, 40) / 40) * 8 : 0;
     const wageW = c.hourlyWage;
     let included = eligible;
     if (e.resignDate && e.resignDate >= weekStart && e.resignDate < weekEnd) {
-      flags.push('퇴사하는 주 — 확인 필요 (노무사 확인 C2), 자동 포함하지 않음');
+      flags.push(RESIGN_WEEK_FLAG);
       included = false;
     }
     if (absent) flags.push('결근 있음 — 개근 요건 미충족');
@@ -271,11 +281,11 @@ export function computePayrollLine(input: PayrollInput): PayrollLine {
     label: '주휴수당',
     amount: won(whPay),
     formula: whRows.filter((r) => r.included).length
-      ? whRows.filter((r) => r.included).map((r) => `주 ${r.scheduledHours}h→${r.hours}h`).join(' + ')
+      ? whRows.filter((r) => r.included).map((r) => `주 ${r.scheduledHours}시간→${r.hours}시간`).join(' + ')
       : '대상 주 없음',
     basis: ['weeklyHoliday.minWeeklyHours', 'weeklyHoliday.paidHours'],
   });
-  if (whRows.some((r) => r.flags.some((f) => f.includes('C2')))) warnings.push({ level: 'check', text: '퇴사하는 주의 주휴수당은 자동으로 넣지 않았어요 (노무사 확인 C2)', basis: ['weeklyHoliday.paidHours'] });
+  if (whRows.some((r) => r.flags.includes(RESIGN_WEEK_FLAG))) warnings.push({ level: 'check', text: '퇴사하는 주의 주휴수당은 자동으로 넣지 않았어요. 지급 여부는 전문가와 확인해 주세요', basis: ['weeklyHoliday.paidHours'] });
 
   // 가산
   const contractWeekly = (we: ISODate) => {
@@ -296,7 +306,7 @@ export function computePayrollLine(input: PayrollInput): PayrollLine {
   } else {
     if (prem.overtimeMin) items.push({ code: 'overtime', label: '연장 가산', amount: won(prem.overtimePay), formula: `${(prem.overtimeMin / 60).toFixed(1)}시간 × 시급 × 50%`, basis: ['premium.overtime'] });
     if (prem.nightMin) items.push({ code: 'night', label: '야간 가산', amount: won(prem.nightPay), formula: `${(prem.nightMin / 60).toFixed(1)}시간(22~06시) × 시급 × 50%`, basis: ['premium.night'] });
-    if (prem.holidayWithin8Min || prem.holidayOver8Min) items.push({ code: 'holiday', label: '휴일 가산', amount: won(prem.holidayPay), formula: `8시간 이내 ${(prem.holidayWithin8Min / 60).toFixed(1)}h × 50% + 초과 ${(prem.holidayOver8Min / 60).toFixed(1)}h × 100%`, basis: ['premium.holiday'] });
+    if (prem.holidayWithin8Min || prem.holidayOver8Min) items.push({ code: 'holiday', label: '휴일 가산', amount: won(prem.holidayPay), formula: `8시간 이내 ${(prem.holidayWithin8Min / 60).toFixed(1)}시간 × 50% + 초과 ${(prem.holidayOver8Min / 60).toFixed(1)}시간 × 100%`, basis: ['premium.holiday'] });
     if (prem.partTimeOverMin) items.push({ code: 'partTimeOver', label: '단시간 초과근로 가산', amount: won(prem.partTimeOverPay), formula: `소정근로시간 초과 ${(prem.partTimeOverMin / 60).toFixed(1)}시간 × 시급 × 50% (근사)`, basis: ['fixedTerm.partTimeOvertime'] });
     if (!prem.overtimeMin && !prem.nightMin && !prem.holidayWithin8Min && !prem.holidayOver8Min && !prem.partTimeOverMin)
       items.push({ code: 'premium', label: '연장·야간·휴일 가산', amount: 0, formula: '해당 근무 없음', basis: ['premium.overtime', 'premium.night', 'premium.holiday'] });
@@ -307,7 +317,7 @@ export function computePayrollLine(input: PayrollInput): PayrollLine {
   const lvMin = days.filter((d) => d.paidOffKind === 'leave').reduce((s, d) => s + d.paidOffMin, 0);
   const phPay = days.filter((d) => d.paidOffKind === 'publicHoliday').reduce((s, d) => s + (d.paidOffMin / 60) * d.wage, 0);
   const lvPay = days.filter((d) => d.paidOffKind === 'leave').reduce((s, d) => s + (d.paidOffMin / 60) * d.wage, 0);
-  if (phMin) items.push({ code: 'publicHoliday', label: '공휴일 유급', amount: won(phPay), formula: `${(phMin / 60).toFixed(1)}시간 × 시급 (단시간 비례 원문 확인 전)`, basis: ['holidays.legal'] });
+  if (phMin) items.push({ code: 'publicHoliday', label: '공휴일 유급', amount: won(phPay), formula: `${(phMin / 60).toFixed(1)}시간 × 시급`, basis: ['holidays.legal'] });
   if (lvMin) items.push({ code: 'leavePay', label: '연차 사용일 유급', amount: won(lvPay), formula: `${(lvMin / 60).toFixed(1)}시간 × 시급`, basis: ['annualLeave.accrual'] });
   if (under5 && days.some((d) => dayPlan(state, e, d.date).off === 'leave')) warnings.push({ level: 'info', text: '1~4명 사업장은 연차 규정 미적용 — 연차로 표시한 날은 무급으로 계산했어요', basis: ['scope.under5.appliedArticles'] });
 
@@ -331,9 +341,9 @@ export function computePayrollLine(input: PayrollInput): PayrollLine {
   const gross = items.reduce((s, i) => s + i.amount, 0);
 
   // 수습·연소자·대기 등 자동으로 판단하지 않는 것
-  if (e.probationEnd && e.probationEnd >= from) warnings.push({ level: 'check', text: '수습 중 — 감액하지 않고 계산했어요. 감액 가능 여부는 확인 필요 (노무사 확인 C1)', basis: ['minimumWage.probation'] });
+  if (e.probationEnd && e.probationEnd >= from) warnings.push({ level: 'check', text: '수습 중 — 감액하지 않고 계산했어요. 감액 가능 여부는 전문가와 확인해 주세요', basis: ['minimumWage.probation'] });
   const pendingDays = days.filter((d) => d.pending).map((d) => d.date);
-  if (pendingDays.length) warnings.push({ level: 'check', text: `확인 대기 근무 ${pendingDays.length}일 — 확인 전에는 예정 시간으로 계산해요`, basis: [] });
+  if (pendingDays.length) warnings.push({ level: 'check', text: `확인 대기 근무 ${pendingDays.length}일 — 확인하기 전까지는 예정 시간으로 계산해요`, basis: [] });
   if (lastCond?.variable) warnings.push({ level: 'check', text: '매주 달라요 — 입력한 실제 근무로 계산했어요', basis: [] });
   if (e.ageBand === 'under18') warnings.push({ level: 'info', text: '18세 미만 — 근무 화면의 시간 한도·야간·휴일 경고를 확인하세요', basis: ['minor.limits'] });
 
@@ -354,14 +364,18 @@ export function computePayrollLine(input: PayrollInput): PayrollLine {
       deductions.push(
         mt != null
           ? { code: 'incomeTax', label: '소득세', amount: mt, source: 'manual', note: '사장님 직접 입력' }
-          : { code: 'incomeTax', label: '소득세', amount: null, source: 'missing', note: '상용 간이세액표 확보 전 — 직접 입력하세요 (세무 전문가 확인 권장)' },
+          : { code: 'incomeTax', label: '소득세', amount: null, source: 'missing', note: '직접 입력해 주세요 (세무 전문가 확인 권장)' },
       );
     }
+    // 지방소득세: 사장님이 직접 넣은 값이 우선, 없으면 소득세의 10% (10원 미만 절사)
     const lt = input.manual?.localTax;
+    const it = deductions.find((d) => d.code === 'incomeTax')?.amount ?? null;
     deductions.push(
       lt != null
         ? { code: 'localTax', label: '지방소득세', amount: lt, source: 'manual', note: '사장님 직접 입력' }
-        : { code: 'localTax', label: '지방소득세', amount: null, source: 'missing', note: '규칙 파일에 없어 자동 계산하지 않아요 — 직접 입력' },
+        : it != null
+          ? { code: 'localTax', label: '지방소득세', amount: localIncomeTax(it), source: 'estimate', note: LOCAL_TAX_NOTE }
+          : { code: 'localTax', label: '지방소득세', amount: null, source: 'missing', note: '소득세를 입력하면 자동으로 계산해요' },
     );
   }
   const deductionTotal = deductions.reduce((s, d) => s + (d.amount ?? 0), 0);
@@ -461,3 +475,4 @@ export function quickWage(q: QuickInput): QuickResult {
     breakIssues,
   };
 }
+

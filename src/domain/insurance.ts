@@ -11,7 +11,7 @@ export const VERDICT_LABEL: Record<Verdict, string> = {
   expected: '가입 대상 예상',
   excluded: '제외 예상',
   check: '확인 필요',
-  noRule: '기준 없음',
+  noRule: '기준 발표 전',
 };
 
 export const INSURANCE_LABEL: Record<InsuranceKind, string> = {
@@ -80,14 +80,14 @@ export function judgeInsurance(j: JudgeInput, date: ISODate): Judgment[] {
     let verdict: Verdict;
     if (j.isForeign) {
       verdict = 'check';
-      reasons.push('외국인 고용보험 적용은 체류자격별 확인 필요 (원문 확인 전)');
+      reasons.push('외국인 고용보험 적용은 체류자격마다 달라요 (전문가 확인 권장)');
     } else if (!rule.ok) {
       if (daily || months >= 3) {
         verdict = 'expected';
         reasons.push(daily ? '일용근로자는 적용' : '3개월 이상 계속 근로는 적용');
       } else {
         verdict = 'noRule';
-        reasons.push('2027.1.1부터 "보수가 소득기준 미만이면 제외" — 소득기준 시행령 확정 전이라 이 날짜의 기준이 아직 없어요');
+        reasons.push('2027.1.1부터 "보수가 소득기준 미만이면 제외"로 바뀌어요 — 이 날짜의 소득기준이 아직 발표되지 않았어요');
       }
     } else if (daily) {
       verdict = 'expected';
@@ -201,7 +201,7 @@ export function premiums(base: number, date: ISODate, judgments: Judgment[], ind
     const bi = resolveRule<{ min: number; max: number; truncateUnder: number }>('insurance.pension.baseIncome', date);
     const verdict = v('pension');
     if (verdict === 'excluded') rows.push(excludedRow('pension', verdict, ['insurance.pension.rate']));
-    else if (!rate.ok || !bi.ok) rows.push({ kind: 'pension', verdict, worker: null, employer: null, status: 'missing', note: !rate.ok ? '요율 기준 없음' : '기준소득월액 하한·상한 기준 없음', basis: ['insurance.pension.rate', 'insurance.pension.baseIncome'] });
+    else if (!rate.ok || !bi.ok) rows.push({ kind: 'pension', verdict, worker: null, employer: null, status: 'missing', note: !rate.ok ? '이 날짜의 요율이 아직 발표되지 않았어요' : '이 날짜의 기준소득월액 상·하한이 아직 발표되지 않았어요', basis: ['insurance.pension.rate', 'insurance.pension.baseIncome'] });
     else {
       const b = Math.min(bi.value.max, Math.max(bi.value.min, Math.floor(base / bi.value.truncateUnder) * bi.value.truncateUnder));
       const amt = floor10(b * rate.value);
@@ -217,12 +217,12 @@ export function premiums(base: number, date: ISODate, judgments: Judgment[], ind
       rows.push(excludedRow('health', verdict, ['insurance.health.rate']));
       rows.push(excludedRow('ltc', verdict, ['insurance.ltc.rate']));
     } else {
-      if (!hr.ok) rows.push({ kind: 'health', verdict, worker: null, employer: null, status: 'missing', note: '기준 없음', basis: ['insurance.health.rate'] });
+      if (!hr.ok) rows.push({ kind: 'health', verdict, worker: null, employer: null, status: 'missing', note: '이 날짜의 요율이 아직 발표되지 않았어요', basis: ['insurance.health.rate'] });
       else {
         const amt = floor10((base * hr.value) / 2);
         rows.push({ kind: 'health', verdict, worker: amt, employer: amt, status: st(hr), note: `${base.toLocaleString('ko-KR')}원 × ${((hr.value / 2) * 100).toFixed(3)}%`, basis: ['insurance.health.rate'] });
       }
-      if (!lr.ok) rows.push({ kind: 'ltc', verdict, worker: null, employer: null, status: 'missing', note: '기준 없음', basis: ['insurance.ltc.rate'] });
+      if (!lr.ok) rows.push({ kind: 'ltc', verdict, worker: null, employer: null, status: 'missing', note: '이 날짜의 요율이 아직 발표되지 않았어요', basis: ['insurance.ltc.rate'] });
       else {
         const amt = floor10((base * lr.value) / 2);
         rows.push({ kind: 'ltc', verdict, worker: amt, employer: amt, status: st(lr), note: `소득 × ${((lr.value / 2) * 100).toFixed(4)}%`, basis: ['insurance.ltc.rate'] });
@@ -235,8 +235,8 @@ export function premiums(base: number, date: ISODate, judgments: Judgment[], ind
     const ur = resolveRule<number>('insurance.employment.unemploymentRate', date);
     const sr = resolveRule<{ under150: number }>('insurance.employment.stabilityRate', date);
     if (verdict === 'excluded') rows.push(excludedRow('employment', verdict, ['insurance.employment.eligibility']));
-    else if (verdict === 'noRule') rows.push({ kind: 'employment', verdict, worker: null, employer: null, status: 'missing', note: '이 날짜의 가입 기준이 아직 없어요', basis: ['insurance.employment.eligibility'] });
-    else if (!ur.ok || !sr.ok) rows.push({ kind: 'employment', verdict, worker: null, employer: null, status: 'missing', note: '요율 기준 없음', basis: ['insurance.employment.unemploymentRate'] });
+    else if (verdict === 'noRule') rows.push({ kind: 'employment', verdict, worker: null, employer: null, status: 'missing', note: '이 날짜의 가입 기준이 아직 발표되지 않았어요', basis: ['insurance.employment.eligibility'] });
+    else if (!ur.ok || !sr.ok) rows.push({ kind: 'employment', verdict, worker: null, employer: null, status: 'missing', note: '이 날짜의 요율이 아직 발표되지 않았어요', basis: ['insurance.employment.unemploymentRate'] });
     else {
       const noUnemployment = ageBand === '65+' && startedBefore65 === false;
       const w = noUnemployment ? 0 : floor10((base * ur.value) / 2);
@@ -247,8 +247,8 @@ export function premiums(base: number, date: ISODate, judgments: Judgment[], ind
   // 산재
   {
     const r = resolveRule<{ total: number }>('insurance.industrial.rate', date);
-    if (industry === 'service') rows.push({ kind: 'industrial', verdict: 'expected', worker: 0, employer: null, status: 'missing', note: '기타 서비스업 요율은 규칙 파일에 없어요 (음식·숙박·도소매만 확인)', basis: ['insurance.industrial.rate'] });
-    else if (!r.ok) rows.push({ kind: 'industrial', verdict: 'expected', worker: 0, employer: null, status: 'missing', note: '이 날짜의 산재요율 고시가 아직 없어요', basis: ['insurance.industrial.rate'] });
+    if (industry === 'service') rows.push({ kind: 'industrial', verdict: 'expected', worker: 0, employer: null, status: 'missing', note: '기타 서비스업 산재요율은 근로복지공단 고지서로 확인해 주세요', basis: ['insurance.industrial.rate'] });
+    else if (!r.ok) rows.push({ kind: 'industrial', verdict: 'expected', worker: 0, employer: null, status: 'missing', note: '이 날짜의 산재요율이 아직 발표되지 않았어요', basis: ['insurance.industrial.rate'] });
     else rows.push({ kind: 'industrial', verdict: 'expected', worker: 0, employer: floor10(base * r.value.total), status: st(r), note: `${(r.value.total * 100).toFixed(2)}% 전액 사장님`, basis: ['insurance.industrial.rate'] });
   }
   return rows;
@@ -315,3 +315,4 @@ export function lossDate(resignDate: ISODate): ISODate {
 export function monthKey(date: ISODate) {
   return monthOf(date);
 }
+

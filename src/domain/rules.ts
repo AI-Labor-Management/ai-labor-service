@@ -131,9 +131,9 @@ export const STATUS_LABEL: Record<RuleStatus | 'missing', string> = {
   verified: '원문 확인',
   partial: '일부 확인',
   announced: '발표 기준 · 법령 개정 전',
-  pending: '기준 대기 · 시행령 미정',
-  needsExpert: '노무사 확인 필요',
-  missing: '이 날짜의 기준이 아직 없어요',
+  pending: '시행령 발표 전',
+  needsExpert: '전문가 확인 권장',
+  missing: '이 날짜의 기준이 아직 발표되지 않았어요',
 };
 
 export function sourceLabel(s: RuleSource): string {
@@ -147,3 +147,4 @@ export function basisText(id: string, date: ISODate): string {
   const srcs = r.sources.map(sourceLabel);
   return srcs.length ? Array.from(new Set(srcs)).join(' · ') : r.label;
 }
+

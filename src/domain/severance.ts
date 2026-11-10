@@ -97,8 +97,8 @@ export function estimateSeverance(state: AppState, e: Employee, asOf: ISODate): 
     applicable = applicable === 'no' ? 'no' : 'check';
     notes.push('하루 단위·짧은 계약의 반복 — 계속근로 확인 필요');
   }
-  if (e.probationEnd && e.probationEnd >= periodFrom) notes.push('평균임금 기간에 수습이 있어요 — 제외 기간 여부는 전문가 확인 필요 (C9)');
-  if (e.bonusAnnual || e.leaveAllowanceAnnual) notes.push('상여·연차수당 3/12 가산은 법령에 없는 실무 기준이에요 (노무사 확인 전)');
+  if (e.probationEnd && e.probationEnd >= periodFrom) notes.push('평균임금 기간에 수습이 있어요 — 제외 기간 여부는 전문가 확인 필요');
+  if (e.bonusAnnual || e.leaveAllowanceAnnual) notes.push('상여·연차수당 3/12 가산은 법령에 없는 실무 기준이에요 (전문가 확인 권장)');
   if (calc.used === 'ordinary') notes.push('평균임금이 통상임금보다 낮아 통상임금으로 계산했어요 (근로기준법 제2조②)');
   notes.push('1~4명 사업장도 퇴직금은 적용돼요. 퇴직소득세는 계산하지 않아요');
   const monthlyAccrual = won(line.gross / 3 / 12);
@@ -117,3 +117,4 @@ export function estimateSeverance(state: AppState, e: Employee, asOf: ISODate): 
     weeklyHours: wh,
   };
 }
+

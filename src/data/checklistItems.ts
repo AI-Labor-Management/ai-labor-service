@@ -54,7 +54,7 @@ export const CHECKLIST_ITEMS: ChecklistItemDef[] = [
   {
     id: 'E3', title: '근로자 명부 작성', group: 'employee', kind: '서류', condition: '사용기간 30일 미만 일용근로자 외', cycle: '입사 시, 변경 시',
     basis: '근로기준법 제41조, 시행령 제20·21조', penalty: '500만 원 이하 과태료 (제116조②2)', evidence: 'verified',
-    plain: '직원별 인적사항·고용 정보를 명부로 작성해 보관해요. 이름은 출력할 때만 입력해요.', todo: ['명부 양식 출력', '이름 등은 출력 직전에 브라우저에서만 입력'], retention: '퇴직한 날부터 3년', ruleIds: ['records.rosterException'], makeable: 'roster',
+    plain: '직원별 인적사항·고용 정보를 명부로 작성해 보관해요. 이름은 출력할 때만 입력해요.', todo: ['명부 양식 출력', '이름 등은 출력할 때만 입력 (저장하지 않음)'], retention: '퇴직한 날부터 3년', ruleIds: ['records.rosterException'], makeable: 'roster',
   },
   {
     id: 'E4', title: '가족관계증명서·친권자(후견인) 동의서 비치', group: 'employee', kind: '서류', condition: '18세 미만', cycle: '근무 시작 전',
@@ -84,23 +84,23 @@ export const CHECKLIST_ITEMS: ChecklistItemDef[] = [
   },
   {
     id: 'F1', title: '체류자격·근무처 제한 확인', group: 'foreign', kind: '서류', condition: '모든 외국인', cycle: '채용 시, 변경 시',
-    basis: '출입국관리법 제18조 (원문 확인 전)', penalty: '원문 확인 전이라 표시하지 않아요', evidence: 'todo',
+    basis: '출입국관리법 제18조 (전문가 확인 권장)', penalty: '과태료는 전문가와 확인해 주세요', evidence: 'todo',
     plain: '체류자격으로 이 일을 할 수 있는지 확인해요. 외국인등록증 사본은 받지 않아요.', todo: ['체류자격·만료일 확인', '확인한 날짜만 기록'], retention: '—', ruleIds: [],
   },
   {
     id: 'F2', title: '시간제취업 허가 확인', group: 'foreign', kind: '서류', condition: 'D-2, D-4', cycle: '근무 시작 전',
-    basis: '출입국관리법 제20조, 하이코리아 매뉴얼 (원문 확인 전)', penalty: '원문 확인 전이라 표시하지 않아요', evidence: 'todo',
+    basis: '출입국관리법 제20조, 하이코리아 매뉴얼 (전문가 확인 권장)', penalty: '과태료는 전문가와 확인해 주세요', evidence: 'todo',
     plain: '유학·연수 비자는 시간제취업 허가가 있어야 일할 수 있어요.', todo: ['허가 여부·허가 시간 확인', '직원 정보에 입력'], retention: '—', ruleIds: [],
   },
   {
     id: 'F3', title: '고용·퇴직 등 변동 신고', group: 'foreign', kind: '서류', condition: '신고 대상 외국인', cycle: '변동 시',
-    basis: '출입국관리법 제19조 (원문 확인 전)', penalty: '원문 확인 전이라 표시하지 않아요', evidence: 'todo',
+    basis: '출입국관리법 제19조 (전문가 확인 권장)', penalty: '과태료는 전문가와 확인해 주세요', evidence: 'todo',
     plain: '외국인 직원의 고용·퇴직 변동을 신고해야 할 수 있어요. 대상과 기한은 확인이 필요해요.', todo: ['신고 대상 여부 확인'], retention: '—', ruleIds: [],
   },
   {
     id: 'F4', title: '외국인고용법 표준근로계약서', group: 'foreign', kind: '서류', condition: 'E-9', cycle: '채용 시',
     basis: '외국인고용법 제9조①', penalty: '—', evidence: 'verified',
-    plain: 'E-9 직원은 외국인고용법상 표준근로계약서를 써요. 서식 링크는 아직 확보하지 못했어요.', todo: ['서식 확인', '작성·교부'], retention: '3년', ruleIds: [],
+    plain: 'E-9 직원은 외국인고용법상 표준근로계약서를 써요.', todo: ['서식 확인', '작성·교부'], retention: '3년', ruleIds: [],
   },
 ];
 
@@ -112,3 +112,4 @@ export const EVENT_GUIDES = [
 ];
 
 export const ITEM_BY_ID = new Map(CHECKLIST_ITEMS.map((i) => [i.id, i]));
+

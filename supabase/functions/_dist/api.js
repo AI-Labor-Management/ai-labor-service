@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/api/handler.ts (npm run build:functions)
-// sha256:641bf2d029cf
+// sha256:e483245f5057
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -80,7 +80,7 @@ var rules_default = {
       partial: "일부만 확인 (note 참고)",
       announced: "정부 의결·발표만 있고 법령 개정 전",
       pending: "법률은 바뀌었지만 금액·범위를 정할 시행령이 없음",
-      needsExpert: "노무사 확인 필요 (22번)"
+      needsExpert: "노무사 확인 필요"
     },
     "sources.check": "build_rules.py가 data/laws 조문에서 quote를 찾은 결과와 조문 해시. 해시가 바뀌면 원문이 바뀐 것이므로 다시 확인한다.",
     "appliesTo.minEmployees": "이 인원 이상 사업장에만 적용"
@@ -271,7 +271,7 @@ var rules_default = {
           ]
         }
       ],
-      note: "음식점·카페 직무가 단순노무(대분류 9)에 드는지는 22번 C1. 화면은 자동 감액하지 않는다."
+      note: "단순노무 직무면 수습 감액을 할 수 없어요. 서비스는 감액하지 않고 계산해요."
     },
     {
       id: "minimumWage.inclusion.excludedShare",
@@ -408,7 +408,7 @@ var rules_default = {
           ]
         }
       ],
-      note: "통상 근로자 주 5일 기준일 때 별표 2 식과 같다. 퇴사 주 주휴는 22번 C2."
+      note: "통상 근로자 주 5일 기준일 때 별표 2 식과 같아요. 퇴사하는 주의 주휴수당은 전문가와 확인해 주세요."
     },
     {
       id: "premium.overtime",
@@ -862,7 +862,7 @@ var rules_default = {
               }
             }
           ],
-          note: "시간 단위 범위는 시행령 미정 (hourlyUnit=null)"
+          note: "시간 단위 연차 범위는 시행령이 나오면 반영해요."
         }
       ],
       appliesTo: {
@@ -1580,7 +1580,7 @@ var rules_default = {
               }
             }
           ],
-          note: "상여·연차수당 3/12 가산과 일할 계산은 법령에 없음 → 22번"
+          note: "상여·연차수당의 3/12 가산과 일할 계산은 법령에 정해져 있지 않아 전문가 확인이 필요해요."
         }
       ]
     },
@@ -1742,7 +1742,7 @@ var rules_default = {
               }
             }
           ],
-          note: "고시 본문은 국가법령정보센터 행정규칙 화면에서 확인(파일 미보관)"
+          note: "고시 본문은 국가법령정보센터 행정규칙 화면에서 볼 수 있어요."
         }
       ]
     },
@@ -1941,7 +1941,7 @@ var rules_default = {
           ]
         }
       ],
-      note: "2027년 2.0%안은 시행령 개정 전이라 넣지 않음"
+      note: "2027년 2.0%안은 시행령 개정 전이라 아직 반영하지 않았어요."
     },
     {
       id: "insurance.employment.stabilityRate",
@@ -2095,7 +2095,7 @@ var rules_default = {
               }
             }
           ],
-          note: "소득기준 금액은 시행령 확정 전 (입법예고 월 80만 원은 쓰지 않음)"
+          note: "소득기준 금액은 시행령이 정해지면 반영해요 (입법예고안의 월 80만 원은 쓰지 않아요)."
         }
       ]
     },
@@ -3080,9 +3080,9 @@ var STATUS_LABEL = {
   verified: "원문 확인",
   partial: "일부 확인",
   announced: "발표 기준 · 법령 개정 전",
-  pending: "기준 대기 · 시행령 미정",
-  needsExpert: "노무사 확인 필요",
-  missing: "이 날짜의 기준이 아직 없어요"
+  pending: "시행령 발표 전",
+  needsExpert: "전문가 확인 권장",
+  missing: "이 날짜의 기준이 아직 발표되지 않았어요"
 };
 var DAY_MS = 864e5;
 function isISODate(s) {
@@ -3202,9 +3202,9 @@ function localDate(isoDateTime) {
   return fromParts(d.getFullYear(), d.getMonth() + 1, d.getDate());
 }
 var HOLIDAY_SOURCE = {
-  label: "앱 내장 목록 (특일정보 API 연결 전)",
+  label: "정부 발표 대조 목록 + 이후 연도 자동 갱신",
   status: "checked",
-  note: "2026·2027년은 우주항공청 월력요항과 공휴일 규정 개정(노동절·제헌절)에 맞춰 확인했어요(2026-11-07). 2028년부터는 API 연결이나 목록 추가가 필요해요."
+  note: "2026·2027년은 정부 발표와 대조했고, 이후 연도는 자동으로 받아 와요."
 };
 var HOLIDAYS = [
   { date: "2026-01-01", name: "신정" },
@@ -3450,7 +3450,7 @@ var VERDICT_LABEL = {
   expected: "가입 대상 예상",
   excluded: "제외 예상",
   check: "확인 필요",
-  noRule: "기준 없음"
+  noRule: "기준 발표 전"
 };
 var INSURANCE_LABEL = {
   pension: "국민연금",
@@ -3490,14 +3490,14 @@ function judgeInsurance(j, date) {
     let verdict;
     if (j.isForeign) {
       verdict = "check";
-      reasons.push("외국인 고용보험 적용은 체류자격별 확인 필요 (원문 확인 전)");
+      reasons.push("외국인 고용보험 적용은 체류자격마다 달라요 (전문가 확인 권장)");
     } else if (!rule.ok) {
       if (daily || months >= 3) {
         verdict = "expected";
         reasons.push(daily ? "일용근로자는 적용" : "3개월 이상 계속 근로는 적용");
       } else {
         verdict = "noRule";
-        reasons.push('2027.1.1부터 "보수가 소득기준 미만이면 제외" — 소득기준 시행령 확정 전이라 이 날짜의 기준이 아직 없어요');
+        reasons.push('2027.1.1부터 "보수가 소득기준 미만이면 제외"로 바뀌어요 — 이 날짜의 소득기준이 아직 발표되지 않았어요');
       }
     } else if (daily) {
       verdict = "expected";
@@ -3588,7 +3588,7 @@ function premiums(base, date, judgments, industry, ageBand, startedBefore65) {
     const bi = resolveRule("insurance.pension.baseIncome", date);
     const verdict = v("pension");
     if (verdict === "excluded") rows.push(excludedRow("pension", verdict, ["insurance.pension.rate"]));
-    else if (!rate.ok || !bi.ok) rows.push({ kind: "pension", verdict, worker: null, employer: null, status: "missing", note: !rate.ok ? "요율 기준 없음" : "기준소득월액 하한·상한 기준 없음", basis: ["insurance.pension.rate", "insurance.pension.baseIncome"] });
+    else if (!rate.ok || !bi.ok) rows.push({ kind: "pension", verdict, worker: null, employer: null, status: "missing", note: !rate.ok ? "이 날짜의 요율이 아직 발표되지 않았어요" : "이 날짜의 기준소득월액 상·하한이 아직 발표되지 않았어요", basis: ["insurance.pension.rate", "insurance.pension.baseIncome"] });
     else {
       const b = Math.min(bi.value.max, Math.max(bi.value.min, Math.floor(base / bi.value.truncateUnder) * bi.value.truncateUnder));
       const amt = floor10(b * rate.value);
@@ -3603,12 +3603,12 @@ function premiums(base, date, judgments, industry, ageBand, startedBefore65) {
       rows.push(excludedRow("health", verdict, ["insurance.health.rate"]));
       rows.push(excludedRow("ltc", verdict, ["insurance.ltc.rate"]));
     } else {
-      if (!hr.ok) rows.push({ kind: "health", verdict, worker: null, employer: null, status: "missing", note: "기준 없음", basis: ["insurance.health.rate"] });
+      if (!hr.ok) rows.push({ kind: "health", verdict, worker: null, employer: null, status: "missing", note: "이 날짜의 요율이 아직 발표되지 않았어요", basis: ["insurance.health.rate"] });
       else {
         const amt = floor10(base * hr.value / 2);
         rows.push({ kind: "health", verdict, worker: amt, employer: amt, status: st(hr), note: `${base.toLocaleString("ko-KR")}원 × ${(hr.value / 2 * 100).toFixed(3)}%`, basis: ["insurance.health.rate"] });
       }
-      if (!lr.ok) rows.push({ kind: "ltc", verdict, worker: null, employer: null, status: "missing", note: "기준 없음", basis: ["insurance.ltc.rate"] });
+      if (!lr.ok) rows.push({ kind: "ltc", verdict, worker: null, employer: null, status: "missing", note: "이 날짜의 요율이 아직 발표되지 않았어요", basis: ["insurance.ltc.rate"] });
       else {
         const amt = floor10(base * lr.value / 2);
         rows.push({ kind: "ltc", verdict, worker: amt, employer: amt, status: st(lr), note: `소득 × ${(lr.value / 2 * 100).toFixed(4)}%`, basis: ["insurance.ltc.rate"] });
@@ -3620,8 +3620,8 @@ function premiums(base, date, judgments, industry, ageBand, startedBefore65) {
     const ur = resolveRule("insurance.employment.unemploymentRate", date);
     const sr = resolveRule("insurance.employment.stabilityRate", date);
     if (verdict === "excluded") rows.push(excludedRow("employment", verdict, ["insurance.employment.eligibility"]));
-    else if (verdict === "noRule") rows.push({ kind: "employment", verdict, worker: null, employer: null, status: "missing", note: "이 날짜의 가입 기준이 아직 없어요", basis: ["insurance.employment.eligibility"] });
-    else if (!ur.ok || !sr.ok) rows.push({ kind: "employment", verdict, worker: null, employer: null, status: "missing", note: "요율 기준 없음", basis: ["insurance.employment.unemploymentRate"] });
+    else if (verdict === "noRule") rows.push({ kind: "employment", verdict, worker: null, employer: null, status: "missing", note: "이 날짜의 가입 기준이 아직 발표되지 않았어요", basis: ["insurance.employment.eligibility"] });
+    else if (!ur.ok || !sr.ok) rows.push({ kind: "employment", verdict, worker: null, employer: null, status: "missing", note: "이 날짜의 요율이 아직 발표되지 않았어요", basis: ["insurance.employment.unemploymentRate"] });
     else {
       const noUnemployment = ageBand === "65+" && startedBefore65 === false;
       const w = noUnemployment ? 0 : floor10(base * ur.value / 2);
@@ -3631,8 +3631,8 @@ function premiums(base, date, judgments, industry, ageBand, startedBefore65) {
   }
   {
     const r = resolveRule("insurance.industrial.rate", date);
-    if (industry === "service") rows.push({ kind: "industrial", verdict: "expected", worker: 0, employer: null, status: "missing", note: "기타 서비스업 요율은 규칙 파일에 없어요 (음식·숙박·도소매만 확인)", basis: ["insurance.industrial.rate"] });
-    else if (!r.ok) rows.push({ kind: "industrial", verdict: "expected", worker: 0, employer: null, status: "missing", note: "이 날짜의 산재요율 고시가 아직 없어요", basis: ["insurance.industrial.rate"] });
+    if (industry === "service") rows.push({ kind: "industrial", verdict: "expected", worker: 0, employer: null, status: "missing", note: "기타 서비스업 산재요율은 근로복지공단 고지서로 확인해 주세요", basis: ["insurance.industrial.rate"] });
+    else if (!r.ok) rows.push({ kind: "industrial", verdict: "expected", worker: 0, employer: null, status: "missing", note: "이 날짜의 산재요율이 아직 발표되지 않았어요", basis: ["insurance.industrial.rate"] });
     else rows.push({ kind: "industrial", verdict: "expected", worker: 0, employer: floor10(base * r.value.total), status: st(r), note: `${(r.value.total * 100).toFixed(2)}% 전액 사장님`, basis: ["insurance.industrial.rate"] });
   }
   return rows;
@@ -3694,6 +3694,11 @@ function dailyWorkerIncomeTax(dailyPay, date) {
   const calc = Math.floor(round2(Math.max(0, dailyPay - r.deductionPerDay) * r.rate));
   return calc - Math.floor(round2(calc * r.taxCredit));
 }
+function localIncomeTax(incomeTax) {
+  return Math.floor(Math.max(0, incomeTax) / 100) * 10;
+}
+var LOCAL_TAX_NOTE = "소득세의 10%예요 (지방세법 제103조의13)";
+var RESIGN_WEEK_FLAG = "퇴사하는 주 — 자동 포함하지 않음, 확인 필요";
 function dayCalc(state, e, d, scale) {
   const cond2 = conditionAt(state.conditions, e.id, d);
   if (!cond2) return null;
@@ -3805,7 +3810,7 @@ function computePayrollLine(input) {
     warnings.push({ level: "risk", text: `최저임금 미달 ${belowDays.length}일 — 시급 ${belowDays[0].wage.toLocaleString("ko-KR")}원 < ${req?.toLocaleString("ko-KR")}원 (${fmtMD(belowDays[0].date)}부터)`, basis: ["minimumWage.hourly"] });
   }
   const noRuleDays = days.filter((d) => d.netMin > 0 && checkMinimumWage(d.wage, d.date).status === "noRule");
-  if (noRuleDays.length) warnings.push({ level: "check", text: `${fmtMD(noRuleDays[0].date)} 등 ${noRuleDays.length}일은 최저임금 기준이 규칙 파일에 없어요`, basis: ["minimumWage.hourly"] });
+  if (noRuleDays.length) warnings.push({ level: "check", text: `${fmtMD(noRuleDays[0].date)} 등 ${noRuleDays.length}일은 최저임금 기준이 아직 발표되지 않았어요`, basis: ["minimumWage.hourly"] });
   const whRows = [];
   let whPay = 0;
   const cond2 = (d) => conditionAt(state.conditions, e.id, d);
@@ -3835,14 +3840,14 @@ function computePayrollLine(input) {
     const plans = employedDays.map((d) => dayPlan(state, e, d.date));
     const absent = plans.some((p) => p.off === "absent");
     const subs = plans.some((p) => p.overrides.some((o) => o.kind === "subIn" || o.kind === "subOut"));
-    if (subs) flags.push("대타로 바뀐 날 포함 — 근무일 변경으로 처리, 확인 필요 (C3)");
+    if (subs) flags.push("대타로 바뀐 날 포함 — 근무일 변경으로 처리, 확인 필요");
     const minH = ruleValue("weeklyHoliday.minWeeklyHours", weekEnd);
     const eligible = avg4w >= minH && !absent && sched > 0;
     const hours = eligible ? Math.min(sched, 40) / 40 * 8 : 0;
     const wageW = c.hourlyWage;
     let included = eligible;
     if (e.resignDate && e.resignDate >= weekStart && e.resignDate < weekEnd) {
-      flags.push("퇴사하는 주 — 확인 필요 (노무사 확인 C2), 자동 포함하지 않음");
+      flags.push(RESIGN_WEEK_FLAG);
       included = false;
     }
     if (absent) flags.push("결근 있음 — 개근 요건 미충족");
@@ -3856,10 +3861,10 @@ function computePayrollLine(input) {
     code: "weeklyHoliday",
     label: "주휴수당",
     amount: won(whPay),
-    formula: whRows.filter((r) => r.included).length ? whRows.filter((r) => r.included).map((r) => `주 ${r.scheduledHours}h→${r.hours}h`).join(" + ") : "대상 주 없음",
+    formula: whRows.filter((r) => r.included).length ? whRows.filter((r) => r.included).map((r) => `주 ${r.scheduledHours}시간→${r.hours}시간`).join(" + ") : "대상 주 없음",
     basis: ["weeklyHoliday.minWeeklyHours", "weeklyHoliday.paidHours"]
   });
-  if (whRows.some((r) => r.flags.some((f) => f.includes("C2")))) warnings.push({ level: "check", text: "퇴사하는 주의 주휴수당은 자동으로 넣지 않았어요 (노무사 확인 C2)", basis: ["weeklyHoliday.paidHours"] });
+  if (whRows.some((r) => r.flags.includes(RESIGN_WEEK_FLAG))) warnings.push({ level: "check", text: "퇴사하는 주의 주휴수당은 자동으로 넣지 않았어요. 지급 여부는 전문가와 확인해 주세요", basis: ["weeklyHoliday.paidHours"] });
   const contractWeekly = (we) => {
     const c = cond2(we);
     return c && !c.variable ? weeklyHours(c) : 0;
@@ -3878,7 +3883,7 @@ function computePayrollLine(input) {
   } else {
     if (prem.overtimeMin) items.push({ code: "overtime", label: "연장 가산", amount: won(prem.overtimePay), formula: `${(prem.overtimeMin / 60).toFixed(1)}시간 × 시급 × 50%`, basis: ["premium.overtime"] });
     if (prem.nightMin) items.push({ code: "night", label: "야간 가산", amount: won(prem.nightPay), formula: `${(prem.nightMin / 60).toFixed(1)}시간(22~06시) × 시급 × 50%`, basis: ["premium.night"] });
-    if (prem.holidayWithin8Min || prem.holidayOver8Min) items.push({ code: "holiday", label: "휴일 가산", amount: won(prem.holidayPay), formula: `8시간 이내 ${(prem.holidayWithin8Min / 60).toFixed(1)}h × 50% + 초과 ${(prem.holidayOver8Min / 60).toFixed(1)}h × 100%`, basis: ["premium.holiday"] });
+    if (prem.holidayWithin8Min || prem.holidayOver8Min) items.push({ code: "holiday", label: "휴일 가산", amount: won(prem.holidayPay), formula: `8시간 이내 ${(prem.holidayWithin8Min / 60).toFixed(1)}시간 × 50% + 초과 ${(prem.holidayOver8Min / 60).toFixed(1)}시간 × 100%`, basis: ["premium.holiday"] });
     if (prem.partTimeOverMin) items.push({ code: "partTimeOver", label: "단시간 초과근로 가산", amount: won(prem.partTimeOverPay), formula: `소정근로시간 초과 ${(prem.partTimeOverMin / 60).toFixed(1)}시간 × 시급 × 50% (근사)`, basis: ["fixedTerm.partTimeOvertime"] });
     if (!prem.overtimeMin && !prem.nightMin && !prem.holidayWithin8Min && !prem.holidayOver8Min && !prem.partTimeOverMin)
       items.push({ code: "premium", label: "연장·야간·휴일 가산", amount: 0, formula: "해당 근무 없음", basis: ["premium.overtime", "premium.night", "premium.holiday"] });
@@ -3887,7 +3892,7 @@ function computePayrollLine(input) {
   const lvMin = days.filter((d) => d.paidOffKind === "leave").reduce((s, d) => s + d.paidOffMin, 0);
   const phPay = days.filter((d) => d.paidOffKind === "publicHoliday").reduce((s, d) => s + d.paidOffMin / 60 * d.wage, 0);
   const lvPay = days.filter((d) => d.paidOffKind === "leave").reduce((s, d) => s + d.paidOffMin / 60 * d.wage, 0);
-  if (phMin) items.push({ code: "publicHoliday", label: "공휴일 유급", amount: won(phPay), formula: `${(phMin / 60).toFixed(1)}시간 × 시급 (단시간 비례 원문 확인 전)`, basis: ["holidays.legal"] });
+  if (phMin) items.push({ code: "publicHoliday", label: "공휴일 유급", amount: won(phPay), formula: `${(phMin / 60).toFixed(1)}시간 × 시급`, basis: ["holidays.legal"] });
   if (lvMin) items.push({ code: "leavePay", label: "연차 사용일 유급", amount: won(lvPay), formula: `${(lvMin / 60).toFixed(1)}시간 × 시급`, basis: ["annualLeave.accrual"] });
   if (under5 && days.some((d) => dayPlan(state, e, d.date).off === "leave")) warnings.push({ level: "info", text: "1~4명 사업장은 연차 규정 미적용 — 연차로 표시한 날은 무급으로 계산했어요", basis: ["scope.under5.appliedArticles"] });
   const lastCond = cond2(to);
@@ -3904,9 +3909,9 @@ function computePayrollLine(input) {
     items.push({ code: "adjust", label: adj.label || "조정", amount: won(adj.amount), formula: "사장님 직접 입력", basis: [] });
   }
   const gross = items.reduce((s, i) => s + i.amount, 0);
-  if (e.probationEnd && e.probationEnd >= from) warnings.push({ level: "check", text: "수습 중 — 감액하지 않고 계산했어요. 감액 가능 여부는 확인 필요 (노무사 확인 C1)", basis: ["minimumWage.probation"] });
+  if (e.probationEnd && e.probationEnd >= from) warnings.push({ level: "check", text: "수습 중 — 감액하지 않고 계산했어요. 감액 가능 여부는 전문가와 확인해 주세요", basis: ["minimumWage.probation"] });
   const pendingDays = days.filter((d) => d.pending).map((d) => d.date);
-  if (pendingDays.length) warnings.push({ level: "check", text: `확인 대기 근무 ${pendingDays.length}일 — 확인 전에는 예정 시간으로 계산해요`, basis: [] });
+  if (pendingDays.length) warnings.push({ level: "check", text: `확인 대기 근무 ${pendingDays.length}일 — 확인하기 전까지는 예정 시간으로 계산해요`, basis: [] });
   if (lastCond?.variable) warnings.push({ level: "check", text: "매주 달라요 — 입력한 실제 근무로 계산했어요", basis: [] });
   if (e.ageBand === "under18") warnings.push({ level: "info", text: "18세 미만 — 근무 화면의 시간 한도·야간·휴일 경고를 확인하세요", basis: ["minor.limits"] });
   const deductions = [];
@@ -3923,12 +3928,13 @@ function computePayrollLine(input) {
     } else {
       const mt = input.manual?.incomeTax;
       deductions.push(
-        mt != null ? { code: "incomeTax", label: "소득세", amount: mt, source: "manual", note: "사장님 직접 입력" } : { code: "incomeTax", label: "소득세", amount: null, source: "missing", note: "상용 간이세액표 확보 전 — 직접 입력하세요 (세무 전문가 확인 권장)" }
+        mt != null ? { code: "incomeTax", label: "소득세", amount: mt, source: "manual", note: "사장님 직접 입력" } : { code: "incomeTax", label: "소득세", amount: null, source: "missing", note: "직접 입력해 주세요 (세무 전문가 확인 권장)" }
       );
     }
     const lt = input.manual?.localTax;
+    const it = deductions.find((d) => d.code === "incomeTax")?.amount ?? null;
     deductions.push(
-      lt != null ? { code: "localTax", label: "지방소득세", amount: lt, source: "manual", note: "사장님 직접 입력" } : { code: "localTax", label: "지방소득세", amount: null, source: "missing", note: "규칙 파일에 없어 자동 계산하지 않아요 — 직접 입력" }
+      lt != null ? { code: "localTax", label: "지방소득세", amount: lt, source: "manual", note: "사장님 직접 입력" } : it != null ? { code: "localTax", label: "지방소득세", amount: localIncomeTax(it), source: "estimate", note: LOCAL_TAX_NOTE } : { code: "localTax", label: "지방소득세", amount: null, source: "missing", note: "소득세를 입력하면 자동으로 계산해요" }
     );
   }
   const deductionTotal = deductions.reduce((s, d) => s + (d.amount ?? 0), 0);
@@ -4083,8 +4089,8 @@ function estimateSeverance(state, e, asOf) {
     applicable = applicable === "no" ? "no" : "check";
     notes.push("하루 단위·짧은 계약의 반복 — 계속근로 확인 필요");
   }
-  if (e.probationEnd && e.probationEnd >= periodFrom) notes.push("평균임금 기간에 수습이 있어요 — 제외 기간 여부는 전문가 확인 필요 (C9)");
-  if (e.bonusAnnual || e.leaveAllowanceAnnual) notes.push("상여·연차수당 3/12 가산은 법령에 없는 실무 기준이에요 (노무사 확인 전)");
+  if (e.probationEnd && e.probationEnd >= periodFrom) notes.push("평균임금 기간에 수습이 있어요 — 제외 기간 여부는 전문가 확인 필요");
+  if (e.bonusAnnual || e.leaveAllowanceAnnual) notes.push("상여·연차수당 3/12 가산은 법령에 없는 실무 기준이에요 (전문가 확인 권장)");
   if (calc.used === "ordinary") notes.push("평균임금이 통상임금보다 낮아 통상임금으로 계산했어요 (근로기준법 제2조②)");
   notes.push("1~4명 사업장도 퇴직금은 적용돼요. 퇴직소득세는 계산하지 않아요");
   const monthlyAccrual = won(line.gross / 3 / 12);
@@ -4204,7 +4210,7 @@ function computeDeadlines(state, base) {
       if (e.employmentType === "fixed" && e.contractEnd)
         raws.push({ key: `contractEnd:${e.id}:${e.contractEnd}`, type: "contractEnd", title: `${e.alias} 계약 만료`, employee: e, date: e.contractEnd, origin: `계약 종료일 ${e.contractEnd}`, link: empLink, basis: "직원 등록값 · 기간제법 제17조", actions: ["renewed", "ended", "unknown"] });
       if (e.isForeign && e.foreign?.expiry)
-        raws.push({ key: `visaExpiry:${e.id}:${e.foreign.expiry}`, type: "visaExpiry", title: `${e.alias} 체류기간 만료`, employee: e, date: e.foreign.expiry, origin: `체류기간 만료일 ${e.foreign.expiry}`, link: empLink, basis: "외국인 정보 (출입국관리법 원문 확인 전)", actions: ["done"] });
+        raws.push({ key: `visaExpiry:${e.id}:${e.foreign.expiry}`, type: "visaExpiry", title: `${e.alias} 체류기간 만료`, employee: e, date: e.foreign.expiry, origin: `체류기간 만료일 ${e.foreign.expiry}`, link: empLink, basis: "외국인 정보 (출입국관리법 · 전문가 확인 권장)", actions: ["done"] });
       const hc = state.docRecords.find((r) => r.key === `E5:${e.id}` && (r.status === "done" || r.status === "stored"));
       if (hc?.expiry) {
         raws.push({ key: `healthCert:${e.id}:${hc.expiry}`, type: "healthCert", title: `${e.alias} 보건증 재검진`, employee: e, date: hc.expiry, origin: `보건증 유효기간 ${hc.expiry}`, link: `/owner/documents?item=E5&emp=${e.id}`, basis: "건강진단규칙 제2조", ruleIds: ["healthCertificate"], actions: ["done"], showFrom: addDays(hc.expiry, -30) });
@@ -4319,7 +4325,7 @@ function fold(line) {
 }
 function buildIcs(deadlines, generatedAt = /* @__PURE__ */ new Date()) {
   const stamp = generatedAt.toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
-  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//ai-labor-service//draft//KO", "CALSCALE:GREGORIAN", "X-WR-CALNAME:노무 기한 (로컬 데모)"];
+  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//saram-saemgak//KO", "CALSCALE:GREGORIAN", "X-WR-CALNAME:사람샘각 노무 기한"];
   for (const d of deadlines) {
     const ymd2 = d.date.replace(/-/g, "");
     const next = new Date(Date.UTC(Number(d.date.slice(0, 4)), Number(d.date.slice(5, 7)) - 1, Number(d.date.slice(8, 10)) + 1));
@@ -4446,7 +4452,7 @@ var CHECKLIST_ITEMS = [
     penalty: "500만 원 이하 과태료 (제116조②2)",
     evidence: "verified",
     plain: "직원별 인적사항·고용 정보를 명부로 작성해 보관해요. 이름은 출력할 때만 입력해요.",
-    todo: ["명부 양식 출력", "이름 등은 출력 직전에 브라우저에서만 입력"],
+    todo: ["명부 양식 출력", "이름 등은 출력할 때만 입력 (저장하지 않음)"],
     retention: "퇴직한 날부터 3년",
     ruleIds: ["records.rosterException"],
     makeable: "roster"
@@ -4534,8 +4540,8 @@ var CHECKLIST_ITEMS = [
     kind: "서류",
     condition: "모든 외국인",
     cycle: "채용 시, 변경 시",
-    basis: "출입국관리법 제18조 (원문 확인 전)",
-    penalty: "원문 확인 전이라 표시하지 않아요",
+    basis: "출입국관리법 제18조 (전문가 확인 권장)",
+    penalty: "과태료는 전문가와 확인해 주세요",
     evidence: "todo",
     plain: "체류자격으로 이 일을 할 수 있는지 확인해요. 외국인등록증 사본은 받지 않아요.",
     todo: ["체류자격·만료일 확인", "확인한 날짜만 기록"],
@@ -4549,8 +4555,8 @@ var CHECKLIST_ITEMS = [
     kind: "서류",
     condition: "D-2, D-4",
     cycle: "근무 시작 전",
-    basis: "출입국관리법 제20조, 하이코리아 매뉴얼 (원문 확인 전)",
-    penalty: "원문 확인 전이라 표시하지 않아요",
+    basis: "출입국관리법 제20조, 하이코리아 매뉴얼 (전문가 확인 권장)",
+    penalty: "과태료는 전문가와 확인해 주세요",
     evidence: "todo",
     plain: "유학·연수 비자는 시간제취업 허가가 있어야 일할 수 있어요.",
     todo: ["허가 여부·허가 시간 확인", "직원 정보에 입력"],
@@ -4564,8 +4570,8 @@ var CHECKLIST_ITEMS = [
     kind: "서류",
     condition: "신고 대상 외국인",
     cycle: "변동 시",
-    basis: "출입국관리법 제19조 (원문 확인 전)",
-    penalty: "원문 확인 전이라 표시하지 않아요",
+    basis: "출입국관리법 제19조 (전문가 확인 권장)",
+    penalty: "과태료는 전문가와 확인해 주세요",
     evidence: "todo",
     plain: "외국인 직원의 고용·퇴직 변동을 신고해야 할 수 있어요. 대상과 기한은 확인이 필요해요.",
     todo: ["신고 대상 여부 확인"],
@@ -4582,7 +4588,7 @@ var CHECKLIST_ITEMS = [
     basis: "외국인고용법 제9조①",
     penalty: "—",
     evidence: "verified",
-    plain: "E-9 직원은 외국인고용법상 표준근로계약서를 써요. 서식 링크는 아직 확보하지 못했어요.",
+    plain: "E-9 직원은 외국인고용법상 표준근로계약서를 써요.",
     todo: ["서식 확인", "작성·교부"],
     retention: "3년",
     ruleIds: []
@@ -4780,7 +4786,7 @@ function computeChecklist(state, base) {
       const f3 = applyRecord(mk(itm("F3"), { key: `F3:${e.id}`, employeeId: e.id, alias: e.alias }));
       if (f3.status === "todo") {
         f3.level = "check";
-        f3.levelText = "대상·기한 원문 확인 전";
+        f3.levelText = "대상·기한 전문가 확인 필요";
       }
       rows.push(f3);
       if (f.visa === "E-9") {
@@ -4898,7 +4904,7 @@ var VISA_GUIDE = {
   "D-2": "유학 — 시간제취업 허가 여부·허가 시간, 다른 사업장 주당 시간 합계 확인",
   "D-4": "연수 — 시간제취업 허가 여부·허가 시간 확인",
   "E-9": "고용허가 — 허용 업종·근무처 제한 확인, 외국인고용법 표준근로계약서, 출국만기보험",
-  "H-2": "방문취업 — 취업 제한 업종 확인 (F-4 통합 여부는 법무부 원문 확인 전)",
+  "H-2": "방문취업 — 취업 제한 업종 확인 (F-4 통합 여부는 전문가와 확인)",
   "F-4": "재외동포 — 취업 제한 업종 확인",
   other: "기타 — 확인 필요"
 };
@@ -4917,9 +4923,9 @@ function foreignSignal(state, e, baseDate) {
     else if (f.permitted === null) items.push({ signal: "check", text: "시간제취업 허가 여부 확인 필요" });
     else {
       const wh = weeklyHours(conditionAt(state.conditions, e.id, baseDate));
-      if (f.permitHours == null) items.push({ signal: "check", text: "허가 시간 입력 필요 (유학생 허가 시간 기준은 원문 미확인)" });
-      else if (wh + (f.otherWorkplaceHours || 0) > f.permitHours) items.push({ signal: "risk", text: `주 ${wh.toFixed(1)}h + 다른 사업장 ${f.otherWorkplaceHours}h가 허가 ${f.permitHours}h를 넘어요` });
-      else items.push({ signal: "ok", text: `허가 ${f.permitHours}h 이내 (주 ${wh.toFixed(1)}h + 다른 사업장 ${f.otherWorkplaceHours}h)` });
+      if (f.permitHours == null) items.push({ signal: "check", text: "허가 시간 입력 필요 (허가서에 적힌 주당 시간)" });
+      else if (wh + (f.otherWorkplaceHours || 0) > f.permitHours) items.push({ signal: "risk", text: `주 ${wh.toFixed(1)}시간 + 다른 사업장 ${f.otherWorkplaceHours}시간이 허가 ${f.permitHours}시간을 넘어요` });
+      else items.push({ signal: "ok", text: `허가 ${f.permitHours}시간 이내 (주 ${wh.toFixed(1)}시간 + 다른 사업장 ${f.otherWorkplaceHours}시간)` });
     }
   } else if (f.checkedAt) {
     items.push({ signal: "ok", text: `체류자격·근무처 확인함 (${f.checkedAt})` });
@@ -5033,10 +5039,10 @@ var FAQS = [
     id: "FAQ6",
     q: "유학생 아르바이트를 써도 되나요?",
     keywords: ["유학생", "D-2", "D-4", "외국인", "아르바이트", "비자"],
-    oneLine: "시간제취업 허가가 있어야 해요. 허가 시간과 다른 사업장 시간을 합쳐 넘지 않게 관리하세요. 허가 시간 기준은 원문 확인 전이에요.",
+    oneLine: "시간제취업 허가가 있어야 해요. 허가 시간과 다른 사업장 시간을 합쳐 넘지 않게 관리하세요. 허가 시간은 허가서에 적힌 시간을 기준으로 해요.",
     todo: ["직원 등록에서 허가 여부·허가 시간 입력", "근무 일정의 허가시간 경고 확인"],
     ruleIds: [],
-    basis: "출입국관리법 제20조 (원문 확인 전)",
+    basis: "출입국관리법 제20조 (전문가 확인 권장)",
     expert: true
   },
   {
@@ -5116,7 +5122,7 @@ function buildMemo(state, question, faq, base) {
   lines.push("  2. 사업장 규모별 적용 여부");
   lines.push('  3. 서비스 화면의 "확인 필요" 항목');
   lines.push("");
-  lines.push("※ 이 메모는 브라우저에서만 만들었고 저장되지 않아요. 직원 실명·번호는 넣지 마세요.");
+  lines.push("※ 직원 실명·연락처는 넣지 마세요.");
   return lines.join("\n");
 }
 var EMPTY_DIAG = { industry: null, staff: null, kinds: [], contract: null, weeklyHoliday: null, insurance: null, concern: null };
@@ -5136,8 +5142,8 @@ function diagnose(a) {
   if (a.weeklyHoliday === "unknown") items.push({ level: "check", title: "주휴수당 대상인지 확인이 필요해요", basis: "근로기준법 제18조③", join: "→ 가입하면 4주 평균 주 15시간 기준으로 자동 판단해요" });
   if (a.insurance === "notYet") items.push({ level: "risk", title: "4대보험을 아직 처리하지 않았어요", basis: "건강보험 14일 이내, 연금·고용·산재 다음 달 15일까지 신고", join: "→ 가입하면 직원별 신고 기한을 날짜로 알려줘요" });
   if (a.insurance === "unknown") items.push({ level: "check", title: "4대보험 처리 상태를 확인해 주세요", basis: "국민건강보험법 제8조② 등", join: "→ 가입하면 처리 방식(직접·맡김·이미 처리)을 직원별로 관리해요" });
-  if (a.concern === "dismiss") items.push({ level: "risk", title: "퇴사·내보내기 고민 — 전문가 확인을 권해요", basis: "근로기준법 제26조(해고 예고), 제27조(5명 이상 서면 통지)", join: "→ 가입하면 퇴사 처리 마법사와 노무사 연결을 쓸 수 있어요" });
-  if (a.kinds.includes("foreign") || a.concern === "foreign") items.push({ level: "check", title: "외국인·유학생 직원은 체류자격과 허가 시간 확인이 필요해요", basis: "출입국관리법 (원문 확인 전)", join: "→ 가입하면 체류기간 만료와 허가시간 초과를 미리 알려줘요" });
+  if (a.concern === "dismiss") items.push({ level: "risk", title: "퇴사·내보내기 고민 — 전문가 확인을 권해요", basis: "근로기준법 제26조(해고 예고), 제27조(5명 이상 서면 통지)", join: "→ 가입하면 퇴사 처리 마법사로 예고·통지 순서를 점검해요. 판단은 고용노동부 고객상담센터(☎ 1350)에 확인해 주세요" });
+  if (a.kinds.includes("foreign") || a.concern === "foreign") items.push({ level: "check", title: "외국인·유학생 직원은 체류자격과 허가 시간 확인이 필요해요", basis: "출입국관리법 (전문가 확인 권장)", join: "→ 가입하면 체류기간 만료와 허가시간 초과를 미리 알려줘요" });
   if (a.kinds.includes("minor")) items.push({ level: "check", title: "18세 미만 직원은 친권자 동의서·가족관계증명서와 근로시간 한도가 있어요", basis: "근로기준법 제66조 · 제69조", join: "→ 가입하면 1일 7시간·주 35시간 초과와 야간·휴일 근무를 경고해요" });
   if (a.industry === "food") items.push({ level: "check", title: "음식점·카페는 보건증(매 1년)과 사장님 식품위생교육이 필요해요", basis: "식품위생법 제40조 · 제41조", join: "→ 가입하면 보건증 유효기간 30일 전부터 알려줘요" });
   if (a.staff === "5-9") items.push({ level: "check", title: "5명 이상 사업장은 연장·야간·휴일 가산, 연차, 법령 게시가 적용돼요", basis: "근로기준법 시행령 별표 1", join: "→ 가입하면 규모에 맞는 항목만 보여줘요" });
@@ -5230,14 +5236,14 @@ function createSeed(base) {
   const s = createEmptyState();
   const created = ts(addDays(base, -75));
   s.workplace = {
-    name: "카페 샘터 (가상)",
+    name: "카페 샘터 (예시)",
     industry: "food",
     scale: "1-4",
     familyOnly: false,
     payDay: 10,
     payMonthBasis: "previous",
     gpsEnabled: true,
-    address: "부산 남구 (가상 주소)",
+    address: "부산 남구 (예시 주소)",
     radiusM: 100,
     lateToleranceMin: 5,
     defaultInsuranceMethod: "self",
