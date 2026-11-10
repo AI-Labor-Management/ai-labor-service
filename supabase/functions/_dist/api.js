@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/api/handler.ts (npm run build:functions)
-// sha256:71ce2d9c4517
+// sha256:641bf2d029cf
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -6209,7 +6209,7 @@ function toGroundedAnswer(raw, docs, checkedAt) {
 // supabase/functions/api/gemini.ts
 var DEFAULT_GEMINI_MODEL = "gemini-3.6-flash";
 var FALLBACK_GEMINI_MODEL = "gemini-3.5-flash-lite";
-var GEMINI_POLICY_FROM = "2026-11-15";
+var GEMINI_POLICY_FROM = "2026-11-10";
 var ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
 var PRIMARY_TIMEOUT_MS = 45e3;
 var FALLBACK_TIMEOUT_MS = 3e4;

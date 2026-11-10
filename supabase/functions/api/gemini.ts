@@ -12,8 +12,9 @@ import { ANSWER_SCHEMA, corpusText, type Doc, toGroundedAnswer } from './ai-grou
 
 export const DEFAULT_GEMINI_MODEL = 'gemini-3.6-flash';
 const FALLBACK_GEMINI_MODEL = 'gemini-3.5-flash-lite';
-/** 처리방침 변경(AI 제공사 Google 추가) 시행일 — 이날부터 Gemini로 답한다 (방침: 시행 7일 전 알림) */
-export const GEMINI_POLICY_FROM = '2026-11-15';
+/** 처리방침 변경(AI 제공사 Google 추가) 시행일 — 이날부터 Gemini로 답한다.
+ *  2026-11-08에 알리고 11-15 시행 예정이었으나, 가입자가 운영자뿐이라 운영자 결정으로 2026-11-10 바로 시행 */
+export const GEMINI_POLICY_FROM = '2026-11-10';
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 /** 첫 모델 45초 + 대체 모델 30초 — 화면은 100초까지 기다리고, Edge Function 벽시계 한도(150초) 안에서 끝낸다 */
 const PRIMARY_TIMEOUT_MS = 45_000;
