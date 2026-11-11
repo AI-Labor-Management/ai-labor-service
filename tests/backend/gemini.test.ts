@@ -4,7 +4,7 @@ import rulesFile from '../../src/data/rules.json';
 import { FAQS } from '../../src/data/faq';
 import { resolveRule } from '../../src/domain/rules';
 import { buildCorpus } from '../../supabase/functions/api/ai-ground';
-import { askGemini, DEFAULT_GEMINI_MODEL } from '../../supabase/functions/api/gemini';
+import { askGemini, DEFAULT_GEMINI_MODEL, resetGeminiState } from '../../supabase/functions/api/gemini';
 
 const TODAY = '2026-11-15';
 const docs = buildCorpus(rulesFile.rules, (id) => resolveRule(id, TODAY), FAQS);
@@ -19,6 +19,7 @@ let fetchMock: ReturnType<typeof vi.fn>;
 const calledModels = () => fetchMock.mock.calls.map(([url]) => decodeURIComponent(String(url)).match(/models\/([^:]+):/)?.[1]);
 
 beforeEach(() => {
+  resetGeminiState();
   vi.useFakeTimers({ toFake: ['setTimeout'] });
   vi.stubGlobal('Deno', { env: { get: (k: string) => (k === 'GEMINI_API_KEY' ? 'test-key' : undefined) } });
   fetchMock = vi.fn();
@@ -57,6 +58,17 @@ describe('Gemini 다시 시도', () => {
     const a = await ask();
     expect(a.status).toBe('answer');
     expect(calledModels()).toEqual([DEFAULT_GEMINI_MODEL, 'gemini-3.5-flash-lite', DEFAULT_GEMINI_MODEL]);
+  });
+
+  it('첫 모델이 이용량 소진(429)이면 남은 시도는 대체 모델로, 다음 질문도 10분 동안 대체 모델부터 묻는다', async () => {
+    const LITE = 'gemini-3.5-flash-lite';
+    fetchMock.mockResolvedValueOnce(fail(429, 'RESOURCE_EXHAUSTED')).mockResolvedValueOnce(fail(503, 'UNAVAILABLE')).mockResolvedValueOnce(ok(GOOD));
+    expect((await ask()).status).toBe('answer');
+    expect(calledModels()).toEqual([DEFAULT_GEMINI_MODEL, LITE, LITE]);
+    fetchMock.mockClear();
+    fetchMock.mockResolvedValueOnce(ok(GOOD));
+    expect((await ask()).status).toBe('answer');
+    expect(calledModels()).toEqual([LITE]);
   });
 
   it('빈 답이나 깨진 JSON도 다음 시도로 넘긴다', async () => {

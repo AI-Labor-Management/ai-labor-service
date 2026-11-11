@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/api/handler.ts (npm run build:functions)
-// sha256:27b9ef7cf1e8
+// sha256:c7c3a686882a
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -6221,7 +6221,9 @@ var PRIMARY_TIMEOUT_MS = 45e3;
 var FALLBACK_TIMEOUT_MS = 3e4;
 var TOTAL_BUDGET_MS = 95e3;
 var LAST_TRY_IF_UNDER_MS = 4e4;
-var LAST_TRY_PAUSE_MS = 1200;
+var LAST_TRY_PAUSE_MS = 2e3;
+var PRIMARY_REST_MS = 6e5;
+var primaryRestUntil = 0;
 function geminiConfigured() {
   return !!Deno.env.get("GEMINI_API_KEY");
 }
@@ -6327,7 +6329,8 @@ async function askGemini(question, context, checkedAt, docs) {
       .../^gemini-([3-9]|\d\d)/.test(model) ? { thinkingConfig: { thinkingLevel: "LOW" } } : {}
     }
   });
-  const tries = [primary, ...primary !== FALLBACK_GEMINI_MODEL ? [FALLBACK_GEMINI_MODEL] : [], primary];
+  const fallbackOnly = primary === FALLBACK_GEMINI_MODEL || Date.now() < primaryRestUntil;
+  const tries = fallbackOnly ? [FALLBACK_GEMINI_MODEL, FALLBACK_GEMINI_MODEL] : [primary, FALLBACK_GEMINI_MODEL, primary];
   const started = Date.now();
   let lastError = new HttpError(502, "AI 답변을 받지 못했어요. 잠시 뒤 다시 시도해 주세요.", { code: "AI_ERROR" });
   for (let i = 0; i < tries.length; i++) {
@@ -6343,6 +6346,10 @@ async function askGemini(question, context, checkedAt, docs) {
     if (!res.ok) {
       lastError = res.error;
       if (!res.retryable) break;
+      if (tries[i] === primary && primary !== FALLBACK_GEMINI_MODEL && res.error.status === 429) {
+        primaryRestUntil = Date.now() + PRIMARY_REST_MS;
+        for (let k = i + 1; k < tries.length; k++) if (tries[k] === primary) tries[k] = FALLBACK_GEMINI_MODEL;
+      }
       continue;
     }
     const answer = readAnswer(tries[i], res.json, docs, checkedAt);
