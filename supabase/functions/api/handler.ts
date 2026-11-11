@@ -471,11 +471,20 @@ async function consultAnswer(db: Db, user: User, body: Body) {
   if (error) throw error;
   if ((used as number) < 0) throw new HttpError(429, `오늘 AI 상담 ${AI_DAILY_LIMIT}회를 모두 썼어요. 내일 다시 이용하거나 노무 전문가 상담을 이용해 주세요.`, { code: 'AI_DAILY_LIMIT' });
   const ctx = { industry: INDUSTRY_KO[wp.industry] ?? '기타', scale: SCALE_KO[wp.scale] ?? wp.scale };
-  const answer =
-    provider === 'gemini'
-      ? await askGemini(question, ctx, today, aiCorpus(today))
-      : await askClaude(question, ctx, today);
-  return { ...answer, usedToday: used as number, dailyLimit: AI_DAILY_LIMIT };
+  try {
+    const answer =
+      provider === 'gemini'
+        ? await askGemini(question, ctx, today, aiCorpus(today))
+        : await askClaude(question, ctx, today);
+    return { ...answer, usedToday: used as number, dailyLimit: AI_DAILY_LIMIT };
+  } catch (e) {
+    // 답을 받지 못했으면(제공사 오류·시간 초과·붐빔) 오늘 이용 횟수에서 한 번을 되돌린다
+    await db.rpc('ai_refund', { p_user: user.id }).then(
+      ({ error: refundError }) => refundError && console.warn('[ai] 이용 횟수 되돌리기 실패', refundError.message),
+      () => undefined,
+    );
+    throw e;
+  }
 }
 
 /** 카카오톡 나에게 보내기 — 상태·연결 시작·끊기·시험 발송 (사장님만) */

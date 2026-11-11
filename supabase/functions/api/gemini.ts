@@ -16,9 +16,13 @@ const FALLBACK_GEMINI_MODEL = 'gemini-3.5-flash-lite';
  *  2026-11-08에 알리고 11-15 시행 예정이었으나, 가입자가 운영자뿐이라 운영자 결정으로 2026-11-10 바로 시행 */
 export const GEMINI_POLICY_FROM = '2026-11-10';
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
-/** 첫 모델 45초 + 대체 모델 30초 — 화면은 100초까지 기다리고, Edge Function 벽시계 한도(150초) 안에서 끝낸다 */
+/** 첫 모델 45초 + 대체 모델 30초 (+ 빨리 실패했을 때만 첫 모델 한 번 더) — 화면은 100초까지 기다리므로 모두 합쳐 95초 안에 끝낸다 */
 const PRIMARY_TIMEOUT_MS = 45_000;
 const FALLBACK_TIMEOUT_MS = 30_000;
+const TOTAL_BUDGET_MS = 95_000;
+/** 세 번째 시도는 앞의 두 번이 이 시간 안에 실패했을 때만 (무료 등급의 잠깐 붐빔·일시 오류) */
+const LAST_TRY_IF_UNDER_MS = 40_000;
+const LAST_TRY_PAUSE_MS = 1_200;
 
 export function geminiConfigured(): boolean {
   return !!Deno.env.get('GEMINI_API_KEY');
@@ -72,7 +76,12 @@ interface GeminiResponse {
   error?: { code?: number; message?: string; status?: string };
 }
 
-/** 한 모델에 한 번 묻는다. 다른 모델로 다시 시도해 볼 만한 실패(시간 초과·429·5xx·연결)는 retryable */
+/** 실패 원인을 함수 로그에 남긴다 — 모델·HTTP 상태·Google 오류 종류만 (질문·답·키는 남기지 않는다) */
+function logFailure(model: string, what: string) {
+  console.warn(`[gemini] ${model} 실패: ${what}`);
+}
+
+/** 한 모델에 한 번 묻는다. 키 문제(401·403)만 다시 시도하지 않고, 나머지(시간 초과·429·4xx·5xx·연결)는 다른 모델로 다시 해 볼 만하다 */
 async function callModel(key: string, model: string, body: unknown, timeoutMs: number): Promise<{ ok: true; json: GeminiResponse } | { ok: false; retryable: boolean; error: HttpError }> {
   let r: Response;
   try {
@@ -84,6 +93,7 @@ async function callModel(key: string, model: string, body: unknown, timeoutMs: n
     });
   } catch (e) {
     const timeout = e instanceof DOMException && (e.name === 'TimeoutError' || e.name === 'AbortError');
+    logFailure(model, timeout ? `시간 초과 ${timeoutMs}ms` : '연결 실패');
     return {
       ok: false,
       retryable: true,
@@ -94,12 +104,36 @@ async function callModel(key: string, model: string, body: unknown, timeoutMs: n
   }
   const j = (await r.json().catch(() => ({}))) as GeminiResponse;
   if (r.ok) return { ok: true, json: j };
+  logFailure(model, `HTTP ${r.status} ${j.error?.status ?? ''}`.trim());
   const msg = j.error?.message ?? '';
   if (r.status === 401 || r.status === 403 || /API key/i.test(msg))
     return { ok: false, retryable: false, error: new HttpError(503, 'AI 연결 설정을 확인해야 해요. 운영자에게 알려 주세요.', { code: 'AI_NOT_CONFIGURED' }) };
   if (r.status === 429)
     return { ok: false, retryable: true, error: new HttpError(429, '오늘 무료 AI 이용량이 많아요. 잠시 뒤 다시 시도하거나 자주 묻는 질문을 이용해 주세요.', { code: 'AI_BUSY' }) };
-  return { ok: false, retryable: r.status >= 500, error: new HttpError(502, 'AI 답변을 받지 못했어요. 잠시 뒤 다시 시도해 주세요.', { code: 'AI_ERROR', status: r.status }) };
+  return { ok: false, retryable: true, error: new HttpError(502, 'AI 답변을 받지 못했어요. 잠시 뒤 다시 시도해 주세요.', { code: 'AI_ERROR', status: r.status }) };
+}
+
+/** 성공 응답에서 답을 꺼낸다. 안전 차단은 전문가 안내로, 비었거나 JSON이 깨졌으면 null(다른 시도로 넘긴다) */
+function readAnswer(model: string, j: GeminiResponse, docs: Doc[], checkedAt: string): AiAnswer | null {
+  const cand = j.candidates?.[0];
+  if (j.promptFeedback?.blockReason || cand?.finishReason === 'SAFETY' || cand?.finishReason === 'PROHIBITED_CONTENT') {
+    return { status: 'expert_required', text: '이 질문에는 AI가 답하지 않았어요. 노무 전문가와 확인해 주세요.', citations: [] };
+  }
+  const text = (cand?.content?.parts ?? [])
+    .filter((p) => !p.thought && typeof p.text === 'string')
+    .map((p) => p.text)
+    .join('');
+  let parsed: { text?: unknown } | null = null;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    parsed = null;
+  }
+  if (!parsed || typeof parsed !== 'object' || typeof parsed.text !== 'string' || !parsed.text.trim()) {
+    logFailure(model, `빈 답·깨진 JSON (finishReason ${cand?.finishReason ?? '없음'})`);
+    return null;
+  }
+  return toGroundedAnswer(parsed, docs, checkedAt);
 }
 
 /** Gemini에 묻는다 (자료 안에서만, JSON으로). 첫 모델이 늦거나 막히면 가벼운 모델로 한 번 더. 실패는 화면 계약의 오류 코드로 바꾼다 */
@@ -118,25 +152,27 @@ export async function askGemini(question: string, context: { industry: string; s
       ...(/^gemini-([3-9]|\d\d)/.test(model) ? { thinkingConfig: { thinkingLevel: 'LOW' } } : {}),
     },
   });
-  let res = await callModel(key, primary, bodyFor(primary), PRIMARY_TIMEOUT_MS);
-  if (!res.ok && res.retryable && primary !== FALLBACK_GEMINI_MODEL) {
-    res = await callModel(key, FALLBACK_GEMINI_MODEL, bodyFor(FALLBACK_GEMINI_MODEL), FALLBACK_TIMEOUT_MS);
+  // 첫 모델 → 가벼운 대체 모델 → (둘 다 빨리 실패했으면) 잠깐 쉬고 첫 모델 한 번 더
+  const tries = [primary, ...(primary !== FALLBACK_GEMINI_MODEL ? [FALLBACK_GEMINI_MODEL] : []), primary];
+  const started = Date.now();
+  let lastError = new HttpError(502, 'AI 답변을 받지 못했어요. 잠시 뒤 다시 시도해 주세요.', { code: 'AI_ERROR' });
+  for (let i = 0; i < tries.length; i++) {
+    const elapsed = Date.now() - started;
+    const isLast = i === tries.length - 1 && i > 0;
+    if (isLast) {
+      if (elapsed > LAST_TRY_IF_UNDER_MS) break;
+      await new Promise((r) => setTimeout(r, LAST_TRY_PAUSE_MS));
+    }
+    const timeout = Math.min(i === 0 ? PRIMARY_TIMEOUT_MS : FALLBACK_TIMEOUT_MS, TOTAL_BUDGET_MS - (Date.now() - started));
+    if (timeout < 5_000) break;
+    const res = await callModel(key, tries[i], bodyFor(tries[i]), timeout);
+    if (!res.ok) {
+      lastError = res.error;
+      if (!res.retryable) break;
+      continue;
+    }
+    const answer = readAnswer(tries[i], res.json, docs, checkedAt);
+    if (answer) return answer;
   }
-  if (!res.ok) throw res.error;
-  const j = res.json;
-  const cand = j.candidates?.[0];
-  if (j.promptFeedback?.blockReason || cand?.finishReason === 'SAFETY' || cand?.finishReason === 'PROHIBITED_CONTENT') {
-    return { status: 'expert_required', text: '이 질문에는 AI가 답하지 않았어요. 노무 전문가와 확인해 주세요.', citations: [] };
-  }
-  const text = (cand?.content?.parts ?? [])
-    .filter((p) => !p.thought && typeof p.text === 'string')
-    .map((p) => p.text)
-    .join('');
-  let parsed: unknown = null;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    parsed = null;
-  }
-  return toGroundedAnswer(parsed, docs, checkedAt);
+  throw lastError;
 }

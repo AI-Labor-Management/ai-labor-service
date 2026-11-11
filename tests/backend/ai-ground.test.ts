@@ -44,6 +44,16 @@ describe('답 변환', () => {
     expect(a.citations.every((c) => c.checkedAt === TODAY)).toBe(true);
   });
 
+  it('괄호 없이 본문에 쓴 자료 번호도 지우고, 남는 쉼표·빈 근거 표시를 정리한다', () => {
+    const t = (text: string) => toGroundedAnswer({ status: 'answer', text, sources: ['F:FAQ1'] }, docs, TODAY).text;
+    expect(t('가산이 없어요. · 근거: 근로기준법 제56조, 근로기준법 시행령 별표 1, F:FAQ1')).toBe('가산이 없어요. · 근거: 근로기준법 제56조, 근로기준법 시행령 별표 1');
+    expect(t('근거: F:FAQ1, 근로기준법 제55조')).toBe('근거: 근로기준법 제55조');
+    expect(t('최저임금은 10,320원이에요 (R:minimumWage.hourly).')).toBe('최저임금은 10,320원이에요.');
+    expect(t('주휴수당을 줘요.\n· 근거: F:FAQ2\n· 할 일: 시간 확인')).toBe('주휴수당을 줘요.\n· 할 일: 시간 확인');
+    // 금액의 쉼표·시각·평범한 콜론은 그대로
+    expect(t('월 2,156,880원, 오후 10:00부터. 참고: 연도별로 바뀌어요')).toBe('월 2,156,880원, 오후 10:00부터. 참고: 연도별로 바뀌어요');
+  });
+
   it('근거 없는 답·이상한 상태·빈 답은 근거 부족으로 바꾼다', () => {
     expect(toGroundedAnswer({ status: 'answer', text: '아마 그럴 거예요', sources: [] }, docs, TODAY).status).toBe('insufficient_evidence');
     expect(toGroundedAnswer({ status: 'maybe', text: 'x', sources: ['F:FAQ1'] }, docs, TODAY).status).toBe('insufficient_evidence');

@@ -1944,6 +1944,7 @@ export type Database = {
       }
       admin_law_watch: { Args: never; Returns: Json }
       admin_stats: { Args: never; Returns: Json }
+      ai_refund: { Args: { p_user: string }; Returns: number }
       ai_take: { Args: { p_limit: number; p_user: string }; Returns: number }
       kakao_link_save: {
         Args: { p_connect: boolean; p_expires_in: number | null; p_refresh: string; p_user: string }
