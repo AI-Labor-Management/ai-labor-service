@@ -176,6 +176,8 @@ describe('상담 보호 장치', () => {
     expect(searchFaq('출산휴가 며칠 줘야 해요')[0].faq.id).toBe('FAQ11');
     expect(searchFaq('남편 배우자 출산 휴가')[0].faq.id).toBe('FAQ12');
     expect(searchFaq('임금명세서 안 주면 과태료')[0].faq.id).toBe('FAQ14');
+    expect(searchFaq('월급을 늦게 주면 처벌받나요')[0].faq.id).toBe('FAQ15');
+    expect(searchFaq('퇴사한 직원 퇴직금 정산은 언제까지')[0].faq.id).toBe('FAQ15');
     expect(searchFaq('ㅁㄴㅇㄹ')).toHaveLength(0);
   });
 });
