@@ -36,9 +36,30 @@ describe('날짜 계산 경계', () => {
 });
 
 describe('규칙 파일 (rules.json)', () => {
-  it('원본 44개 규칙을 그대로 읽는다', () => {
+  it('원본 44개 + 출산·육아·벌칙 4개 규칙을 읽는다', () => {
     expect(RULES_FILE.schema).toBe('bix-rules/1');
-    expect(allRules()).toHaveLength(44);
+    expect(allRules()).toHaveLength(48);
+  });
+  it('출산·육아·벌칙 규칙 — 현행 원문 인용과 공포번호를 갖고, 1~4명에도 적용된다고 안내한다', () => {
+    const today = '2026-11-11';
+    const mat = resolveRule<{ leaveDays: number; afterBirthMinDays: number; paidDays: number }>('leave.maternity', today);
+    expect(mat.ok && [mat.value.leaveDays, mat.value.afterBirthMinDays, mat.value.paidDays]).toEqual([90, 45, 60]);
+    const sp = resolveRule<{ leaveDays: number; usableFromDaysBefore: number }>('leave.spouseBirth', today);
+    expect(sp.ok && [sp.value.leaveDays, sp.value.usableFromDaysBefore]).toEqual([20, 50]);
+    const par = resolveRule<{ maxMonths: number; refuseUnderMonths: number }>('leave.parental', today);
+    expect(par.ok && [par.value.maxMonths, par.value.refuseUnderMonths]).toEqual([12, 6]);
+    expect(resolveRule('penalty.main', today).ok).toBe(true);
+    for (const id of ['leave.maternity', 'leave.spouseBirth', 'leave.parental', 'penalty.main']) {
+      const r = resolveRule(id, today);
+      expect(r.ok && r.status, id).toBe('verified');
+      expect(r.sources.length, id).toBeGreaterThan(0);
+      for (const s of r.sources) {
+        expect(s.type, id).toBe('law');
+        expect(s.quote, id).toBeTruthy();
+        expect(s.check?.lawNumber, id).toMatch(/^(법률|대통령령) 제\d+호$/);
+      }
+      if (id !== 'penalty.main') expect(r.note, id).toContain('1~4명 사업장도 적용');
+    }
   });
   it('최저임금은 근무일 기준으로 고른다 (연도 전환)', () => {
     const a = resolveRule<number>('minimumWage.hourly', '2026-12-31');

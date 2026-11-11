@@ -30,6 +30,14 @@ describe('근거 자료', () => {
     expect(decodeURIComponent(lawUrl('공휴일규정'))).toBe('https://www.law.go.kr/법령/관공서의공휴일에관한규정');
   });
 
+  it('출산·육아·벌칙 자료가 들어가고, 근거 링크는 해당 조문으로 간다', () => {
+    expect(byId.get('R:leave.parental')!.url).toBe(lawUrl('남녀고용평등법', '제19조'));
+    expect(decodeURIComponent(byId.get('R:leave.spouseBirth')!.url)).toBe('https://www.law.go.kr/법령/남녀고용평등과일ㆍ가정양립지원에관한법률/제18조의2');
+    expect(byId.get('R:leave.maternity')!.text).toContain('1~4명 사업장도 적용');
+    expect(byId.get('R:penalty.main')!.text).toContain('500만원 이하 과태료');
+    expect(byId.get('F:FAQ13')!.url).toBe(lawUrl('남녀고용평등법', '제19조'));
+  });
+
   it('자료 전체가 무료 등급에서 부담 없는 크기다 (6만 자 이하)', () => {
     expect(corpusText(docs).length).toBeLessThan(60_000);
   });

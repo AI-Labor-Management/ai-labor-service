@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/cron-daily/handler.ts (npm run build:functions)
-// sha256:874da7991751
+// sha256:047ea4c0e7f0
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -3031,6 +3031,405 @@ var rules_default = {
           ]
         }
       ]
+    },
+    {
+      id: "leave.maternity",
+      label: "출산전후휴가",
+      category: "family",
+      unit: "일",
+      check: "D1",
+      usedIn: [
+        "16"
+      ],
+      values: [
+        {
+          value: {
+            leaveDays: 90,
+            prematureDays: 100,
+            multipleDays: 120,
+            afterBirthMinDays: 45,
+            multipleAfterBirthMinDays: 60,
+            paidDays: 60,
+            multiplePaidDays: 75
+          },
+          effectiveFrom: "2025-02-23",
+          effectiveTo: null,
+          status: "verified",
+          verifiedAt: "2026-11-11",
+          verifiedBy: "Claude (국가법령정보센터 현행 원문 대조)",
+          sources: [
+            {
+              type: "law",
+              law: "근로기준법",
+              article: "제74조",
+              quote: "90일(미숙아를 출산한 경우에는 100일, 한 번에 둘 이상 자녀를 임신한 경우에는 120일)의 출산전후휴가를 주어야 한다",
+              paragraph: 1,
+              ref: "근로기준법#제74조①",
+              check: {
+                ok: true,
+                versionFrom: "2026-10-08",
+                versionStatus: "current",
+                lawEffective: "2026-10-08",
+                lawNumber: "법률 제21533호"
+              }
+            },
+            {
+              type: "law",
+              law: "근로기준법",
+              article: "제74조",
+              quote: "출산 후에 45일(한 번에 둘 이상 자녀를 임신한 경우에는 60일) 이상이 되어야 하고",
+              paragraph: 1,
+              ref: "근로기준법#제74조①",
+              check: {
+                ok: true,
+                versionFrom: "2026-10-08",
+                versionStatus: "current",
+                lawEffective: "2026-10-08",
+                lawNumber: "법률 제21533호"
+              }
+            },
+            {
+              type: "law",
+              law: "근로기준법",
+              article: "제74조",
+              quote: "최초 60일(한 번에 둘 이상 자녀를 임신한 경우에는 75일)은 유급으로 한다",
+              paragraph: 4,
+              ref: "근로기준법#제74조④",
+              check: {
+                ok: true,
+                versionFrom: "2026-10-08",
+                versionStatus: "current",
+                lawEffective: "2026-10-08",
+                lawNumber: "법률 제21533호"
+              }
+            },
+            {
+              type: "law",
+              law: "남녀고용평등법",
+              article: "제18조",
+              quote: "사업주가 지급한 것으로 본다",
+              paragraph: 2,
+              ref: "남녀고용평등법#제18조②",
+              check: {
+                ok: true,
+                versionFrom: "2026-09-18",
+                versionStatus: "current",
+                lawEffective: "2026-09-18",
+                lawNumber: "법률 제21476호"
+              }
+            },
+            {
+              type: "law",
+              law: "근로기준법",
+              article: "제110조",
+              quote: "2년 이하의 징역 또는 2천만원 이하의 벌금에 처한다",
+              ref: "근로기준법#제110조",
+              check: {
+                ok: true,
+                versionFrom: "2026-10-08",
+                versionStatus: "current",
+                lawEffective: "2026-10-08",
+                lawNumber: "법률 제21533호"
+              }
+            }
+          ]
+        }
+      ],
+      note: "1~4명 사업장도 적용돼요(근로기준법 시행령 별표 1). 고용보험에서 출산전후휴가 급여가 나오면 그 금액만큼은 사장님이 준 것으로 봐요. 소규모 사업장(우선지원 대상기업)은 90일 전체가 고용보험 지원 대상이에요(상한액 있음, 직원이 신청하고 사장님은 확인서를 내요). 휴가를 주지 않으면 2년 이하 징역 또는 2천만원 이하 벌금(근로기준법 제110조)."
+    },
+    {
+      id: "leave.spouseBirth",
+      label: "배우자 출산전후휴가",
+      category: "family",
+      unit: "일",
+      check: "D2",
+      usedIn: [
+        "16"
+      ],
+      values: [
+        {
+          value: {
+            leaveDays: 20,
+            paid: true,
+            usableFromDaysBefore: 50,
+            usableWithinDaysAfter: 120,
+            splitTimes: 3
+          },
+          effectiveFrom: "2026-09-18",
+          effectiveTo: null,
+          status: "verified",
+          verifiedAt: "2026-11-11",
+          verifiedBy: "Claude (국가법령정보센터 현행 원문 대조)",
+          sources: [
+            {
+              type: "law",
+              law: "남녀고용평등법",
+              article: "제18조의2",
+              quote: "20일의 휴가를 주어야 한다. 이 경우 사용한 휴가기간은 유급으로 한다",
+              paragraph: 1,
+              ref: "남녀고용평등법#제18조의2①",
+              check: {
+                ok: true,
+                versionFrom: "2026-09-18",
+                versionStatus: "current",
+                lawEffective: "2026-09-18",
+                lawNumber: "법률 제21476호"
+              }
+            },
+            {
+              type: "law",
+              law: "남녀고용평등법",
+              article: "제18조의2",
+              quote: "출산예정일 50일 전부터 사용할 수 있고, 배우자가 출산한 날부터 120일이 지나면 사용할 수 없다",
+              paragraph: 3,
+              ref: "남녀고용평등법#제18조의2③",
+              check: {
+                ok: true,
+                versionFrom: "2026-09-18",
+                versionStatus: "current",
+                lawEffective: "2026-09-18",
+                lawNumber: "법률 제21476호"
+              }
+            },
+            {
+              type: "law",
+              law: "남녀고용평등법",
+              article: "제18조의2",
+              quote: "3회에 한정하여 나누어 사용할 수 있다",
+              paragraph: 4,
+              ref: "남녀고용평등법#제18조의2④",
+              check: {
+                ok: true,
+                versionFrom: "2026-09-18",
+                versionStatus: "current",
+                lawEffective: "2026-09-18",
+                lawNumber: "법률 제21476호"
+              }
+            },
+            {
+              type: "law",
+              law: "남녀고용평등법",
+              article: "제39조",
+              quote: "500만원 이하의 과태료를 부과한다",
+              paragraph: 3,
+              ref: "남녀고용평등법#제39조③",
+              check: {
+                ok: true,
+                versionFrom: "2026-09-18",
+                versionStatus: "current",
+                lawEffective: "2026-09-18",
+                lawNumber: "법률 제21476호"
+              }
+            }
+          ]
+        }
+      ],
+      note: "1~4명 사업장도 적용돼요(동거하는 친족만 일하는 사업은 제외, 남녀고용평등법 시행령 제2조). 소규모 사업장(우선지원 대상기업)은 휴가 급여를 고용보험에서 지원받을 수 있어요(상한액 있음). 휴가를 주지 않거나 무급으로 하면 500만원 이하 과태료(남녀고용평등법 제39조③)."
+    },
+    {
+      id: "leave.parental",
+      label: "육아휴직",
+      category: "family",
+      unit: "개월",
+      check: "D3",
+      usedIn: [
+        "16"
+      ],
+      values: [
+        {
+          value: {
+            child: "만 8세 이하 또는 초등학교 2학년 이하 자녀",
+            maxMonths: 12,
+            extraMonths: 6,
+            refuseUnderMonths: 6
+          },
+          effectiveFrom: "2026-09-18",
+          effectiveTo: null,
+          status: "verified",
+          verifiedAt: "2026-11-11",
+          verifiedBy: "Claude (국가법령정보센터 현행 원문 대조)",
+          sources: [
+            {
+              type: "law",
+              law: "남녀고용평등법",
+              article: "제19조",
+              quote: "만 8세 이하 또는 초등학교 2학년 이하의 자녀",
+              paragraph: 1,
+              ref: "남녀고용평등법#제19조①",
+              check: {
+                ok: true,
+                versionFrom: "2026-09-18",
+                versionStatus: "current",
+                lawEffective: "2026-09-18",
+                lawNumber: "법률 제21476호"
+              }
+            },
+            {
+              type: "law",
+              law: "남녀고용평등법",
+              article: "제19조",
+              quote: "육아휴직의 기간은 1년 이내로 한다",
+              paragraph: 2,
+              ref: "남녀고용평등법#제19조②",
+              check: {
+                ok: true,
+                versionFrom: "2026-09-18",
+                versionStatus: "current",
+                lawEffective: "2026-09-18",
+                lawNumber: "법률 제21476호"
+              }
+            },
+            {
+              type: "law",
+              law: "남녀고용평등법 시행령",
+              article: "제10조",
+              quote: "계속 근로한 기간이 6개월 미만인 근로자가 신청한 경우",
+              ref: "남녀고용평등법 시행령#제10조",
+              check: {
+                ok: true,
+                versionFrom: "2026-09-18",
+                versionStatus: "current",
+                lawEffective: "2026-09-18",
+                lawNumber: "대통령령 제36589호"
+              }
+            },
+            {
+              type: "law",
+              law: "남녀고용평등법",
+              article: "제19조",
+              quote: "6개월 이내에서 추가로 육아휴직을 사용할 수 있다",
+              paragraph: 2,
+              ref: "남녀고용평등법#제19조②",
+              check: {
+                ok: true,
+                versionFrom: "2026-09-18",
+                versionStatus: "current",
+                lawEffective: "2026-09-18",
+                lawNumber: "법률 제21476호"
+              }
+            },
+            {
+              type: "law",
+              law: "남녀고용평등법",
+              article: "제37조",
+              quote: "500만원 이하의 벌금에 처한다",
+              paragraph: 4,
+              ref: "남녀고용평등법#제37조④",
+              check: {
+                ok: true,
+                versionFrom: "2026-09-18",
+                versionStatus: "current",
+                lawEffective: "2026-09-18",
+                lawNumber: "법률 제21476호"
+              }
+            }
+          ]
+        }
+      ],
+      note: "1~4명 사업장도 적용돼요(동거하는 친족만 일하는 사업은 제외). 휴직을 시작하기 전날까지 근속 6개월 미만이면 거절할 수 있어요. 같은 자녀로 부모가 각각 3개월 이상 썼거나 한부모·장애아동 부모면 6개월을 더 쓸 수 있어요. 방학·휴교·자녀 질병 때 1주나 2주 육아휴직(1년에 1회)도 허용해야 해요. 휴직 중에는 해고할 수 없고, 끝나면 같은 업무나 같은 수준 임금의 일로 복귀시켜야 해요. 휴직 기간 급여는 고용보험 육아휴직 급여로 나와요(직원이 신청). 허용하지 않으면 500만원 이하 벌금, 휴직을 이유로 해고·불리한 처우를 하면 3년 이하 징역 또는 3천만원 이하 벌금(남녀고용평등법 제37조)."
+    },
+    {
+      id: "penalty.main",
+      label: "주요 의무 위반 시 벌칙·과태료",
+      category: "penalty",
+      unit: "문구",
+      check: "D4",
+      usedIn: [
+        "16"
+      ],
+      values: [
+        {
+          value: {
+            contract: "500만원 이하 벌금",
+            wageStatement: "500만원 이하 과태료",
+            fixedTermWritten: "500만원 이하 과태료",
+            records: "500만원 이하 과태료",
+            minimumWage: "3년 이하 징역 또는 2천만원 이하 벌금",
+            basicProtection: "2년 이하 징역 또는 2천만원 이하 벌금"
+          },
+          effectiveFrom: "2026-10-08",
+          effectiveTo: null,
+          status: "verified",
+          verifiedAt: "2026-11-11",
+          verifiedBy: "Claude (국가법령정보센터 현행 원문 대조)",
+          sources: [
+            {
+              type: "law",
+              law: "근로기준법",
+              article: "제114조",
+              quote: "500만원 이하의 벌금에 처한다",
+              ref: "근로기준법#제114조",
+              check: {
+                ok: true,
+                versionFrom: "2026-10-08",
+                versionStatus: "current",
+                lawEffective: "2026-10-08",
+                lawNumber: "법률 제21533호"
+              }
+            },
+            {
+              type: "law",
+              law: "근로기준법",
+              article: "제116조",
+              quote: "500만원 이하의 과태료를 부과한다",
+              paragraph: 2,
+              ref: "근로기준법#제116조②",
+              check: {
+                ok: true,
+                versionFrom: "2026-10-08",
+                versionStatus: "current",
+                lawEffective: "2026-10-08",
+                lawNumber: "법률 제21533호"
+              }
+            },
+            {
+              type: "law",
+              law: "기간제법",
+              article: "제24조",
+              quote: "제17조의 규정을 위반하여 근로조건을 서면으로 명시하지 아니한 자",
+              paragraph: 2,
+              ref: "기간제법#제24조②",
+              check: {
+                ok: true,
+                versionFrom: "2021-05-18",
+                versionStatus: "current",
+                lawEffective: "2021-05-18",
+                lawNumber: "법률 제18177호"
+              }
+            },
+            {
+              type: "law",
+              law: "최저임금법",
+              article: "제28조",
+              quote: "3년 이하의 징역 또는 2천만원 이하의 벌금에 처한다",
+              paragraph: 1,
+              ref: "최저임금법#제28조①",
+              check: {
+                ok: true,
+                versionFrom: "2020-05-26",
+                versionStatus: "current",
+                lawEffective: "2020-05-26",
+                lawNumber: "법률 제17326호"
+              }
+            },
+            {
+              type: "law",
+              law: "근로기준법",
+              article: "제110조",
+              quote: "2년 이하의 징역 또는 2천만원 이하의 벌금에 처한다",
+              ref: "근로기준법#제110조",
+              check: {
+                ok: true,
+                versionFrom: "2026-10-08",
+                versionStatus: "current",
+                lawEffective: "2026-10-08",
+                lawNumber: "법률 제21533호"
+              }
+            }
+          ]
+        }
+      ],
+      note: "법이 정한 최고 한도예요. 근로계약서(근로조건 명시·교부, 근로기준법 제17조) → 제114조 벌금. 임금명세서(제48조)·근로자 명부(제41조)·계약 서류 3년 보존(제42조) → 제116조② 과태료. 기간제·단시간 직원 근로조건 서면 명시(기간제법 제17조) → 기간제법 제24조② 과태료. 최저임금 미달 → 최저임금법 제28조①(징역과 벌금을 함께 받을 수 있음). 휴게(제54조)·휴일(제55조)·해고 예고(제26조)·출산전후휴가(제74조) 위반 → 근로기준법 제110조. 1~4명 사업장도 이 조문들이 적용돼요."
     }
   ]
 };
@@ -5084,6 +5483,46 @@ var FAQS = [
     ruleIds: [],
     basis: "근로기준법 제2조 (판례)",
     expert: true
+  },
+  {
+    id: "FAQ11",
+    q: "직원이 출산휴가를 쓰겠다고 하면 어떻게 하나요?",
+    keywords: ["출산", "출산휴가", "출산전후", "산전", "산후", "임신", "임산부"],
+    oneLine: "출산 전후로 90일(미숙아 100일, 둘 이상 임신 120일)을 주고, 출산 후에 45일 이상이 되게 해요. 처음 60일은 유급인데, 고용보험 급여가 나오면 그만큼은 준 것으로 봐요. 1~4명 사업장도 적용돼요.",
+    todo: ["출산예정일 기준으로 휴가 기간을 직원과 정하기", "직원의 고용보험 출산전후휴가 급여 신청에 확인서 내기"],
+    ruleIds: ["leave.maternity"],
+    basis: "근로기준법 제74조①④, 남녀고용평등법 제18조②",
+    expert: false
+  },
+  {
+    id: "FAQ12",
+    q: "배우자 출산휴가는 며칠 줘야 하나요?",
+    keywords: ["배우자", "남편", "아내 출산", "아빠", "배우자 출산"],
+    oneLine: "20일을 유급으로 줘야 해요. 출산예정일 50일 전부터 출산 후 120일 안에 쓰고, 3번까지 나눠 쓸 수 있어요. 1~4명 사업장도 적용돼요.",
+    todo: ["휴가 날짜를 근무 일정에 반영", "급여에서 휴가일을 유급으로 처리"],
+    ruleIds: ["leave.spouseBirth"],
+    basis: "남녀고용평등법 제18조의2",
+    expert: false
+  },
+  {
+    id: "FAQ13",
+    q: "육아휴직을 신청하면 꼭 줘야 하나요?",
+    keywords: ["육아휴직", "육아", "휴직", "자녀", "아이"],
+    oneLine: "만 8세 이하(초등 2학년 이하) 자녀를 키우는 직원이 신청하면 1년까지 줘야 해요. 근속 6개월 미만이면 거절할 수 있어요. 휴직 중 급여는 고용보험에서 나오고, 휴직 중 해고는 안 돼요. 1~4명 사업장도 적용돼요.",
+    todo: ["휴직 시작 전날까지 근속 6개월이 되는지 확인", "휴직 기간과 복귀 업무를 서로 정하기"],
+    ruleIds: ["leave.parental"],
+    basis: "남녀고용평등법 제19조, 시행령 제10조",
+    expert: false
+  },
+  {
+    id: "FAQ14",
+    q: "근로계약서나 임금명세서를 안 주면 어떻게 되나요?",
+    keywords: ["벌금", "과태료", "처벌", "안 주면", "안 쓰면", "계약서", "위반"],
+    oneLine: "근로계약서(근로조건 명시·교부)를 안 하면 500만원 이하 벌금, 임금명세서를 안 주면 500만원 이하 과태료예요. 단시간·기간제 직원 근로조건을 서면으로 안 적어도 500만원 이하 과태료예요. 법이 정한 최고 한도예요.",
+    todo: ["직원마다 근로계약서 작성·교부", "급여 확정 후 임금명세서 교부"],
+    ruleIds: ["penalty.main"],
+    basis: "근로기준법 제114조·제116조②, 기간제법 제24조②",
+    expert: false
   }
 ];
 function searchFaq(query) {

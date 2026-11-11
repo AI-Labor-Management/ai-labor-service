@@ -4,7 +4,7 @@ import { allRules, resolveRule, RULES_FILE, sourceLabel } from '../../domain/rul
 import { useStore } from '../../state/store';
 import { Badge, Card, cx, inputBaseCls, PageHeader, RuleStatusBadge } from '../../ui/kit';
 
-const CAT: Record<string, string> = { wage: '임금', work: '근무', leave: '연차', scope: '적용 범위', end: '퇴직·해고', docs: '서류', insurance: '보험', deadline: '기한', calendar: '공휴일', tax: '세금' };
+const CAT: Record<string, string> = { wage: '임금', work: '근무', leave: '연차', scope: '적용 범위', end: '퇴직·해고', docs: '서류', insurance: '보험', deadline: '기한', calendar: '공휴일', tax: '세금', family: '출산·육아', penalty: '벌칙' };
 
 export function RulesTable({ date }: { date: string }) {
   const [cat, setCat] = useState('');
