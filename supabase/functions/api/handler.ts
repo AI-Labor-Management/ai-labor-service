@@ -65,14 +65,17 @@ async function notifyEmployee(db: Db, wpId: string, e: Employee, kind: string, t
 
 // ───────────────────────── 공통 ─────────────────────────
 async function me(db: Db, user: User) {
-  const [wp, emps, firms, adm] = await Promise.all([
+  const [wp, emps, firms, adm, terms] = await Promise.all([
     ownerWorkplace(db, user.id),
     must(db.from('employees').select('id, alias, workplace_id, account_status').eq('user_id', user.id).eq('account_status', 'joined')),
     must(db.from('firm_members').select('firm_id').eq('user_id', user.id)),
     must(db.from('admins').select('user_id').eq('user_id', user.id)),
+    must(db.from('terms_consents').select('terms_version').eq('user_id', user.id).order('terms_version', { ascending: false }).limit(1)),
   ]);
   return {
     userId: user.id,
+    /** 동의한 가장 최근 이용약관 판(시행일). 없으면 null → 화면이 동의를 받는다 (마이그레이션 17) */
+    termsVersion: (terms[0]?.terms_version as string | undefined) ?? null,
     roles: {
       owner: wp ? { workplaceId: wp.id, name: wp.name, scale: wp.scale } : null,
       employee: emps.map((e) => ({ employeeId: e.id, alias: e.alias, workplaceId: e.workplace_id })),

@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/api/handler.ts (npm run build:functions)
-// sha256:40598867f665
+// sha256:8edd951f48a3
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -7572,14 +7572,17 @@ async function notifyEmployee(db, wpId, e, kind, textMsg, link = "/employee") {
   await pushNotification(db, { workplace_id: wpId, recipient: "employee", employee_id: e.id, kind, text: textMsg, link });
 }
 async function me(db, user) {
-  const [wp, emps, firms, adm] = await Promise.all([
+  const [wp, emps, firms, adm, terms] = await Promise.all([
     ownerWorkplace(db, user.id),
     must(db.from("employees").select("id, alias, workplace_id, account_status").eq("user_id", user.id).eq("account_status", "joined")),
     must(db.from("firm_members").select("firm_id").eq("user_id", user.id)),
-    must(db.from("admins").select("user_id").eq("user_id", user.id))
+    must(db.from("admins").select("user_id").eq("user_id", user.id)),
+    must(db.from("terms_consents").select("terms_version").eq("user_id", user.id).order("terms_version", { ascending: false }).limit(1))
   ]);
   return {
     userId: user.id,
+    /** 동의한 가장 최근 이용약관 판(시행일). 없으면 null → 화면이 동의를 받는다 (마이그레이션 17) */
+    termsVersion: terms[0]?.terms_version ?? null,
     roles: {
       owner: wp ? { workplaceId: wp.id, name: wp.name, scale: wp.scale } : null,
       employee: emps.map((e) => ({ employeeId: e.id, alias: e.alias, workplaceId: e.workplace_id })),
