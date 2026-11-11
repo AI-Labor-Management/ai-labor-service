@@ -22,7 +22,15 @@ const FALLBACK_TIMEOUT_MS = 30_000;
 const TOTAL_BUDGET_MS = 95_000;
 /** 세 번째 시도는 앞의 두 번이 이 시간 안에 실패했을 때만 (무료 등급의 잠깐 붐빔·일시 오류) */
 const LAST_TRY_IF_UNDER_MS = 40_000;
-const LAST_TRY_PAUSE_MS = 1_200;
+const LAST_TRY_PAUSE_MS = 2_000;
+/** 첫 모델이 '이용량 소진(429)'이면 10분 동안은 대체 모델부터 묻는다.
+ *  2026-11-11 실측: 무료 등급 3.6 Flash는 하루 한도가 작아 30번쯤 뒤 계속 429, 3.5 Flash-Lite는 답하되 가끔 503 */
+const PRIMARY_REST_MS = 600_000;
+let primaryRestUntil = 0;
+/** 테스트용 — 모듈에 남은 '첫 모델 쉬는 중' 상태를 지운다 */
+export function resetGeminiState() {
+  primaryRestUntil = 0;
+}
 
 export function geminiConfigured(): boolean {
   return !!Deno.env.get('GEMINI_API_KEY');
@@ -152,8 +160,10 @@ export async function askGemini(question: string, context: { industry: string; s
       ...(/^gemini-([3-9]|\d\d)/.test(model) ? { thinkingConfig: { thinkingLevel: 'LOW' } } : {}),
     },
   });
-  // 첫 모델 → 가벼운 대체 모델 → (둘 다 빨리 실패했으면) 잠깐 쉬고 첫 모델 한 번 더
-  const tries = [primary, ...(primary !== FALLBACK_GEMINI_MODEL ? [FALLBACK_GEMINI_MODEL] : []), primary];
+  // 첫 모델 → 가벼운 대체 모델 → (둘 다 빨리 실패했으면) 잠깐 쉬고 첫 모델 한 번 더.
+  // 첫 모델이 이용량 소진(429)이면 남은 시도와 다음 10분의 질문은 대체 모델로만 묻는다.
+  const fallbackOnly = primary === FALLBACK_GEMINI_MODEL || Date.now() < primaryRestUntil;
+  const tries = fallbackOnly ? [FALLBACK_GEMINI_MODEL, FALLBACK_GEMINI_MODEL] : [primary, FALLBACK_GEMINI_MODEL, primary];
   const started = Date.now();
   let lastError = new HttpError(502, 'AI 답변을 받지 못했어요. 잠시 뒤 다시 시도해 주세요.', { code: 'AI_ERROR' });
   for (let i = 0; i < tries.length; i++) {
@@ -169,6 +179,10 @@ export async function askGemini(question: string, context: { industry: string; s
     if (!res.ok) {
       lastError = res.error;
       if (!res.retryable) break;
+      if (tries[i] === primary && primary !== FALLBACK_GEMINI_MODEL && res.error.status === 429) {
+        primaryRestUntil = Date.now() + PRIMARY_REST_MS;
+        for (let k = i + 1; k < tries.length; k++) if (tries[k] === primary) tries[k] = FALLBACK_GEMINI_MODEL;
+      }
       continue;
     }
     const answer = readAnswer(tries[i], res.json, docs, checkedAt);
