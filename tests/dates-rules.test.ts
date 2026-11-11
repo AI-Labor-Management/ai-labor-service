@@ -36,9 +36,19 @@ describe('날짜 계산 경계', () => {
 });
 
 describe('규칙 파일 (rules.json)', () => {
-  it('원본 44개 + 출산·육아·벌칙 4개 규칙을 읽는다', () => {
+  it('원본 44개 + 출산·육아·벌칙 5개 규칙을 읽는다', () => {
     expect(RULES_FILE.schema).toBe('bix-rules/1');
-    expect(allRules()).toHaveLength(48);
+    expect(allRules()).toHaveLength(49);
+  });
+  it('임금·퇴직금 체불 벌칙 — 2026-10-08부터 5년/5천만원, 퇴사 후 14일 안에 정산', () => {
+    const r = resolveRule<{ settleWithinDays: number; wageArrears: string; severanceArrears: string }>('penalty.wageArrears', '2026-11-11');
+    expect(r.ok && r.value.settleWithinDays).toBe(14);
+    expect(r.ok && r.value.wageArrears).toBe('5년 이하 징역 또는 5천만원 이하 벌금');
+    expect(r.ok && r.value.severanceArrears).toBe('5년 이하 징역 또는 5천만원 이하 벌금');
+    expect(r.sources.some((s) => s.law === '근로기준법' && s.article === '제107조')).toBe(true);
+    expect(r.sources.some((s) => s.law === '퇴직급여법' && s.article === '제43조')).toBe(true);
+    expect(r.note).toContain('1~4명 사업장도 적용');
+    expect(resolveRule('penalty.wageArrears', '2026-10-07').ok).toBe(false);
   });
   it('출산·육아·벌칙 규칙 — 현행 원문 인용과 공포번호를 갖고, 1~4명에도 적용된다고 안내한다', () => {
     const today = '2026-11-11';
@@ -49,7 +59,7 @@ describe('규칙 파일 (rules.json)', () => {
     const par = resolveRule<{ maxMonths: number; refuseUnderMonths: number }>('leave.parental', today);
     expect(par.ok && [par.value.maxMonths, par.value.refuseUnderMonths]).toEqual([12, 6]);
     expect(resolveRule('penalty.main', today).ok).toBe(true);
-    for (const id of ['leave.maternity', 'leave.spouseBirth', 'leave.parental', 'penalty.main']) {
+    for (const id of ['leave.maternity', 'leave.spouseBirth', 'leave.parental', 'penalty.main', 'penalty.wageArrears']) {
       const r = resolveRule(id, today);
       expect(r.ok && r.status, id).toBe('verified');
       expect(r.sources.length, id).toBeGreaterThan(0);
