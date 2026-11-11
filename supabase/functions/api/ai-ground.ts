@@ -101,6 +101,13 @@ export function toGroundedAnswer(raw: unknown, docs: Doc[], checkedAt: string): 
   let status = (typeof o.status === 'string' && STATUSES.has(o.status) ? o.status : 'insufficient_evidence') as AiAnswer['status'];
   let text = (typeof o.text === 'string' ? o.text : '')
     .replace(/\[[RF]:[^\]]+\]/g, '')
+    // 괄호 없이 본문에 쓴 자료 번호(예: "…, F:FAQ1")도 지우고, 남은 쉼표·빈 괄호·빈 '근거:'를 정리한다
+    .replace(/(^|[^\w])[RF]:[A-Za-z][\w.-]*/g, '$1')
+    .replace(/[ \t]*\(\s*\)/g, '')
+    .replace(/:[ \t]*,[ \t]*/g, ': ')
+    .replace(/[ \t]*,[ \t]*(?=,|\.|\n|$)/g, '')
+    .replace(/\n?[ \t]*·?[ \t]*근거:[ \t]*(?=\n|$)/g, '')
+    .replace(/[ \t]+$/gm, '')
     .replace(/\*\*(.+?)\*\*/g, '$1')
     .replace(/^#+\s*/gm, '')
     .trim();

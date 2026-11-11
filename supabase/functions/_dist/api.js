@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/api/handler.ts (npm run build:functions)
-// sha256:e483245f5057
+// sha256:27b9ef7cf1e8
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -6196,7 +6196,7 @@ var STATUSES = /* @__PURE__ */ new Set(["answer", "insufficient_evidence", "expe
 function toGroundedAnswer(raw, docs, checkedAt) {
   const o = raw && typeof raw === "object" ? raw : {};
   let status = typeof o.status === "string" && STATUSES.has(o.status) ? o.status : "insufficient_evidence";
-  let text2 = (typeof o.text === "string" ? o.text : "").replace(/\[[RF]:[^\]]+\]/g, "").replace(/\*\*(.+?)\*\*/g, "$1").replace(/^#+\s*/gm, "").trim();
+  let text2 = (typeof o.text === "string" ? o.text : "").replace(/\[[RF]:[^\]]+\]/g, "").replace(/(^|[^\w])[RF]:[A-Za-z][\w.-]*/g, "$1").replace(/[ \t]*\(\s*\)/g, "").replace(/:[ \t]*,[ \t]*/g, ": ").replace(/[ \t]*,[ \t]*(?=,|\.|\n|$)/g, "").replace(/\n?[ \t]*·?[ \t]*근거:[ \t]*(?=\n|$)/g, "").replace(/[ \t]+$/gm, "").replace(/\*\*(.+?)\*\*/g, "$1").replace(/^#+\s*/gm, "").trim();
   const byId = new Map(docs.map((d) => [d.id, d]));
   const seen = /* @__PURE__ */ new Map();
   for (const id of Array.isArray(o.sources) ? o.sources : []) {
@@ -6219,6 +6219,9 @@ var GEMINI_POLICY_FROM = "2026-11-10";
 var ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
 var PRIMARY_TIMEOUT_MS = 45e3;
 var FALLBACK_TIMEOUT_MS = 3e4;
+var TOTAL_BUDGET_MS = 95e3;
+var LAST_TRY_IF_UNDER_MS = 4e4;
+var LAST_TRY_PAUSE_MS = 1200;
 function geminiConfigured() {
   return !!Deno.env.get("GEMINI_API_KEY");
 }
@@ -6258,6 +6261,9 @@ async function checkGemini() {
   lastCheck = { at: Date.now(), result };
   return result;
 }
+function logFailure(model, what) {
+  console.warn(`[gemini] ${model} 실패: ${what}`);
+}
 async function callModel(key2, model, body, timeoutMs) {
   let r;
   try {
@@ -6269,6 +6275,7 @@ async function callModel(key2, model, body, timeoutMs) {
     });
   } catch (e) {
     const timeout = e instanceof DOMException && (e.name === "TimeoutError" || e.name === "AbortError");
+    logFailure(model, timeout ? `시간 초과 ${timeoutMs}ms` : "연결 실패");
     return {
       ok: false,
       retryable: true,
@@ -6277,12 +6284,31 @@ async function callModel(key2, model, body, timeoutMs) {
   }
   const j = await r.json().catch(() => ({}));
   if (r.ok) return { ok: true, json: j };
+  logFailure(model, `HTTP ${r.status} ${j.error?.status ?? ""}`.trim());
   const msg = j.error?.message ?? "";
   if (r.status === 401 || r.status === 403 || /API key/i.test(msg))
     return { ok: false, retryable: false, error: new HttpError(503, "AI 연결 설정을 확인해야 해요. 운영자에게 알려 주세요.", { code: "AI_NOT_CONFIGURED" }) };
   if (r.status === 429)
     return { ok: false, retryable: true, error: new HttpError(429, "오늘 무료 AI 이용량이 많아요. 잠시 뒤 다시 시도하거나 자주 묻는 질문을 이용해 주세요.", { code: "AI_BUSY" }) };
-  return { ok: false, retryable: r.status >= 500, error: new HttpError(502, "AI 답변을 받지 못했어요. 잠시 뒤 다시 시도해 주세요.", { code: "AI_ERROR", status: r.status }) };
+  return { ok: false, retryable: true, error: new HttpError(502, "AI 답변을 받지 못했어요. 잠시 뒤 다시 시도해 주세요.", { code: "AI_ERROR", status: r.status }) };
+}
+function readAnswer(model, j, docs, checkedAt) {
+  const cand = j.candidates?.[0];
+  if (j.promptFeedback?.blockReason || cand?.finishReason === "SAFETY" || cand?.finishReason === "PROHIBITED_CONTENT") {
+    return { status: "expert_required", text: "이 질문에는 AI가 답하지 않았어요. 노무 전문가와 확인해 주세요.", citations: [] };
+  }
+  const text2 = (cand?.content?.parts ?? []).filter((p) => !p.thought && typeof p.text === "string").map((p) => p.text).join("");
+  let parsed = null;
+  try {
+    parsed = JSON.parse(text2);
+  } catch {
+    parsed = null;
+  }
+  if (!parsed || typeof parsed !== "object" || typeof parsed.text !== "string" || !parsed.text.trim()) {
+    logFailure(model, `빈 답·깨진 JSON (finishReason ${cand?.finishReason ?? "없음"})`);
+    return null;
+  }
+  return toGroundedAnswer(parsed, docs, checkedAt);
 }
 async function askGemini(question, context, checkedAt, docs) {
   const key2 = Deno.env.get("GEMINI_API_KEY");
@@ -6301,24 +6327,28 @@ async function askGemini(question, context, checkedAt, docs) {
       .../^gemini-([3-9]|\d\d)/.test(model) ? { thinkingConfig: { thinkingLevel: "LOW" } } : {}
     }
   });
-  let res = await callModel(key2, primary, bodyFor(primary), PRIMARY_TIMEOUT_MS);
-  if (!res.ok && res.retryable && primary !== FALLBACK_GEMINI_MODEL) {
-    res = await callModel(key2, FALLBACK_GEMINI_MODEL, bodyFor(FALLBACK_GEMINI_MODEL), FALLBACK_TIMEOUT_MS);
+  const tries = [primary, ...primary !== FALLBACK_GEMINI_MODEL ? [FALLBACK_GEMINI_MODEL] : [], primary];
+  const started = Date.now();
+  let lastError = new HttpError(502, "AI 답변을 받지 못했어요. 잠시 뒤 다시 시도해 주세요.", { code: "AI_ERROR" });
+  for (let i = 0; i < tries.length; i++) {
+    const elapsed = Date.now() - started;
+    const isLast = i === tries.length - 1 && i > 0;
+    if (isLast) {
+      if (elapsed > LAST_TRY_IF_UNDER_MS) break;
+      await new Promise((r) => setTimeout(r, LAST_TRY_PAUSE_MS));
+    }
+    const timeout = Math.min(i === 0 ? PRIMARY_TIMEOUT_MS : FALLBACK_TIMEOUT_MS, TOTAL_BUDGET_MS - (Date.now() - started));
+    if (timeout < 5e3) break;
+    const res = await callModel(key2, tries[i], bodyFor(tries[i]), timeout);
+    if (!res.ok) {
+      lastError = res.error;
+      if (!res.retryable) break;
+      continue;
+    }
+    const answer = readAnswer(tries[i], res.json, docs, checkedAt);
+    if (answer) return answer;
   }
-  if (!res.ok) throw res.error;
-  const j = res.json;
-  const cand = j.candidates?.[0];
-  if (j.promptFeedback?.blockReason || cand?.finishReason === "SAFETY" || cand?.finishReason === "PROHIBITED_CONTENT") {
-    return { status: "expert_required", text: "이 질문에는 AI가 답하지 않았어요. 노무 전문가와 확인해 주세요.", citations: [] };
-  }
-  const text2 = (cand?.content?.parts ?? []).filter((p) => !p.thought && typeof p.text === "string").map((p) => p.text).join("");
-  let parsed = null;
-  try {
-    parsed = JSON.parse(text2);
-  } catch {
-    parsed = null;
-  }
-  return toGroundedAnswer(parsed, docs, checkedAt);
+  throw lastError;
 }
 
 // supabase/functions/api/ai.ts
@@ -7465,8 +7495,16 @@ async function consultAnswer(db, user, body) {
   if (error) throw error;
   if (used < 0) throw new HttpError(429, `오늘 AI 상담 ${AI_DAILY_LIMIT}회를 모두 썼어요. 내일 다시 이용하거나 노무 전문가 상담을 이용해 주세요.`, { code: "AI_DAILY_LIMIT" });
   const ctx = { industry: INDUSTRY_KO[wp.industry] ?? "기타", scale: SCALE_KO[wp.scale] ?? wp.scale };
-  const answer = provider === "gemini" ? await askGemini(question, ctx, today, aiCorpus(today)) : await askClaude(question, ctx, today);
-  return { ...answer, usedToday: used, dailyLimit: AI_DAILY_LIMIT };
+  try {
+    const answer = provider === "gemini" ? await askGemini(question, ctx, today, aiCorpus(today)) : await askClaude(question, ctx, today);
+    return { ...answer, usedToday: used, dailyLimit: AI_DAILY_LIMIT };
+  } catch (e) {
+    await db.rpc("ai_refund", { p_user: user.id }).then(
+      ({ error: refundError }) => refundError && console.warn("[ai] 이용 횟수 되돌리기 실패", refundError.message),
+      () => void 0
+    );
+    throw e;
+  }
 }
 async function kakaoRoutes(req, db, user, path, body) {
   const m = req.method;
