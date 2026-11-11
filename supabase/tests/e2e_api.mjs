@@ -97,6 +97,32 @@ r = await api('me');
 ok(r.status === 401, 'GET /api/me 토큰 없으면 401', r.status);
 r = await api('me', owner);
 ok(r.status === 200 && r.body.roles.owner === null && r.body.roles.employee.length === 0, 'GET /api/me 새 계정은 역할 없음', r.body);
+ok(r.body.termsVersion === null, 'GET /api/me 동의 기록 없는 계정은 termsVersion null', r.body.termsVersion);
+const ownerId = r.body.userId;
+
+// ── 이용약관 동의 기록 (마이그레이션 17) ──
+r = await rpc('accept_terms', owner, { p_version: '2099-01-01' });
+ok(r.status >= 400 && /약관 판/.test(JSON.stringify(r.body)), '없는 약관 판에는 동의할 수 없음', r);
+r = await rpc('accept_terms', owner, { p_version: '2026-11-11' });
+const agreedAt = r.body;
+ok(r.status === 200 && typeof agreedAt === 'string' && Math.abs(Date.parse(agreedAt) - Date.now()) < 120_000, '약관 동의 기록 (서버 시각)', r);
+r = await rpc('accept_terms', owner, { p_version: '2026-11-11' });
+ok(r.status === 200 && r.body === agreedAt, '다시 동의해도 처음 동의 시각 그대로', r.body);
+r = await api('me', owner);
+ok(r.body.termsVersion === '2026-11-11', 'GET /api/me 동의한 약관 판', r.body.termsVersion);
+r = await rest('terms_consents?select=user_id,terms_version,method', owner);
+ok(r.status === 200 && r.body.length === 1 && r.body[0].user_id === ownerId && r.body[0].method === 'app', '자기 동의 기록을 읽음', r.body);
+r = await rest('terms_consents?select=user_id', emp);
+ok(r.status === 200 && Array.isArray(r.body) && r.body.length === 0, '다른 사람의 동의 기록은 안 보임', r.body);
+r = await rest('terms_consents', owner, { method: 'POST', body: { user_id: ownerId, terms_version: '2026-11-11', method: 'signup' } });
+ok(r.status === 401 || r.status === 403, '동의 기록을 직접 쓸 수 없음 (함수로만, 서버 시각)', r.status);
+r = await rest(`terms_consents?user_id=eq.${ownerId}`, owner, { method: 'DELETE' });
+const stillThere = await rest('terms_consents?select=terms_version', owner);
+ok(stillThere.body.length === 1, '동의 기록을 직접 지울 수 없음', [r.status, stillThere.body]);
+{
+  const anon = await fetch(`${BASE}/rest/v1/rpc/accept_terms`, { method: 'POST', headers: { apikey: KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_version: '2026-11-11' }) });
+  ok(anon.status === 401 || anon.status === 403 || anon.status === 404, '로그인 없이 약관 동의 함수를 부를 수 없음', anon.status);
+}
 r = await api('owner/home', owner);
 ok(r.status === 404, '사업장 없으면 /owner/home 404', r);
 r = await api('nope', owner);

@@ -1786,6 +1786,53 @@ export type Database = {
           },
         ]
       }
+      terms_consents: {
+        Row: {
+          agreed_at: string
+          method: string
+          terms_version: string
+          user_id: string
+        }
+        Insert: {
+          agreed_at?: string
+          method: string
+          terms_version: string
+          user_id: string
+        }
+        Update: {
+          agreed_at?: string
+          method?: string
+          terms_version?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "terms_consents_terms_version_fkey"
+            columns: ["terms_version"]
+            isOneToOne: false
+            referencedRelation: "terms_versions"
+            referencedColumns: ["version"]
+          },
+        ]
+      }
+      terms_versions: {
+        Row: {
+          effective_on: string
+          note: string
+          version: string
+        }
+        Insert: {
+          effective_on: string
+          note?: string
+          version: string
+        }
+        Update: {
+          effective_on?: string
+          note?: string
+          version?: string
+        }
+        Relationships: []
+      }
       work_conditions: {
         Row: {
           break_waiver_requested: boolean
@@ -1944,6 +1991,7 @@ export type Database = {
       }
       admin_law_watch: { Args: never; Returns: Json }
       admin_stats: { Args: never; Returns: Json }
+      accept_terms: { Args: { p_version: string }; Returns: string }
       ai_refund: { Args: { p_user: string }; Returns: number }
       ai_take: { Args: { p_limit: number; p_user: string }; Returns: number }
       kakao_link_save: {
