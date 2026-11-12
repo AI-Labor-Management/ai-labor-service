@@ -178,6 +178,8 @@ describe('상담 보호 장치', () => {
     expect(searchFaq('임금명세서 안 주면 과태료')[0].faq.id).toBe('FAQ14');
     expect(searchFaq('월급을 늦게 주면 처벌받나요')[0].faq.id).toBe('FAQ15');
     expect(searchFaq('퇴사한 직원 퇴직금 정산은 언제까지')[0].faq.id).toBe('FAQ15');
+    expect(searchFaq('알바 공고에 여성 우대라고 써도 되나요')[0].faq.id).toBe('FAQ16');
+    expect(searchFaq('구인 글에 20대만 뽑는다고 적어도 돼요?')[0].faq.id).toBe('FAQ16');
     expect(searchFaq('ㅁㄴㅇㄹ')).toHaveLength(0);
   });
 });

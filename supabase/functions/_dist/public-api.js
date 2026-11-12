@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/public-api/handler.ts (npm run build:functions)
-// sha256:ab2dd3de19d6
+// sha256:41669b8bc737
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -3547,6 +3547,260 @@ var rules_default = {
         }
       ],
       note: "1~4명 사업장도 적용돼요(근로기준법 시행령 별표 1, 퇴직급여법은 모든 사업장). 임금은 통화로 직접 전액을 매월 1회 이상 정한 날짜에 줘야 하고(제43조), 퇴사하면 14일 안에 남은 임금·퇴직금 등을 모두 줘야 해요(제36조, 퇴직급여법 제9조 — 특별한 사정이 있으면 서로 합의해 미룰 수 있어요). 어기면 5년 이하 징역 또는 5천만원 이하 벌금(근로기준법 제107조①은 2026년 10월 8일부터 — 그 전에는 3년 이하 징역 또는 3천만원 이하 벌금이었어요, 퇴직급여법 제43조). 직원이 처벌을 원하지 않으면 기소하지 않지만, 체불사업주로 명단이 공개된 기간에는 예외예요."
+    },
+    {
+      id: "hiring.gender",
+      label: "채용 공고 성차별 금지",
+      category: "hiring",
+      unit: "문구",
+      check: "D6",
+      values: [
+        {
+          value: {
+            rule: "모집·채용할 때 남녀를 차별하면 안 됨 (예: 여성만, 남성 우대)",
+            conditions: "직무에 필요 없는 용모·키·체중 같은 신체 조건이나 미혼 조건을 내걸거나 요구하면 안 됨",
+            exception: "직무의 성격상 특정 성이 불가피하게 요구되는 경우",
+            penalty: "500만원 이하 벌금",
+            scope: "동거하는 친족만 일하는 사업장·가사사용인 외 모든 사업장"
+          },
+          effectiveFrom: "2026-09-18",
+          effectiveTo: null,
+          status: "verified",
+          verifiedAt: "2026-11-12",
+          verifiedBy: "Claude (국가법령정보센터 현행 원문 대조)",
+          sources: [
+            {
+              type: "law",
+              law: "남녀고용평등법",
+              article: "제7조",
+              quote: "근로자를 모집하거나 채용할 때 남녀를 차별하여서는 아니 된다",
+              paragraph: 1,
+              ref: "남녀고용평등법#제7조①",
+              check: {
+                ok: true,
+                versionFrom: "2026-09-18",
+                versionStatus: "current",
+                lawEffective: "2026-09-18",
+                lawNumber: "법률 제21476호"
+              }
+            },
+            {
+              type: "law",
+              law: "남녀고용평등법",
+              article: "제7조",
+              quote: "그 직무의 수행에 필요하지 아니한 용모ㆍ키ㆍ체중 등의 신체적 조건, 미혼 조건",
+              paragraph: 2,
+              ref: "남녀고용평등법#제7조②",
+              check: {
+                ok: true,
+                versionFrom: "2026-09-18",
+                versionStatus: "current",
+                lawEffective: "2026-09-18",
+                lawNumber: "법률 제21476호"
+              }
+            },
+            {
+              type: "law",
+              law: "남녀고용평등법",
+              article: "제2조",
+              quote: "직무의 성격에 비추어 특정 성이 불가피하게 요구되는 경우",
+              ref: "남녀고용평등법#제2조",
+              check: {
+                ok: true,
+                versionFrom: "2026-09-18",
+                versionStatus: "current",
+                lawEffective: "2026-09-18",
+                lawNumber: "법률 제21476호"
+              }
+            },
+            {
+              type: "law",
+              law: "남녀고용평등법",
+              article: "제37조",
+              quote: "500만원 이하의 벌금에 처한다",
+              paragraph: 4,
+              ref: "남녀고용평등법#제37조④",
+              check: {
+                ok: true,
+                versionFrom: "2026-09-18",
+                versionStatus: "current",
+                lawEffective: "2026-09-18",
+                lawNumber: "법률 제21476호"
+              }
+            },
+            {
+              type: "law",
+              law: "남녀고용평등법 시행령",
+              article: "제2조",
+              quote: "동거하는 친족만으로 이루어지는 사업 또는 사업장",
+              paragraph: 1,
+              ref: "남녀고용평등법 시행령#제2조①",
+              check: {
+                ok: true,
+                versionFrom: "2026-09-18",
+                versionStatus: "current",
+                lawEffective: "2026-09-18",
+                lawNumber: "대통령령 제36589호"
+              }
+            }
+          ]
+        }
+      ],
+      note: '1~4명 사업장도 적용돼요. "여성만", "남성 우대", "키 160cm 이상", "미혼"처럼 성별이나 직무와 상관없는 외모·결혼 조건을 공고에 쓰지 않아요. 2026년 9월 18일 시행 판 원문으로 확인했어요.'
+    },
+    {
+      id: "hiring.age",
+      label: "채용 공고 연령차별 금지",
+      category: "hiring",
+      unit: "문구",
+      check: "D7",
+      values: [
+        {
+          value: {
+            rule: "모집·채용에서 합리적인 이유 없이 나이로 차별하면 안 됨 (예: 20대만, 35세 이하)",
+            indirect: "나이 외의 기준이라도 특정 나이대에 특히 불리하면 연령차별로 봄",
+            exception: "직무의 성격상 특정 나이 기준이 불가피하게 요구되는 경우 등",
+            penalty: "500만원 이하 벌금",
+            scope: "직원을 쓰는 모든 사업주"
+          },
+          effectiveFrom: "2022-06-10",
+          effectiveTo: null,
+          status: "verified",
+          verifiedAt: "2026-11-12",
+          verifiedBy: "Claude (국가법령정보센터 현행 원문 대조)",
+          sources: [
+            {
+              type: "law",
+              law: "고령자고용법",
+              article: "제4조의4",
+              quote: "합리적인 이유 없이 연령을 이유로 근로자 또는 근로자가 되려는 사람을 차별하여서는 아니 된다",
+              paragraph: 1,
+              ref: "고령자고용법#제4조의4①",
+              check: {
+                ok: true,
+                versionFrom: "2022-06-10",
+                versionStatus: "current",
+                lawEffective: "2022-06-10",
+                lawNumber: "법률 제18921호"
+              }
+            },
+            {
+              type: "law",
+              law: "고령자고용법",
+              article: "제4조의4",
+              quote: "특정 연령집단에 특히 불리한 결과를 초래하는 경우에는 연령차별로 본다",
+              paragraph: 2,
+              ref: "고령자고용법#제4조의4②",
+              check: {
+                ok: true,
+                versionFrom: "2022-06-10",
+                versionStatus: "current",
+                lawEffective: "2022-06-10",
+                lawNumber: "법률 제18921호"
+              }
+            },
+            {
+              type: "law",
+              law: "고령자고용법",
+              article: "제4조의5",
+              quote: "직무의 성격에 비추어 특정 연령기준이 불가피하게 요구되는 경우",
+              ref: "고령자고용법#제4조의5",
+              check: {
+                ok: true,
+                versionFrom: "2022-06-10",
+                versionStatus: "current",
+                lawEffective: "2022-06-10",
+                lawNumber: "법률 제18921호"
+              }
+            },
+            {
+              type: "law",
+              law: "고령자고용법",
+              article: "제23조의3",
+              quote: "500만원 이하의 벌금에 처한다",
+              paragraph: 2,
+              ref: "고령자고용법#제23조의3②",
+              check: {
+                ok: true,
+                versionFrom: "2022-06-10",
+                versionStatus: "current",
+                lawEffective: "2022-06-10",
+                lawNumber: "법률 제18921호"
+              }
+            },
+            {
+              type: "law",
+              law: "고령자고용법",
+              article: "제2조",
+              quote: "“사업주”란 근로자를 사용하여 사업을 하는 자를 말한다",
+              ref: "고령자고용법#제2조",
+              check: {
+                ok: true,
+                versionFrom: "2022-06-10",
+                versionStatus: "current",
+                lawEffective: "2022-06-10",
+                lawNumber: "법률 제18921호"
+              }
+            }
+          ]
+        }
+      ],
+      note: '1~4명 사업장도 적용돼요. "20대", "35세 이하", "젊은 분"처럼 나이를 조건으로 거는 표현은 쓰지 않아요. 다른 법이 정한 나이 기준(예: 18세 미만 야간 근로 제한)을 지키려는 하한은 합리적인 이유가 될 수 있어요.'
+    },
+    {
+      id: "minor.nightHoliday",
+      label: "18세 미만 야간·휴일 근로 제한",
+      category: "work",
+      unit: "문구",
+      check: "D8",
+      values: [
+        {
+          value: {
+            night: "오후 10시 ~ 오전 6시",
+            rule: "18세 미만은 야간·휴일에 일하게 할 수 없음",
+            exception: "본인 동의가 있고 고용노동부장관 인가를 받은 경우",
+            docs: "나이를 증명하는 가족관계기록사항 증명서와 친권자(후견인) 동의서를 갖춰 둠",
+            scope: "1~4명 사업장도 적용"
+          },
+          effectiveFrom: "2026-10-08",
+          effectiveTo: null,
+          status: "verified",
+          verifiedAt: "2026-11-12",
+          verifiedBy: "Claude (국가법령정보센터 현행 원문 대조)",
+          sources: [
+            {
+              type: "law",
+              law: "근로기준법",
+              article: "제70조",
+              quote: "18세 미만자를 오후 10시부터 오전 6시까지의 시간 및 휴일에 근로시키지 못한다",
+              paragraph: 2,
+              ref: "근로기준법#제70조②",
+              check: {
+                ok: true,
+                versionFrom: "2026-10-08",
+                versionStatus: "current",
+                lawEffective: "2026-10-08",
+                lawNumber: "법률 제21533호"
+              }
+            },
+            {
+              type: "law",
+              law: "근로기준법",
+              article: "제66조",
+              quote: "가족관계기록사항에 관한 증명서와 친권자 또는 후견인의 동의서를 사업장에 갖추어 두어야 한다",
+              ref: "근로기준법#제66조",
+              check: {
+                ok: true,
+                versionFrom: "2026-10-08",
+                versionStatus: "current",
+                lawEffective: "2026-10-08",
+                lawNumber: "법률 제21533호"
+              }
+            }
+          ]
+        }
+      ],
+      note: "1~4명 사업장도 적용돼요(근로기준법 시행령 별표 1: 제66조, 제70조②③). 18세 미만은 하루 7시간·주 35시간 한도도 따로 있어요(minor.limits). 2026년 10월 8일 시행 판 원문으로 확인했어요."
     }
   ]
 };
@@ -5649,6 +5903,16 @@ var FAQS = [
     todo: ["급여일을 근로계약서에 적고 그날 지급", "퇴사일로부터 14일 안에 남은 임금·퇴직금 지급"],
     ruleIds: ["penalty.wageArrears"],
     basis: "근로기준법 제36조·제43조·제107조, 퇴직급여법 제9조·제43조",
+    expert: false
+  },
+  {
+    id: "FAQ16",
+    q: "채용 공고에 '여성 우대'·'20대'라고 써도 되나요?",
+    keywords: ["채용", "공고", "구인", "모집", "알바 구함", "여성", "남성", "여자", "남자", "성별", "나이", "연령", "20대", "30대", "젊은", "용모", "외모", "키", "미혼"],
+    oneLine: "안 돼요. 모집·채용할 때 성별을 가리거나 직무와 상관없는 외모·키·몸무게·미혼 조건을 걸면 500만원 이하 벌금, 합리적인 이유 없이 나이로 거르면 500만원 이하 벌금이에요. 1~4명 사업장도 같아요. 직무의 성격상 꼭 필요한 경우만 예외예요.",
+    todo: ["공고에서 성별·나이·외모·결혼 조건 빼기", "하는 일·근무 요일과 시간·시급·근무 기간만 적기"],
+    ruleIds: ["hiring.gender", "hiring.age"],
+    basis: "남녀고용평등법 제7조·제37조④, 고령자고용법 제4조의4·제23조의3②",
     expert: false
   }
 ];
