@@ -38,7 +38,7 @@ describe('날짜 계산 경계', () => {
 describe('규칙 파일 (rules.json)', () => {
   it('원본 44개 + 출산·육아·벌칙 5개 규칙을 읽는다', () => {
     expect(RULES_FILE.schema).toBe('bix-rules/1');
-    expect(allRules()).toHaveLength(49);
+    expect(allRules()).toHaveLength(52);
   });
   it('임금·퇴직금 체불 벌칙 — 2026-10-08부터 5년/5천만원, 퇴사 후 14일 안에 정산', () => {
     const r = resolveRule<{ settleWithinDays: number; wageArrears: string; severanceArrears: string }>('penalty.wageArrears', '2026-11-11');

@@ -10,6 +10,6 @@ describe('계산 엔진 계약', () => {
   it('Edge Function이 쓰는 함수가 모두 있다', () => {
     const names = ['computeDeadlines', 'draftLines', 'payrollLines', 'classifyClock', 'buildIcs', 'createSeed', 'diagnose', 'quickWage', 'detectPII'] as const;
     for (const n of names) expect(typeof contract[n]).toBe('function');
-    expect(contract.RULES_FILE.rules).toHaveLength(49); // 44 + 출산·육아·벌칙 5 (2026-11-11)
+    expect(contract.RULES_FILE.rules).toHaveLength(52); // 44 + 출산·육아·벌칙 5 (2026-11-11) + 채용 3 (2026-11-12)
   });
 });
