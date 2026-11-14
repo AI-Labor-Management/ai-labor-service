@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/public-api/handler.ts (npm run build:functions)
-// sha256:41669b8bc737
+// sha256:892babe01311
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -5093,9 +5093,11 @@ function fold(line) {
   out.push(rest);
   return out.join("\r\n");
 }
-function buildIcs(deadlines, generatedAt = /* @__PURE__ */ new Date()) {
+function buildIcs(deadlines, generatedAt = /* @__PURE__ */ new Date(), opts = {}) {
   const stamp = generatedAt.toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
-  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//saram-saemgak//KO", "CALSCALE:GREGORIAN", "X-WR-CALNAME:사람샘각 노무 기한"];
+  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//saram-saemgak//KO", "CALSCALE:GREGORIAN", fold(`X-WR-CALNAME:${esc(opts.calName ?? "사람샘각 노무 기한")}`)];
+  if (opts.subscription) lines.push("X-WR-TIMEZONE:Asia/Seoul", "REFRESH-INTERVAL;VALUE=DURATION:PT6H", "X-PUBLISHED-TTL:PT6H");
+  const note = opts.subscription ? "사람샘각과 연결된 일정이에요. 기한이 바뀌면 캘린더가 다시 읽어 올 때 함께 바뀌어요." : "내려받은 시점의 사본이에요. 기한이 바뀌면 다시 내려받으세요.";
   for (const d of deadlines) {
     const ymd = d.date.replace(/-/g, "");
     const next = new Date(Date.UTC(Number(d.date.slice(0, 4)), Number(d.date.slice(5, 7)) - 1, Number(d.date.slice(8, 10)) + 1));
@@ -5108,7 +5110,7 @@ function buildIcs(deadlines, generatedAt = /* @__PURE__ */ new Date()) {
     lines.push(fold(`SUMMARY:${esc(d.title)}`));
     lines.push(fold(`DESCRIPTION:${esc(`${d.secondaryLabel ? d.secondaryLabel + "\n" : ""}계산 근거: ${d.origin}
 근거: ${d.basis}
-내려받은 시점의 사본이에요. 기한이 바뀌면 다시 내려받으세요.`)}`));
+${note}`)}`));
     const offsets = d.recurring ? [3, 0] : [30, 7, 3, 0];
     for (const o of offsets) {
       lines.push("BEGIN:VALARM", "ACTION:DISPLAY", fold(`DESCRIPTION:${esc(d.title)}`), o === 0 ? "TRIGGER:PT9H" : `TRIGGER:-P${o}D`, "END:VALARM");
@@ -5643,29 +5645,29 @@ function evaluateRisk(state, base) {
     if (!q.visible(state, base)) continue;
     const a = state.riskAnswers.find((x) => x.questionId === q.id) ?? null;
     let result = "unanswered";
-    let text = "";
+    let text2 = "";
     if (a) {
       const stale = addMonths(a.answeredAt, 6) <= base || a.scaleAtAnswer !== scale;
       if (stale) {
         result = "stale";
-        text = a.scaleAtAnswer !== scale ? "규모 구간이 바뀌어 다시 확인해요" : "6개월이 지나 다시 확인해요";
+        text2 = a.scaleAtAnswer !== scale ? "규모 구간이 바뀌어 다시 확인해요" : "6개월이 지나 다시 확인해요";
       } else if (a.answer === "unknown") {
         result = "check";
-        text = "잘 모르겠어요 — 확인 필요";
+        text2 = "잘 모르겠어요 — 확인 필요";
       } else if (a.answer === q.dangerAnswer) {
         if (under5 && q.under5Info) {
           result = "info";
-          text = q.under5Info;
+          text2 = q.under5Info;
         } else {
           result = "risk";
-          text = q.risk;
+          text2 = q.risk;
         }
       } else {
         result = "ok";
-        text = "";
+        text2 = "";
       }
     }
-    rows.push({ q, answer: a, result, text });
+    rows.push({ q, answer: a, result, text: text2 });
   }
   const answered = rows.filter((r) => r.answer && r.result !== "stale").length;
   return { rows, answered, total: rows.length, riskCount: rows.filter((r) => r.result === "risk").length, checkCount: rows.filter((r) => r.result === "check").length };
@@ -5927,11 +5929,11 @@ function searchFaq(query) {
     return { faq, score };
   }).filter((x) => x.score >= 3).sort((a, b) => b.score - a.score).slice(0, 3);
 }
-function detectPII(text) {
+function detectPII(text2) {
   const found = [];
-  if (/\d{6}\s*-?\s*[1-8]\d{6}/.test(text)) found.push("주민등록번호·외국인등록번호로 보이는 숫자");
-  if (/01[016789]\s*-?\s*\d{3,4}\s*-?\s*\d{4}/.test(text)) found.push("휴대폰 번호");
-  if (/0\d{1,2}-\d{3,4}-\d{4}/.test(text)) found.push("전화번호");
+  if (/\d{6}\s*-?\s*[1-8]\d{6}/.test(text2)) found.push("주민등록번호·외국인등록번호로 보이는 숫자");
+  if (/01[016789]\s*-?\s*\d{3,4}\s*-?\s*\d{4}/.test(text2)) found.push("휴대폰 번호");
+  if (/0\d{1,2}-\d{3,4}-\d{4}/.test(text2)) found.push("전화번호");
   return Array.from(new Set(found));
 }
 function buildMemo(state, question, faq, base) {
@@ -6179,6 +6181,294 @@ function createSeed(base) {
 // supabase/functions/_shared/engine.ts
 var engine = domain_exports;
 
+// supabase/functions/_shared/mapping.ts
+var WORKPLACE_TABLES = [
+  "busy_days",
+  "employees",
+  "employee_foreign_info",
+  "work_conditions",
+  "condition_acks",
+  "invites",
+  "shift_overrides",
+  "attendance_records",
+  "attendance_edits",
+  "substitutions",
+  "leave_requests",
+  "payroll_months",
+  "payroll_manual",
+  "payroll_lines",
+  "payroll_edits",
+  "statement_deliveries",
+  "insurance_reports",
+  "insurance_notices",
+  "doc_records",
+  "doc_requests",
+  "custom_forms",
+  "deadline_actions",
+  "risk_answers",
+  "offboarding_progress",
+  "consult_requests",
+  "notifications"
+];
+var num = (v) => v === null || v === void 0 ? null : Number(v);
+var asSchedule = (v) => Array.isArray(v) ? v : [null, null, null, null, null, null, null];
+function latestLines(lines, payrollId) {
+  const byEmp = /* @__PURE__ */ new Map();
+  for (const l of lines.filter((x) => x.payroll_id === payrollId)) {
+    const prev = byEmp.get(l.employee_id);
+    if (!prev || l.revision > prev.revision) byEmp.set(l.employee_id, l);
+  }
+  return [...byEmp.values()].map((l) => l.line);
+}
+function rowsToState(r) {
+  const w = r.workplace;
+  const monthOfPayroll = new Map(r.payroll_months.map((p) => [p.id, p.month]));
+  const employees = r.employees.map((e) => {
+    const f = r.employee_foreign_info.find((x) => x.employee_id === e.id);
+    const inv = r.invites.filter((i) => i.employee_id === e.id && !i.used_at).sort((a, b) => a.created_at < b.created_at ? 1 : -1)[0];
+    return {
+      id: e.id,
+      alias: e.alias,
+      ageBand: e.age_band,
+      birthDate: e.birth_date,
+      startedBefore65: e.started_before_65,
+      hireDate: e.hire_date,
+      employmentType: e.employment_type,
+      contractEnd: e.contract_end,
+      probationEnd: e.probation_end,
+      foodHandler: e.food_handler,
+      isForeign: e.is_foreign,
+      foreign: f ? { visa: f.visa, expiry: f.expiry, permitted: f.permitted, permitHours: num(f.permit_hours), otherWorkplaceHours: num(f.other_workplace_hours) ?? 0, nationality: f.nationality, checkedAt: f.checked_at } : null,
+      school: e.school,
+      insuranceMethod: e.insurance_method,
+      registeredAt: e.registered_at,
+      onboarding: e.onboarding,
+      resignDate: e.resign_date,
+      resignType: e.resign_type,
+      account: e.account_status,
+      // 토큰 원문은 저장하지 않으므로 상태만 전달
+      invite: inv ? { token: "", expiresAt: inv.expires_at, used: false } : null,
+      locationConsent: e.location_consent_at ? { at: e.location_consent_at, revokedAt: e.location_consent_revoked_at } : null,
+      conditionAcks: r.condition_acks.filter((a) => a.employee_id === e.id).map((a) => ({ conditionId: a.condition_id, status: a.status, memo: a.memo, at: a.at, resolvedAt: a.resolved_at })),
+      bonusAnnual: e.bonus_annual,
+      leaveAllowanceAnnual: e.leave_allowance_annual,
+      createdAt: e.created_at
+    };
+  });
+  const conditions = r.work_conditions.map((c) => ({
+    id: c.id,
+    employeeId: c.employee_id,
+    effectiveFrom: c.effective_from,
+    hourlyWage: c.hourly_wage,
+    schedule: asSchedule(c.schedule),
+    variable: c.variable,
+    variableWeeklyHours: num(c.variable_weekly_hours),
+    weeklyHolidayDay: c.weekly_holiday_day,
+    job: c.job,
+    mealAllowance: c.meal_allowance,
+    breakWaiverRequested: c.break_waiver_requested,
+    reason: c.reason,
+    createdAt: c.created_at
+  }));
+  const payrolls = r.payroll_months.map((p) => ({
+    id: p.month,
+    // 계산 엔진은 급여월 문자열을 id로 쓴다
+    month: p.month,
+    status: p.status,
+    scaleConfirmed: p.scale_confirmed,
+    manual: r.payroll_manual.filter((m) => m.payroll_id === p.id).map((m) => ({ employeeId: m.employee_id, incomeTax: m.income_tax, localTax: m.local_tax, adjustments: m.adjustments ?? [] })),
+    confirmedAt: p.confirmed_at,
+    confirmedLines: p.status === "confirmed" ? latestLines(r.payroll_lines, p.id) : null,
+    confirmedWithPending: p.confirmed_with_pending ?? [],
+    revision: p.revision
+  }));
+  const latestDelivery = /* @__PURE__ */ new Map();
+  for (const s of r.statement_deliveries) {
+    const k = `${s.payroll_id}:${s.employee_id}`;
+    const prev = latestDelivery.get(k);
+    if (!prev || s.revision > prev.revision) latestDelivery.set(k, s);
+  }
+  return {
+    schemaVersion: 1,
+    workplace: {
+      name: w.name,
+      industry: w.industry,
+      scale: w.scale,
+      familyOnly: w.family_only,
+      payDay: w.pay_day,
+      payMonthBasis: w.pay_month_basis,
+      gpsEnabled: w.gps_enabled,
+      address: w.address,
+      radiusM: w.radius_m,
+      lateToleranceMin: w.late_tolerance_min,
+      defaultInsuranceMethod: w.default_insurance_method,
+      hourlyLeaveAllowed: w.hourly_leave_allowed,
+      firmInsuranceShareConsent: w.firm_insurance_share_consent,
+      createdAt: w.created_at
+    },
+    employees,
+    conditions,
+    overrides: r.shift_overrides.map((o) => ({
+      id: o.id,
+      employeeId: o.employee_id,
+      date: o.date,
+      kind: o.kind,
+      start: o.start_time,
+      end: o.end_time,
+      breakMin: o.break_min,
+      memo: o.memo,
+      substitutionId: o.substitution_id,
+      createdAt: o.created_at
+    })),
+    attendance: r.attendance_records.map((a) => ({
+      id: a.id,
+      recordNo: a.record_no,
+      employeeId: a.employee_id,
+      date: a.date,
+      original: { clockIn: a.original_clock_in, clockOut: a.original_clock_out },
+      source: a.source === "gps" ? "gps-demo" : a.source,
+      gps: a.gps,
+      status: a.status,
+      approval: a.approval,
+      reason: a.reason,
+      createdAt: a.created_at,
+      confirmedAt: a.confirmed_at
+    })),
+    attendanceEdits: r.attendance_edits.map((x) => ({
+      id: x.id,
+      recordId: x.record_id,
+      before: { clockIn: x.before_in, clockOut: x.before_out },
+      after: { clockIn: x.after_in, clockOut: x.after_out },
+      reason: x.reason,
+      by: "owner",
+      at: x.at,
+      employeeResponse: x.employee_response_status ? { status: x.employee_response_status, memo: x.employee_response_memo, at: x.employee_response_at ?? x.at } : null
+    })),
+    substitutions: r.substitutions.map((s) => ({
+      id: s.id,
+      date: s.date,
+      fromEmployeeId: s.from_employee_id,
+      toEmployeeId: s.to_employee_id,
+      mode: s.mode,
+      status: s.status,
+      memo: s.memo,
+      createdAt: s.created_at,
+      decidedAt: s.decided_at
+    })),
+    leaveRequests: r.leave_requests.map((l) => ({
+      id: l.id,
+      employeeId: l.employee_id,
+      date: l.date,
+      hours: num(l.hours),
+      status: l.status,
+      adjustReason: l.adjust_reason,
+      requestedAt: l.requested_at,
+      decidedAt: l.decided_at,
+      by: l.requested_by
+    })),
+    payrolls,
+    payrollEdits: r.payroll_edits.map((x) => ({
+      id: x.id,
+      payrollId: monthOfPayroll.get(x.payroll_id) ?? x.payroll_id,
+      employeeId: x.employee_id,
+      field: x.field,
+      before: x.before_value,
+      after: x.after_value,
+      reason: x.reason,
+      at: x.at
+    })),
+    statements: [...latestDelivery.values()].map((s) => ({
+      id: s.id,
+      payrollId: monthOfPayroll.get(s.payroll_id) ?? s.payroll_id,
+      employeeId: s.employee_id,
+      revision: s.revision,
+      method: s.method,
+      deliveredAt: s.delivered_at,
+      viewedAt: s.viewed_at,
+      disputed: s.disputed_memo ? { memo: s.disputed_memo, at: s.disputed_at ?? s.delivered_at } : null
+    })),
+    insuranceReports: r.insurance_reports.map((x) => ({
+      employeeId: x.employee_id,
+      phase: x.phase,
+      status: x.status,
+      date: x.date,
+      by: x.by_role
+    })),
+    insuranceNotices: r.insurance_notices.map((n) => ({
+      id: n.id,
+      employeeId: n.employee_id,
+      fromMonth: n.from_month,
+      amounts: n.amounts,
+      enteredAt: n.entered_at
+    })),
+    docRecords: r.doc_records.map((d) => ({
+      id: d.id,
+      key: d.key,
+      itemId: d.item_id,
+      employeeId: d.employee_id,
+      status: d.status,
+      doneAt: d.done_at,
+      naReason: d.na_reason,
+      expiry: d.expiry,
+      examDate: d.exam_date,
+      location: d.location,
+      bulk: d.bulk,
+      updatedAt: d.updated_at
+    })),
+    docRequests: r.doc_requests.map((d) => ({
+      id: d.id,
+      employeeId: d.employee_id,
+      itemId: d.item_id,
+      customName: d.custom_name,
+      status: d.status,
+      requestedAt: d.requested_at,
+      dueDate: d.due_date,
+      receivedAt: d.received_at,
+      fixReason: d.fix_reason,
+      expiry: d.expiry,
+      location: d.location,
+      history: d.history ?? []
+    })),
+    customForms: r.custom_forms.map((c) => ({ id: c.id, name: c.name, url: c.url })),
+    deadlineActions: r.deadline_actions.map((a) => ({ key: a.key, action: a.action, at: a.at, date: a.date, note: a.note })),
+    riskAnswers: r.risk_answers.map((a) => ({ questionId: a.question_id, answer: a.answer, answeredAt: a.answered_at, scaleAtAnswer: a.scale_at_answer })),
+    offboarding: r.offboarding_progress.map((o) => ({ employeeId: o.employee_id, steps: o.steps ?? {}, startedAt: o.started_at, completedAt: o.completed_at })),
+    consults: r.consult_requests.map((c) => ({
+      id: c.id,
+      topic: c.topic,
+      question: c.question,
+      memo: c.memo,
+      shareItems: c.share_items,
+      employeeIds: c.employee_ids,
+      snapshot: c.snapshot,
+      consentAt: c.consent_at,
+      revokedAt: c.revoked_at,
+      // DB의 'delivered'(실제 저장)를 프론트엔드 타입의 'demo-delivered' 자리에 맞춘다
+      status: c.status === "delivered" ? "demo-delivered" : c.status,
+      createdAt: c.created_at
+    })),
+    guestConsults: [],
+    reviewComments: [],
+    notifications: r.notifications.map((n) => ({
+      id: n.id,
+      to: n.recipient === "owner" ? "owner" : n.employee_id,
+      kind: n.kind,
+      text: n.text,
+      link: n.link,
+      createdAt: n.created_at,
+      readAt: n.read_at,
+      channels: { inApp: "delivered", kakao: n.kakao_status === "not-sent" ? "not-sent" : "not-connected" }
+    })),
+    busyDays: r.busy_days.map((b) => ({ id: b.id, date: b.date, memo: b.memo })),
+    settings: {
+      baseDateOverride: w.base_date_override,
+      kakaoBannerDismissed: w.kakao_banner_dismissed,
+      employeeLang: Object.fromEntries(r.employees.map((e) => [e.id, e.lang]))
+    },
+    seq: w.seq
+  };
+}
+
 // supabase/functions/_shared/http.ts
 var ALLOWED_ORIGINS = /* @__PURE__ */ new Set([
   // 사람샘각 공개 사이트 (2026-11-10~, GitHub Pages + 자체 도메인)
@@ -6216,6 +6506,9 @@ function json(req, body, status = 200, headers = {}) {
     status,
     headers: { "Content-Type": "application/json; charset=utf-8", ...corsHeaders(req), ...headers }
   });
+}
+function text(req, body, contentType, headers = {}) {
+  return new Response(body, { status: 200, headers: { "Content-Type": contentType, ...corsHeaders(req), ...headers } });
 }
 async function readJson(req) {
   if (req.method === "GET") return {};
@@ -6291,6 +6584,47 @@ function serviceClient() {
 }
 function kstToday() {
   return new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 10);
+}
+async function must(p) {
+  const { data, error } = await p;
+  if (error) throw error;
+  return data;
+}
+async function loadWorkplace(db, workplaceId, today = kstToday()) {
+  const wp = await must(db.from("workplaces").select("*").eq("id", workplaceId).single());
+  const since = new Date(Date.parse(today) - 430 * 864e5).toISOString().slice(0, 10);
+  const results = await Promise.all(
+    WORKPLACE_TABLES.map((t) => {
+      let q = db.from(t).select("*").eq("workplace_id", workplaceId);
+      if (t === "attendance_records") q = q.gte("date", since);
+      if (t === "notifications") q = q.order("created_at", { ascending: false }).limit(200);
+      return must(q.limit(5e3)).then((data) => [t, data]);
+    })
+  );
+  const rows = { workplace: wp, ...Object.fromEntries(results) };
+  return { rows, state: rowsToState(rows) };
+}
+
+// supabase/functions/_shared/calfeed-core.ts
+function feedTokenFromPath(path) {
+  const m = /^calendar\/([A-Za-z0-9_-]{43})\.ics$/.exec(path);
+  return m ? m[1] : null;
+}
+
+// supabase/functions/_shared/calfeed.ts
+async function feedIcs(token, now = /* @__PURE__ */ new Date()) {
+  const db = serviceClient();
+  const { data, error } = await db.from("calendar_feeds").select("workplace_id").eq("token", token).maybeSingle();
+  if (error) throw error;
+  const feed = data;
+  if (!feed) return null;
+  const today = kstToday();
+  const { rows, state } = await loadWorkplace(db, feed.workplace_id, today);
+  const base = rows.workplace.base_date_override ?? today;
+  const items = engine.computeDeadlines(state, base).filter((d) => d.status !== "done");
+  const name = rows.workplace.name?.trim();
+  await db.from("calendar_feeds").update({ last_fetched_at: now.toISOString() }).eq("workplace_id", feed.workplace_id);
+  return engine.buildIcs(items, now, { subscription: true, calName: name ? `사람샘각 · ${name}` : "사람샘각 노무 기한" });
 }
 
 // supabase/functions/_shared/kakao-core.ts
@@ -6434,21 +6768,21 @@ var key = () => {
     return k;
   }
 };
-var redact = (text) => [rawKey(), key()].filter(Boolean).reduce((t, k) => t.replaceAll(k, "***"), text);
+var redact = (text2) => [rawKey(), key()].filter(Boolean).reduce((t, k) => t.replaceAll(k, "***"), text2);
 var FESTIVAL_URL = "https://apis.data.go.kr/B551011/KorService2/searchFestival2";
 var LDONG_URL = "https://apis.data.go.kr/B551011/KorService2/ldongCode2";
 var TOUR = { MobileOS: "ETC", MobileApp: "saram-saemgak" };
 async function getJson(url, params) {
   const q = new URLSearchParams({ serviceKey: key(), _type: "json", ...params });
   const r = await fetch(`${url}?${q}`, { signal: AbortSignal.timeout(15e3) });
-  const text = await r.text();
+  const text2 = await r.text();
   let body = null;
   try {
-    body = JSON.parse(text);
+    body = JSON.parse(text2);
   } catch {
     body = null;
   }
-  return { status: r.status, body, text: redact(text).slice(0, 1500) };
+  return { status: r.status, body, text: redact(text2).slice(0, 1500) };
 }
 async function holidayDiff(db, years) {
   const { data } = await db.from("holidays_api").select("date, name").order("date");
@@ -6537,6 +6871,12 @@ async function handler(req) {
     const path = subPath(req, "public-api");
     const url = new URL(req.url);
     const m = req.method;
+    const feedToken = m === "GET" ? feedTokenFromPath(path) : null;
+    if (feedToken) {
+      const ics = await feedIcs(feedToken);
+      if (!ics) return new Response("없는 캘린더 주소예요. 사람샘각 일정·기한 화면에서 연결을 다시 만들어 주세요.", { status: 404, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+      return text(req, ics, "text/calendar; charset=utf-8", { "Cache-Control": "private, max-age=900", "Content-Disposition": 'inline; filename="saram-saemgak.ics"' });
+    }
     if (m === "GET" && (path === "" || path === "health")) {
       return json(req, { ok: true, service: "ai-labor-service", function: "public-api", time: (/* @__PURE__ */ new Date()).toISOString(), kstToday: kstToday(), rules: { schema: engine.RULES_FILE.schema, generatedAt: engine.RULES_FILE.generatedAt, count: engine.RULES_FILE.rules.length } });
     }

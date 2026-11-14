@@ -3,7 +3,9 @@
 import { engine as E } from '../_shared/engine.ts';
 import type { AgeBand, Industry, ScaleBand } from '../_shared/domain-types.ts';
 import { kstToday, serviceClient } from '../_shared/db.ts';
-import { bad, corsHeaders, handleError, int, json, notFound, oneOf, readJson, str, subPath } from '../_shared/http.ts';
+import { bad, corsHeaders, handleError, int, json, notFound, oneOf, readJson, str, subPath, text } from '../_shared/http.ts';
+import { feedTokenFromPath } from '../_shared/calfeed-core.ts';
+import { feedIcs } from '../_shared/calfeed.ts';
 import * as K from '../_shared/kakao.ts';
 import { dataGoKrConfigured, holidayDiff, tourEvents, tourRegions } from '../_shared/datagokr.ts';
 
@@ -58,6 +60,13 @@ export async function handler(req: Request): Promise<Response> {
     const path = subPath(req, 'public-api');
     const url = new URL(req.url);
     const m = req.method;
+    // 구글 캘린더 연결: 캘린더 앱이 주기적으로 읽어 가는 구독 주소 (로그인 없음, 추측할 수 없는 토큰)
+    const feedToken = m === 'GET' ? feedTokenFromPath(path) : null;
+    if (feedToken) {
+      const ics = await feedIcs(feedToken);
+      if (!ics) return new Response('없는 캘린더 주소예요. 사람샘각 일정·기한 화면에서 연결을 다시 만들어 주세요.', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+      return text(req, ics, 'text/calendar; charset=utf-8', { 'Cache-Control': 'private, max-age=900', 'Content-Disposition': 'inline; filename="saram-saemgak.ics"' });
+    }
     if (m === 'GET' && (path === '' || path === 'health')) {
       return json(req, { ok: true, service: 'ai-labor-service', function: 'public-api', time: new Date().toISOString(), kstToday: kstToday(), rules: { schema: E.RULES_FILE.schema, generatedAt: E.RULES_FILE.generatedAt, count: E.RULES_FILE.rules.length } });
     }
