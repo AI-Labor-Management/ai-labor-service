@@ -106,7 +106,7 @@ export interface Engine {
   leaveAccrual(state: AppState, e: Employee, asOf: ISODate): { applicable: boolean };
 
   computeDeadlines(state: AppState, base: ISODate): DeadlineLite[];
-  buildIcs(deadlines: DeadlineLite[], generatedAt?: Date): string;
+  buildIcs(deadlines: DeadlineLite[], generatedAt?: Date, opts?: { subscription?: boolean; calName?: string }): string;
   computeChecklist(state: AppState, base: ISODate): unknown[];
   computeTodos(state: AppState, base: ISODate): TodoLite[];
   areaCounts(todos: TodoLite[]): Record<string, number>;

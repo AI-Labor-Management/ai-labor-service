@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/api/handler.ts (npm run build:functions)
-// sha256:31fcb459cba4
+// sha256:0f90e2f87037
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -5047,15 +5047,15 @@ function computeDeadlines(state, base) {
     if (r.showFrom && base < r.showFrom && diffDays(base, r.date) > 30) continue;
     const handled = state.deadlineActions.find((a) => a.key === r.key) ?? null;
     const days = diffDays(base, r.date);
-    let status;
+    let status2;
     const autoDoneAction = r.autoDone ? { key: r.key, action: "done", at: "", date: base, note: "연결된 화면에서 처리됨" } : null;
     const h = handled ?? autoDoneAction;
-    if (h && h.action !== "unknown") status = "done";
-    else if (r.employee && r.employee.onboarding === "existing-pending" && r.date < r.employee.registeredAt) status = "onboarding";
-    else if (days < 0) status = "overdue";
-    else if (days <= 7) status = "due7";
-    else if (days <= 30) status = "due30";
-    else status = "later";
+    if (h && h.action !== "unknown") status2 = "done";
+    else if (r.employee && r.employee.onboarding === "existing-pending" && r.date < r.employee.registeredAt) status2 = "onboarding";
+    else if (days < 0) status2 = "overdue";
+    else if (days <= 7) status2 = "due7";
+    else if (days <= 30) status2 = "due30";
+    else status2 = "later";
     const alerts = alertDates(r.date, !!r.recurring);
     out.push({
       key: r.key,
@@ -5073,11 +5073,11 @@ function computeDeadlines(state, base) {
       ruleIds: r.ruleIds ?? [],
       actions: r.actions ?? ["done"],
       handled: h,
-      status,
+      status: status2,
       days,
       dLabel: dDayLabel(days),
       alerts,
-      nextAlert: status === "done" ? null : alerts.find((a) => a >= base) ?? null
+      nextAlert: status2 === "done" ? null : alerts.find((a) => a >= base) ?? null
     });
   }
   return out.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.key < b.key ? -1 : 1);
@@ -5093,9 +5093,11 @@ function fold(line) {
   out.push(rest);
   return out.join("\r\n");
 }
-function buildIcs(deadlines, generatedAt = /* @__PURE__ */ new Date()) {
+function buildIcs(deadlines, generatedAt = /* @__PURE__ */ new Date(), opts = {}) {
   const stamp = generatedAt.toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
-  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//saram-saemgak//KO", "CALSCALE:GREGORIAN", "X-WR-CALNAME:사람샘각 노무 기한"];
+  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//saram-saemgak//KO", "CALSCALE:GREGORIAN", fold(`X-WR-CALNAME:${esc(opts.calName ?? "사람샘각 노무 기한")}`)];
+  if (opts.subscription) lines.push("X-WR-TIMEZONE:Asia/Seoul", "REFRESH-INTERVAL;VALUE=DURATION:PT6H", "X-PUBLISHED-TTL:PT6H");
+  const note = opts.subscription ? "사람샘각과 연결된 일정이에요. 기한이 바뀌면 캘린더가 다시 읽어 올 때 함께 바뀌어요." : "내려받은 시점의 사본이에요. 기한이 바뀌면 다시 내려받으세요.";
   for (const d of deadlines) {
     const ymd2 = d.date.replace(/-/g, "");
     const next = new Date(Date.UTC(Number(d.date.slice(0, 4)), Number(d.date.slice(5, 7)) - 1, Number(d.date.slice(8, 10)) + 1));
@@ -5108,7 +5110,7 @@ function buildIcs(deadlines, generatedAt = /* @__PURE__ */ new Date()) {
     lines.push(fold(`SUMMARY:${esc(d.title)}`));
     lines.push(fold(`DESCRIPTION:${esc(`${d.secondaryLabel ? d.secondaryLabel + "\n" : ""}계산 근거: ${d.origin}
 근거: ${d.basis}
-내려받은 시점의 사본이에요. 기한이 바뀌면 다시 내려받으세요.`)}`));
+${note}`)}`));
     const offsets = d.recurring ? [3, 0] : [30, 7, 3, 0];
     for (const o of offsets) {
       lines.push("BEGIN:VALARM", "ACTION:DISPLAY", fold(`DESCRIPTION:${esc(d.title)}`), o === 0 ? "TRIGGER:PT9H" : `TRIGGER:-P${o}D`, "END:VALARM");
@@ -6766,9 +6768,9 @@ function corsHeaders(req) {
   };
 }
 var HttpError = class extends Error {
-  constructor(status, message, detail) {
+  constructor(status2, message, detail) {
     super(message);
-    this.status = status;
+    this.status = status2;
     this.detail = detail;
   }
   status;
@@ -6778,9 +6780,9 @@ var bad = (msg, detail) => new HttpError(400, msg, detail);
 var forbidden = (msg = "권한이 없어요") => new HttpError(403, msg);
 var notFound = (msg = "찾을 수 없어요") => new HttpError(404, msg);
 var conflict = (msg) => new HttpError(409, msg);
-function json(req, body, status = 200, headers = {}) {
+function json(req, body, status2 = 200, headers = {}) {
   return new Response(JSON.stringify(body), {
-    status,
+    status: status2,
     headers: { "Content-Type": "application/json; charset=utf-8", ...corsHeaders(req), ...headers }
   });
 }
@@ -6805,8 +6807,8 @@ function handleError(req, e) {
   if (e instanceof HttpError) return json(req, { error: e.message, detail: e.detail ?? null }, e.status);
   const pg = e;
   if (pg && typeof pg.message === "string" && pg.code) {
-    const status = pg.code === "42501" ? 403 : pg.code === "23505" ? 409 : 400;
-    return json(req, { error: pg.message, code: pg.code }, status);
+    const status2 = pg.code === "42501" ? 403 : pg.code === "23505" ? 409 : 400;
+    return json(req, { error: pg.message, code: pg.code }, status2);
   }
   console.error("unhandled", e);
   return json(req, { error: "서버 오류가 났어요. 잠시 후 다시 시도하세요" }, 500);
@@ -6934,15 +6936,15 @@ function toAiAnswer(content, checkedAt) {
     }
   }
   const m = text2.match(/\[상태\s*:\s*(answer|insufficient_evidence|expert_required)\]/);
-  let status = m?.[1] ?? "answer";
+  let status2 = m?.[1] ?? "answer";
   text2 = text2.replace(/\[상태\s*:\s*[a-z_]+\]\s*/g, "").replace(/\*\*(.+?)\*\*/g, "$1").replace(/^#+\s*/gm, "").trim();
   const citations = [...seen].slice(0, 5).map(([url, title]) => ({ title, url, checkedAt }));
-  if (status === "answer" && citations.length === 0) status = "insufficient_evidence";
+  if (status2 === "answer" && citations.length === 0) status2 = "insufficient_evidence";
   if (!text2) {
-    status = "insufficient_evidence";
+    status2 = "insufficient_evidence";
     text2 = "공식 자료에서 확인할 수 있는 근거를 찾지 못했어요. 노무 전문가와 확인해 주세요.";
   }
-  return { status, text: text2, citations };
+  return { status: status2, text: text2, citations };
 }
 
 // supabase/functions/api/ai-model.ts
@@ -7026,7 +7028,7 @@ var ANSWER_SCHEMA = {
 var STATUSES = /* @__PURE__ */ new Set(["answer", "insufficient_evidence", "expert_required"]);
 function toGroundedAnswer(raw, docs, checkedAt) {
   const o = raw && typeof raw === "object" ? raw : {};
-  let status = typeof o.status === "string" && STATUSES.has(o.status) ? o.status : "insufficient_evidence";
+  let status2 = typeof o.status === "string" && STATUSES.has(o.status) ? o.status : "insufficient_evidence";
   let text2 = (typeof o.text === "string" ? o.text : "").replace(/\[[RF]:[^\]]+\]/g, "").replace(/(^|[^\w])[RF]:[A-Za-z][\w.-]*/g, "$1").replace(/[ \t]*\(\s*\)/g, "").replace(/:[ \t]*,[ \t]*/g, ": ").replace(/[ \t]*,[ \t]*(?=,|\.|\n|$)/g, "").replace(/\n?[ \t]*·?[ \t]*근거:[ \t]*(?=\n|$)/g, "").replace(/[ \t]+$/gm, "").replace(/\*\*(.+?)\*\*/g, "$1").replace(/^#+\s*/gm, "").trim();
   const byId = new Map(docs.map((d) => [d.id, d]));
   const seen = /* @__PURE__ */ new Map();
@@ -7035,12 +7037,12 @@ function toGroundedAnswer(raw, docs, checkedAt) {
     if (d && !seen.has(d.url)) seen.set(d.url, d.title);
   }
   const citations = [...seen].slice(0, 5).map(([url, title]) => ({ title, url, checkedAt }));
-  if (status === "answer" && citations.length === 0) status = "insufficient_evidence";
+  if (status2 === "answer" && citations.length === 0) status2 = "insufficient_evidence";
   if (!text2) {
-    status = "insufficient_evidence";
+    status2 = "insufficient_evidence";
     text2 = "앱에 있는 공식 근거 자료에서 이 질문의 답을 찾지 못했어요. 노무 전문가와 확인해 주세요.";
   }
-  return { status, text: text2, citations };
+  return { status: status2, text: text2, citations };
 }
 
 // supabase/functions/api/gemini.ts
@@ -7653,7 +7655,7 @@ function judge(ref, prev, now) {
   }
   const pending = now.upcoming.filter((u) => !u.known);
   const soon = pending.length ? ` 또 ${pending.map((u) => `${u.effective}부터 바뀌는 개정(제${u.no}호)`).join("·")}이 공포됐어요.` : "";
-  const out = (status, detail) => ({ status, detail: detail.trim(), baseline_hash: bh, baseline_no: bn });
+  const out = (status2, detail) => ({ status: status2, detail: detail.trim(), baseline_hash: bh, baseline_no: bn });
   if (ref.article && !a) return out("missing", `지금 시행 중인 ${ref.lawFull}(제${v.no}호)에서 ${ref.article}를 찾지 못했어요. 삭제·이동됐는지 원문을 확인해 주세요.`);
   if (a && bh && a.hash !== bh)
     return out("changed", `검증한 원문(제${bn}호)과 지금 시행 중인 조문(제${v.no}호, ${v.effective} 시행)이 달라요. 원문을 확인하고 rules.json을 고쳐 주세요.${soon}`);
@@ -7922,6 +7924,49 @@ async function reissuePoster(db, workplaceId) {
 async function verifyClockQr(db, workplaceId, code) {
   if (code == null || code === "") return null;
   return verifyCode(code, await keysFor(db, workplaceId), Date.now());
+}
+
+// supabase/functions/_shared/calfeed-core.ts
+function newFeedToken() {
+  const b = crypto.getRandomValues(new Uint8Array(32));
+  let bin = "";
+  for (const x of b) bin += String.fromCharCode(x);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function feedLinks(projectUrl2, token) {
+  const https = `${projectUrl2.replace(/\/+$/, "")}/functions/v1/public-api/calendar/${token}.ics`;
+  const webcal = https.replace(/^https:/, "webcal:");
+  return { https, webcal, google: `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcal)}` };
+}
+
+// supabase/functions/_shared/calfeed.ts
+var projectUrl = () => Deno.env.get("SUPABASE_URL");
+function status(row) {
+  if (!row) return { connected: false, links: null, createdAt: null, lastFetchedAt: null };
+  return { connected: true, links: feedLinks(projectUrl(), row.token), createdAt: row.created_at, lastFetchedAt: row.last_fetched_at };
+}
+async function readFeed(workplaceId) {
+  const { data, error } = await serviceClient().from("calendar_feeds").select("workplace_id, token, created_at, last_fetched_at").eq("workplace_id", workplaceId).maybeSingle();
+  if (error) throw error;
+  return data ?? null;
+}
+async function feedStatus(workplaceId) {
+  return status(await readFeed(workplaceId));
+}
+async function feedAction(workplaceId, userId, action) {
+  const db = serviceClient();
+  if (action === "delete") {
+    const { error: error2 } = await db.from("calendar_feeds").delete().eq("workplace_id", workplaceId);
+    if (error2) throw error2;
+    return status(null);
+  }
+  if (action !== "create" && action !== "rotate") throw bad("action은 'create' · 'rotate' · 'delete' 중 하나예요");
+  const existing = await readFeed(workplaceId);
+  if (existing && action === "create") return status(existing);
+  const row = { workplace_id: workplaceId, token: newFeedToken(), created_by: userId, created_at: (/* @__PURE__ */ new Date()).toISOString(), last_fetched_at: null };
+  const { error } = await db.from("calendar_feeds").upsert(row, { onConflict: "workplace_id" });
+  if (error) throw error;
+  return status(row);
 }
 
 // supabase/functions/api/handler.ts
@@ -8378,6 +8423,11 @@ async function ownerRoutes(req, db, user, path, body, url) {
     const r = await kakaoRoutes(req, db, user, path, body);
     if (r) return r;
     throw notFound(`없는 경로예요: owner/${path}`);
+  }
+  if (path === "calendar-feed") {
+    const owned = await ownerWorkplace(db, user.id);
+    if (!owned) throw notFound("사업장이 없어요. 먼저 사업장을 만들어 주세요");
+    return json(req, m === "POST" ? await feedAction(owned.id, user.id, body.action) : await feedStatus(owned.id));
   }
   const ctx = await ownerCtx(db, user);
   const { state, base, wp } = ctx;

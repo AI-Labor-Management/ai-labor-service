@@ -15,6 +15,7 @@ import * as K from '../_shared/kakao.ts';
 import { checkDataGoKr, ensureHolidays } from '../_shared/datagokr.ts';
 import { checkLawApi, lastLawWatchAt, lawApiConfigured, runLawWatch } from '../_shared/lawapi.ts';
 import { ownerClockQr, reissuePoster, verifyClockQr } from '../_shared/clockqr.ts';
+import { feedAction, feedStatus } from '../_shared/calfeed.ts';
 
 type Body = Record<string, unknown>;
 type User = { id: string; email: string | null; token: string };
@@ -523,6 +524,12 @@ async function ownerRoutes(req: Request, db: Db, user: User, path: string, body:
     const r = await kakaoRoutes(req, db, user, path, body);
     if (r) return r;
     throw notFound(`없는 경로예요: owner/${path}`);
+  }
+  // 구글 캘린더 연결 (구독 주소): GET 상태 · POST { action: create | rotate | delete }
+  if (path === 'calendar-feed') {
+    const owned = await ownerWorkplace(db, user.id);
+    if (!owned) throw notFound('사업장이 없어요. 먼저 사업장을 만들어 주세요');
+    return json(req, m === 'POST' ? await feedAction(owned.id, user.id, body.action) : await feedStatus(owned.id));
   }
   const ctx = await ownerCtx(db, user);
   const { state, base, wp } = ctx;
