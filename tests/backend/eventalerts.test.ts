@@ -64,5 +64,5 @@ describe('지역 확인', () => {
 });
 
 it('처리방침 변경 시행일 (사람샘각 Privacy.tsx와 같아야 함)', () => {
-  expect(EVENT_ALERT_POLICY_FROM).toBe('2026-11-22');
+  expect(EVENT_ALERT_POLICY_FROM).toBe('2026-11-15'); // 11-22 예정 → 운영자 결정으로 11-15 바로 시행
 });

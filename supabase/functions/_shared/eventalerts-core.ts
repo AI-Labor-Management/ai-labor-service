@@ -2,8 +2,9 @@
 import type { TourEvent } from './datagokr-core.ts';
 
 /** 개인정보 처리방침 변경(행사 알림: 지역 저장 · 카카오톡 알림 내용 추가) 시행일 — 이날부터 켜기를 받고 알림을 보낸다.
- *  사람샘각 src/pages/public/Privacy.tsx EVENT_ALERT_CHANGE와 같아야 한다 */
-export const EVENT_ALERT_POLICY_FROM = '2026-11-22';
+ *  사람샘각 src/pages/public/Privacy.tsx EVENT_ALERT_CHANGE와 같아야 한다.
+ *  2026-11-15에 알리고 11-22 시행 예정이었으나, 운영자 결정으로 2026-11-15 바로 시행 */
+export const EVENT_ALERT_POLICY_FROM = '2026-11-15';
 /** 행사 며칠 전에 알릴지 */
 export const EVENT_ALERT_DAYS = [3, 1] as const;
 export type AlertBefore = (typeof EVENT_ALERT_DAYS)[number];

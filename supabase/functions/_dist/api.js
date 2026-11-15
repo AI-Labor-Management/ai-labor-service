@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/api/handler.ts (npm run build:functions)
-// sha256:0465fb3bb473
+// sha256:927d85b1980d
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -7970,7 +7970,7 @@ async function feedAction(workplaceId, userId, action) {
 }
 
 // supabase/functions/_shared/eventalerts-core.ts
-var EVENT_ALERT_POLICY_FROM = "2026-11-22";
+var EVENT_ALERT_POLICY_FROM = "2026-11-15";
 var EVENT_ALERT_DAYS = [3, 1];
 function parseRegion(v) {
   if (!v || typeof v !== "object") return null;

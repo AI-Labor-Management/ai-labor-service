@@ -2,7 +2,7 @@
 -- 사장님이 '행사 알림 받기'를 켜면 고른 지역(시·도 · 시·군·구 코드와 이름)을 사업장마다 하나 저장한다. 끄면 줄을 지운다.
 -- 매일 알림(cron-daily)이 이 지역의 한국관광공사 TourAPI 축제·행사 중 3일 뒤 · 내일 시작하는 것을
 -- 앱 안 알림과 카카오톡(연결한 경우)으로 알린다. 지역 코드만 TourAPI에 보내고 사용자 정보는 보내지 않는다.
--- 개인정보 처리방침 변경 시행일(2026-11-22) 전에는 서버가 켜기를 받지 않는다 (_shared/eventalerts-core.ts EVENT_ALERT_POLICY_FROM).
+-- 개인정보 처리방침 변경 시행일 전에는 서버가 켜기를 받지 않는다 (_shared/eventalerts-core.ts EVENT_ALERT_POLICY_FROM — 11-22 예정이었으나 운영자 결정으로 2026-11-15 바로 시행).
 
 create table public.event_alerts (
   workplace_id uuid primary key references public.workplaces (id) on delete cascade,

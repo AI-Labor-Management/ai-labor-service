@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/cron-daily/handler.ts (npm run build:functions)
-// sha256:ffed4f25e1bc
+// sha256:38a5a7b9dc75
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -6769,7 +6769,7 @@ async function tourEvents(sido, sigungu, from, days) {
 }
 
 // supabase/functions/_shared/eventalerts-core.ts
-var EVENT_ALERT_POLICY_FROM = "2026-11-22";
+var EVENT_ALERT_POLICY_FROM = "2026-11-15";
 var EVENT_ALERT_DAYS = [3, 1];
 var LONG_EVENT_DAYS = 31;
 var dayMs = 864e5;

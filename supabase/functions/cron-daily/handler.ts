@@ -1,6 +1,6 @@
 // Edge Function `cron-daily` — 하루 1번(pg_cron) 기한 알림을 만들고 보관 기간을 정리한다 (verify_jwt = false, x-cron-secret 검사)
 // 알림 규칙(11_F4): 30·7·3일 전 + 당일, 매달 반복(급여일)은 3일 전·당일, 기한이 지나면 다음 날 한 번 위험 알림.
-// 동네 행사(2026-11-22~): 행사 알림을 켠 사업장은 그 지역 축제·행사 중 3일 뒤 · 내일 시작하는 것을 같은 알림에 더한다 (_shared/eventalerts*.ts).
+// 동네 행사(2026-11-15~, 운영자 결정으로 11-22 예정을 앞당김): 행사 알림을 켠 사업장은 그 지역 축제·행사 중 3일 뒤 · 내일 시작하는 것을 같은 알림에 더한다 (_shared/eventalerts*.ts).
 // 채널: 앱 안 알림은 늘 쌓는다. 카카오톡(나에게 보내기)은 키(KAKAO_REST_KEY·KAKAO_CLIENT_SECRET)가 있고
 //       사장님이 연결했을 때만 같은 내용을 한 번 보낸다 (_shared/kakao.ts). 아니면 발송 기록에 'not-connected'.
 import { engine as E } from '../_shared/engine.ts';
