@@ -16,6 +16,7 @@ import { checkDataGoKr, ensureHolidays } from '../_shared/datagokr.ts';
 import { checkLawApi, lastLawWatchAt, lawApiConfigured, runLawWatch } from '../_shared/lawapi.ts';
 import { ownerClockQr, reissuePoster, verifyClockQr } from '../_shared/clockqr.ts';
 import { feedAction, feedStatus } from '../_shared/calfeed.ts';
+import { eventAlertAction, eventAlertStatus } from '../_shared/eventalerts.ts';
 
 type Body = Record<string, unknown>;
 type User = { id: string; email: string | null; token: string };
@@ -530,6 +531,12 @@ async function ownerRoutes(req: Request, db: Db, user: User, path: string, body:
     const owned = await ownerWorkplace(db, user.id);
     if (!owned) throw notFound('사업장이 없어요. 먼저 사업장을 만들어 주세요');
     return json(req, m === 'POST' ? await feedAction(owned.id, user.id, body.action) : await feedStatus(owned.id));
+  }
+  // 동네 행사 알림: GET 상태 · POST { action: 'on', region } | { action: 'off' } (마이그레이션 22)
+  if (path === 'event-alerts') {
+    const owned = await ownerWorkplace(db, user.id);
+    if (!owned) throw notFound('사업장이 없어요. 먼저 사업장을 만들어 주세요');
+    return json(req, m === 'POST' ? await eventAlertAction(owned.id, user.id, body) : await eventAlertStatus(owned.id));
   }
   const ctx = await ownerCtx(db, user);
   const { state, base, wp } = ctx;

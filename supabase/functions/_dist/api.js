@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/api/handler.ts (npm run build:functions)
-// sha256:0f90e2f87037
+// sha256:0465fb3bb473
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -5047,15 +5047,15 @@ function computeDeadlines(state, base) {
     if (r.showFrom && base < r.showFrom && diffDays(base, r.date) > 30) continue;
     const handled = state.deadlineActions.find((a) => a.key === r.key) ?? null;
     const days = diffDays(base, r.date);
-    let status2;
+    let status3;
     const autoDoneAction = r.autoDone ? { key: r.key, action: "done", at: "", date: base, note: "연결된 화면에서 처리됨" } : null;
     const h = handled ?? autoDoneAction;
-    if (h && h.action !== "unknown") status2 = "done";
-    else if (r.employee && r.employee.onboarding === "existing-pending" && r.date < r.employee.registeredAt) status2 = "onboarding";
-    else if (days < 0) status2 = "overdue";
-    else if (days <= 7) status2 = "due7";
-    else if (days <= 30) status2 = "due30";
-    else status2 = "later";
+    if (h && h.action !== "unknown") status3 = "done";
+    else if (r.employee && r.employee.onboarding === "existing-pending" && r.date < r.employee.registeredAt) status3 = "onboarding";
+    else if (days < 0) status3 = "overdue";
+    else if (days <= 7) status3 = "due7";
+    else if (days <= 30) status3 = "due30";
+    else status3 = "later";
     const alerts = alertDates(r.date, !!r.recurring);
     out.push({
       key: r.key,
@@ -5073,11 +5073,11 @@ function computeDeadlines(state, base) {
       ruleIds: r.ruleIds ?? [],
       actions: r.actions ?? ["done"],
       handled: h,
-      status: status2,
+      status: status3,
       days,
       dLabel: dDayLabel(days),
       alerts,
-      nextAlert: status2 === "done" ? null : alerts.find((a) => a >= base) ?? null
+      nextAlert: status3 === "done" ? null : alerts.find((a) => a >= base) ?? null
     });
   }
   return out.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.key < b.key ? -1 : 1);
@@ -6768,9 +6768,9 @@ function corsHeaders(req) {
   };
 }
 var HttpError = class extends Error {
-  constructor(status2, message, detail) {
+  constructor(status3, message, detail) {
     super(message);
-    this.status = status2;
+    this.status = status3;
     this.detail = detail;
   }
   status;
@@ -6780,9 +6780,9 @@ var bad = (msg, detail) => new HttpError(400, msg, detail);
 var forbidden = (msg = "권한이 없어요") => new HttpError(403, msg);
 var notFound = (msg = "찾을 수 없어요") => new HttpError(404, msg);
 var conflict = (msg) => new HttpError(409, msg);
-function json(req, body, status2 = 200, headers = {}) {
+function json(req, body, status3 = 200, headers = {}) {
   return new Response(JSON.stringify(body), {
-    status: status2,
+    status: status3,
     headers: { "Content-Type": "application/json; charset=utf-8", ...corsHeaders(req), ...headers }
   });
 }
@@ -6807,8 +6807,8 @@ function handleError(req, e) {
   if (e instanceof HttpError) return json(req, { error: e.message, detail: e.detail ?? null }, e.status);
   const pg = e;
   if (pg && typeof pg.message === "string" && pg.code) {
-    const status2 = pg.code === "42501" ? 403 : pg.code === "23505" ? 409 : 400;
-    return json(req, { error: pg.message, code: pg.code }, status2);
+    const status3 = pg.code === "42501" ? 403 : pg.code === "23505" ? 409 : 400;
+    return json(req, { error: pg.message, code: pg.code }, status3);
   }
   console.error("unhandled", e);
   return json(req, { error: "서버 오류가 났어요. 잠시 후 다시 시도하세요" }, 500);
@@ -6936,15 +6936,15 @@ function toAiAnswer(content, checkedAt) {
     }
   }
   const m = text2.match(/\[상태\s*:\s*(answer|insufficient_evidence|expert_required)\]/);
-  let status2 = m?.[1] ?? "answer";
+  let status3 = m?.[1] ?? "answer";
   text2 = text2.replace(/\[상태\s*:\s*[a-z_]+\]\s*/g, "").replace(/\*\*(.+?)\*\*/g, "$1").replace(/^#+\s*/gm, "").trim();
   const citations = [...seen].slice(0, 5).map(([url, title]) => ({ title, url, checkedAt }));
-  if (status2 === "answer" && citations.length === 0) status2 = "insufficient_evidence";
+  if (status3 === "answer" && citations.length === 0) status3 = "insufficient_evidence";
   if (!text2) {
-    status2 = "insufficient_evidence";
+    status3 = "insufficient_evidence";
     text2 = "공식 자료에서 확인할 수 있는 근거를 찾지 못했어요. 노무 전문가와 확인해 주세요.";
   }
-  return { status: status2, text: text2, citations };
+  return { status: status3, text: text2, citations };
 }
 
 // supabase/functions/api/ai-model.ts
@@ -7028,7 +7028,7 @@ var ANSWER_SCHEMA = {
 var STATUSES = /* @__PURE__ */ new Set(["answer", "insufficient_evidence", "expert_required"]);
 function toGroundedAnswer(raw, docs, checkedAt) {
   const o = raw && typeof raw === "object" ? raw : {};
-  let status2 = typeof o.status === "string" && STATUSES.has(o.status) ? o.status : "insufficient_evidence";
+  let status3 = typeof o.status === "string" && STATUSES.has(o.status) ? o.status : "insufficient_evidence";
   let text2 = (typeof o.text === "string" ? o.text : "").replace(/\[[RF]:[^\]]+\]/g, "").replace(/(^|[^\w])[RF]:[A-Za-z][\w.-]*/g, "$1").replace(/[ \t]*\(\s*\)/g, "").replace(/:[ \t]*,[ \t]*/g, ": ").replace(/[ \t]*,[ \t]*(?=,|\.|\n|$)/g, "").replace(/\n?[ \t]*·?[ \t]*근거:[ \t]*(?=\n|$)/g, "").replace(/[ \t]+$/gm, "").replace(/\*\*(.+?)\*\*/g, "$1").replace(/^#+\s*/gm, "").trim();
   const byId = new Map(docs.map((d) => [d.id, d]));
   const seen = /* @__PURE__ */ new Map();
@@ -7037,12 +7037,12 @@ function toGroundedAnswer(raw, docs, checkedAt) {
     if (d && !seen.has(d.url)) seen.set(d.url, d.title);
   }
   const citations = [...seen].slice(0, 5).map(([url, title]) => ({ title, url, checkedAt }));
-  if (status2 === "answer" && citations.length === 0) status2 = "insufficient_evidence";
+  if (status3 === "answer" && citations.length === 0) status3 = "insufficient_evidence";
   if (!text2) {
-    status2 = "insufficient_evidence";
+    status3 = "insufficient_evidence";
     text2 = "앱에 있는 공식 근거 자료에서 이 질문의 답을 찾지 못했어요. 노무 전문가와 확인해 주세요.";
   }
-  return { status: status2, text: text2, citations };
+  return { status: status3, text: text2, citations };
 }
 
 // supabase/functions/api/gemini.ts
@@ -7655,7 +7655,7 @@ function judge(ref, prev, now) {
   }
   const pending = now.upcoming.filter((u) => !u.known);
   const soon = pending.length ? ` 또 ${pending.map((u) => `${u.effective}부터 바뀌는 개정(제${u.no}호)`).join("·")}이 공포됐어요.` : "";
-  const out = (status2, detail) => ({ status: status2, detail: detail.trim(), baseline_hash: bh, baseline_no: bn });
+  const out = (status3, detail) => ({ status: status3, detail: detail.trim(), baseline_hash: bh, baseline_no: bn });
   if (ref.article && !a) return out("missing", `지금 시행 중인 ${ref.lawFull}(제${v.no}호)에서 ${ref.article}를 찾지 못했어요. 삭제·이동됐는지 원문을 확인해 주세요.`);
   if (a && bh && a.hash !== bh)
     return out("changed", `검증한 원문(제${bn}호)과 지금 시행 중인 조문(제${v.no}호, ${v.effective} 시행)이 달라요. 원문을 확인하고 rules.json을 고쳐 주세요.${soon}`);
@@ -7967,6 +7967,58 @@ async function feedAction(workplaceId, userId, action) {
   const { error } = await db.from("calendar_feeds").upsert(row, { onConflict: "workplace_id" });
   if (error) throw error;
   return status(row);
+}
+
+// supabase/functions/_shared/eventalerts-core.ts
+var EVENT_ALERT_POLICY_FROM = "2026-11-22";
+var EVENT_ALERT_DAYS = [3, 1];
+function parseRegion(v) {
+  if (!v || typeof v !== "object") return null;
+  const r = v;
+  const s = (x, max) => typeof x === "string" ? x.trim().slice(0, max) : "";
+  if (typeof r.sido !== "string" || !/^\d{2}$/.test(r.sido)) return null;
+  const sigungu = r.sigungu == null || r.sigungu === "" ? null : r.sigungu;
+  if (sigungu !== null && (typeof sigungu !== "string" || !/^\d{3}$/.test(sigungu))) return null;
+  return { sido: r.sido, sidoName: s(r.sidoName, 20), sigungu, sigunguName: sigungu ? s(r.sigunguName, 30) || null : null };
+}
+
+// supabase/functions/_shared/eventalerts.ts
+var toRegion = (r) => ({ sido: r.sido, sidoName: r.sido_name, sigungu: r.sigungu, sigunguName: r.sigungu ? r.sigungu_name || null : null });
+var available = () => dataGoKrConfigured() && kstToday() >= EVENT_ALERT_POLICY_FROM;
+function status2(row) {
+  return { on: !!row, region: row ? toRegion(row) : null, available: available(), policyFrom: EVENT_ALERT_POLICY_FROM, days: EVENT_ALERT_DAYS };
+}
+async function readRow(workplaceId) {
+  const { data, error } = await serviceClient().from("event_alerts").select("workplace_id, sido, sido_name, sigungu, sigungu_name").eq("workplace_id", workplaceId).maybeSingle();
+  if (error) throw error;
+  return data ?? null;
+}
+async function eventAlertStatus(workplaceId) {
+  return status2(await readRow(workplaceId));
+}
+async function eventAlertAction(workplaceId, userId, body) {
+  const db = serviceClient();
+  if (body.action === "off") {
+    const { error: error2 } = await db.from("event_alerts").delete().eq("workplace_id", workplaceId);
+    if (error2) throw error2;
+    return status2(null);
+  }
+  if (body.action !== "on") throw bad("action은 'on' · 'off' 중 하나예요");
+  if (!available()) throw forbidden(dataGoKrConfigured() ? `행사 알림은 ${EVENT_ALERT_POLICY_FROM}부터 켤 수 있어요` : "지금은 행사 알림을 켤 수 없어요");
+  const region = parseRegion(body.region);
+  if (!region) throw bad("지역(시·도 코드 2자리, 시·군·구 코드 3자리)을 확인해 주세요");
+  const row = {
+    workplace_id: workplaceId,
+    sido: region.sido,
+    sido_name: region.sidoName,
+    sigungu: region.sigungu,
+    sigungu_name: region.sigunguName ?? "",
+    updated_by: userId,
+    updated_at: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  const { error } = await db.from("event_alerts").upsert(row, { onConflict: "workplace_id" });
+  if (error) throw error;
+  return status2(row);
 }
 
 // supabase/functions/api/handler.ts
@@ -8428,6 +8480,11 @@ async function ownerRoutes(req, db, user, path, body, url) {
     const owned = await ownerWorkplace(db, user.id);
     if (!owned) throw notFound("사업장이 없어요. 먼저 사업장을 만들어 주세요");
     return json(req, m === "POST" ? await feedAction(owned.id, user.id, body.action) : await feedStatus(owned.id));
+  }
+  if (path === "event-alerts") {
+    const owned = await ownerWorkplace(db, user.id);
+    if (!owned) throw notFound("사업장이 없어요. 먼저 사업장을 만들어 주세요");
+    return json(req, m === "POST" ? await eventAlertAction(owned.id, user.id, body) : await eventAlertStatus(owned.id));
   }
   const ctx = await ownerCtx(db, user);
   const { state, base, wp } = ctx;

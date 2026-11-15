@@ -1,5 +1,5 @@
 // 자동 생성 파일 — 직접 고치지 마세요. 원본: supabase/functions/cron-daily/handler.ts (npm run build:functions)
-// sha256:04e7c7cd96ca
+// sha256:ffed4f25e1bc
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -6663,6 +6663,24 @@ function parseHolidays(json2) {
   }
   return [...seen].sort(([a], [b]) => a.localeCompare(b)).map(([date, name]) => ({ date, name }));
 }
+var iso8 = (v) => {
+  const d = String(v ?? "");
+  return /^\d{8}$/.test(d) ? `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}` : "";
+};
+function parseFestivals(json2) {
+  const out = [];
+  for (const it of itemsOf(json2)) {
+    const start = iso8(it.eventstartdate);
+    const end = iso8(it.eventenddate) || start;
+    const title = String(it.title ?? "").trim();
+    if (!start || !title) continue;
+    out.push({ id: String(it.contentid ?? `${title}-${start}`), title: title.slice(0, 120), start, end, addr: [it.addr1, it.addr2].map((x) => String(x ?? "").trim()).filter(Boolean).join(" ").slice(0, 160) });
+  }
+  return out;
+}
+function eventsBetween(events, from, to) {
+  return events.filter((e) => e.start <= to && e.end >= from).sort((a, b) => a.start.localeCompare(b.start) || a.title.localeCompare(b.title));
+}
 
 // supabase/functions/_shared/datagokr.ts
 var dataGoKrConfigured = () => !!Deno.env.get("DATA_GO_KR_KEY");
@@ -6678,6 +6696,8 @@ var key = () => {
 };
 var redact = (text) => [rawKey(), key()].filter(Boolean).reduce((t, k) => t.replaceAll(k, "***"), text);
 var HOLIDAY_URL = "https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo";
+var FESTIVAL_URL = "https://apis.data.go.kr/B551011/KorService2/searchFestival2";
+var TOUR = { MobileOS: "ETC", MobileApp: "saram-saemgak" };
 async function getJson(url, params) {
   const q = new URLSearchParams({ serviceKey: key(), _type: "json", ...params });
   const r = await fetch(`${url}?${q}`, { signal: AbortSignal.timeout(15e3) });
@@ -6719,6 +6739,69 @@ async function ensureHolidays(db) {
   const { data, error } = await db.from("holidays_api").select("date, name").order("date");
   if (error || !data) return;
   engine.registerHolidays(data);
+}
+var tourCache = /* @__PURE__ */ new Map();
+async function remember(key2, ttlMs, fn) {
+  const hit = tourCache.get(key2);
+  if (hit && Date.now() - hit.at < ttlMs) return hit.v;
+  const v = await fn();
+  if (tourCache.size > 500) tourCache.clear();
+  tourCache.set(key2, { at: Date.now(), v });
+  return v;
+}
+var ymd8 = (iso) => iso.replaceAll("-", "");
+var addDaysIso = (iso, n) => new Date(Date.parse(`${iso}T00:00:00Z`) + n * 864e5).toISOString().slice(0, 10);
+async function tourEvents(sido, sigungu, from, days) {
+  const to = addDaysIso(from, days);
+  return remember(`events:${sido}:${sigungu ?? ""}:${from}:${days}`, 6 * 36e5, async () => {
+    const r = await getJson(FESTIVAL_URL, {
+      ...TOUR,
+      eventStartDate: ymd8(from),
+      lDongRegnCd: sido,
+      ...sigungu ? { lDongSignguCd: sigungu } : {},
+      numOfRows: "300",
+      pageNo: "1",
+      arrange: "A"
+    });
+    if (r.status !== 200 || resultCode(r.body) !== "0000") throw new Error(`지역 행사: HTTP ${r.status} ${r.text.slice(0, 160)}`);
+    return eventsBetween(parseFestivals(r.body), from, to);
+  });
+}
+
+// supabase/functions/_shared/eventalerts-core.ts
+var EVENT_ALERT_POLICY_FROM = "2026-11-22";
+var EVENT_ALERT_DAYS = [3, 1];
+var LONG_EVENT_DAYS = 31;
+var dayMs = 864e5;
+var utc = (iso) => Date.parse(`${iso}T00:00:00Z`);
+var daysBetween = (a, b) => Math.round((utc(b) - utc(a)) / dayMs);
+var WEEK = ["일", "월", "화", "수", "목", "금", "토"];
+var mdw = (iso) => `${Number(iso.slice(5, 7))}/${Number(iso.slice(8, 10))}(${WEEK[new Date(utc(iso)).getUTCDay()]})`;
+function pickEventAlerts(events, today) {
+  const out = [];
+  for (const e of events) {
+    if (daysBetween(e.start, e.end) > LONG_EVENT_DAYS) continue;
+    const d = daysBetween(today, e.start);
+    if (EVENT_ALERT_DAYS.includes(d)) out.push({ event: e, before: d });
+  }
+  return out.sort((a, b) => a.before - b.before || a.event.title.localeCompare(b.event.title));
+}
+var eventAlertKey = (e, before) => `event:${e.id}:${e.start}:d${before}`.slice(0, 200);
+function eventAlertText(list2) {
+  if (!list2.length) return "";
+  const first = list2[0];
+  const when = first.before === 1 ? "내일" : "3일 뒤";
+  const name = first.event.title.length > 30 ? `${first.event.title.slice(0, 29)}…` : first.event.title;
+  const more = list2.length > 1 ? ` 외 ${list2.length - 1}건` : "";
+  return `동네 행사: ${when} ${mdw(first.event.start)} ${name}${more} — 손님이 늘 수 있어요. 근무표를 확인해 보세요`;
+}
+
+// supabase/functions/_shared/eventalerts.ts
+var toRegion = (r) => ({ sido: r.sido, sidoName: r.sido_name, sigungu: r.sigungu, sigunguName: r.sigungu ? r.sigungu_name || null : null });
+async function allEventRegions() {
+  const { data, error } = await serviceClient().from("event_alerts").select("workplace_id, sido, sido_name, sigungu, sigungu_name");
+  if (error) throw error;
+  return new Map((data ?? []).map((r) => [r.workplace_id, toRegion(r)]));
 }
 
 // supabase/functions/_shared/lawnames.ts
@@ -7052,6 +7135,8 @@ async function handler(req) {
     const kakaoOn = kakaoSwitch && kakaoConfigured();
     const linked = new Set(kakaoOn ? (await must(db.from("kakao_links").select("user_id"))).map((l) => l.user_id) : []);
     const workplaces = await must(db.from("workplaces").select("id, owner_id, base_date_override"));
+    const eventRegions = dataGoKrConfigured() && today >= EVENT_ALERT_POLICY_FROM ? await allEventRegions() : /* @__PURE__ */ new Map();
+    let eventErrors = 0;
     const summary = [];
     for (const wp of workplaces) {
       const base = wp.base_date_override ?? today;
@@ -7069,15 +7154,29 @@ async function handler(req) {
         }
         fresh.push(d);
       }
+      const freshEvents = [];
+      const region = eventRegions.get(wp.id);
+      if (region) {
+        try {
+          for (const p of pickEventAlerts(await tourEvents(region.sido, region.sigungu, base, 3), base)) {
+            const { error: e2 } = await db.from("notification_log").insert({ workplace_id: wp.id, deadline_key: eventAlertKey(p.event, p.before), channel: "inApp", sent_on: base, status: "delivered" });
+            if (!e2) freshEvents.push(p);
+          }
+        } catch {
+          eventErrors++;
+        }
+      }
       let kakao = null;
-      if (fresh.length) {
+      if (fresh.length || freshEvents.length) {
         const first = fresh[0];
-        const text = `오늘 처리할 노무 일 ${fresh.length}건: ${first.title} ${first.status === "overdue" ? "(기한 지남)" : first.dLabel}${fresh.length > 1 ? ` 외 ${fresh.length - 1}건` : ""}`;
+        const dueText = first ? `오늘 처리할 노무 일 ${fresh.length}건: ${first.title} ${first.status === "overdue" ? "(기한 지남)" : first.dLabel}${fresh.length > 1 ? ` 외 ${fresh.length - 1}건` : ""}` : "";
+        const eventText = eventAlertText(freshEvents);
+        const text = [dueText, eventText].filter(Boolean).join("\n");
         let detail = "카카오 연결 대기 — 보내지 않음";
         kakao = "not-connected";
         if (kakaoOn && linked.has(wp.owner_id)) {
           try {
-            await sendMemo(db, wp.owner_id, `[사람샘각] ${text}`);
+            await sendMemo(db, wp.owner_id, `[사람샘각] ${text}`, fresh.length ? "/owner/deadlines" : "/owner/work");
             await recordResult(db, wp.owner_id, base, null);
             kakao = "sent";
             detail = "";
@@ -7087,19 +7186,16 @@ async function handler(req) {
             detail = String(e instanceof Error ? e.message : e).slice(0, 200);
           }
         }
+        const keys2 = [...fresh.map((d) => d.key), ...freshEvents.map((p) => eventAlertKey(p.event, p.before))];
         await db.from("notification_log").insert(
-          fresh.map((d) => ({ workplace_id: wp.id, deadline_key: d.key, channel: "kakao", sent_on: base, status: kakao === "sent" ? "delivered" : kakao, detail }))
+          keys2.map((key2) => ({ workplace_id: wp.id, deadline_key: key2, channel: "kakao", sent_on: base, status: kakao === "sent" ? "delivered" : kakao, detail }))
         );
-        await must(db.from("notifications").insert({
-          workplace_id: wp.id,
-          recipient: "owner",
-          kind: "dailyDigest",
-          text,
-          link: "/owner/deadlines",
-          kakao_status: kakao
-        }));
+        if (dueText)
+          await must(db.from("notifications").insert({ workplace_id: wp.id, recipient: "owner", kind: "dailyDigest", text: dueText, link: "/owner/deadlines", kakao_status: kakao }));
+        if (eventText)
+          await must(db.from("notifications").insert({ workplace_id: wp.id, recipient: "owner", kind: "eventAlert", text: eventText, link: "/owner/work", kakao_status: kakao }));
       }
-      summary.push({ workplaceId: wp.id, alerts: fresh.length, skipped, kakao });
+      summary.push({ workplaceId: wp.id, alerts: fresh.length, events: freshEvents.length, skipped, kakao });
     }
     let kakaoRefreshed = 0;
     if (kakaoOn) {
@@ -7126,7 +7222,7 @@ async function handler(req) {
         lawWatch = { error: String(e instanceof Error ? e.message : e).slice(0, 300) };
       }
     }
-    return json(req, { ok: true, date: today, workplaces: summary.length, summary, kakao: { on: kakaoOn, linked: linked.size, refreshed: kakaoRefreshed }, holidaySync, retention, lawWatch });
+    return json(req, { ok: true, date: today, workplaces: summary.length, summary, kakao: { on: kakaoOn, linked: linked.size, refreshed: kakaoRefreshed }, events: { regions: eventRegions.size, errors: eventErrors }, holidaySync, retention, lawWatch });
   } catch (e) {
     return handleError(req, e);
   }

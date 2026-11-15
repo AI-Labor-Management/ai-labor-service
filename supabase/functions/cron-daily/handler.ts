@@ -1,12 +1,15 @@
 // Edge Function `cron-daily` — 하루 1번(pg_cron) 기한 알림을 만들고 보관 기간을 정리한다 (verify_jwt = false, x-cron-secret 검사)
 // 알림 규칙(11_F4): 30·7·3일 전 + 당일, 매달 반복(급여일)은 3일 전·당일, 기한이 지나면 다음 날 한 번 위험 알림.
+// 동네 행사(2026-11-22~): 행사 알림을 켠 사업장은 그 지역 축제·행사 중 3일 뒤 · 내일 시작하는 것을 같은 알림에 더한다 (_shared/eventalerts*.ts).
 // 채널: 앱 안 알림은 늘 쌓는다. 카카오톡(나에게 보내기)은 키(KAKAO_REST_KEY·KAKAO_CLIENT_SECRET)가 있고
 //       사장님이 연결했을 때만 같은 내용을 한 번 보낸다 (_shared/kakao.ts). 아니면 발송 기록에 'not-connected'.
 import { engine as E } from '../_shared/engine.ts';
 import { kstToday, loadWorkplace, must, serviceClient } from '../_shared/db.ts';
 import { corsHeaders, handleError, HttpError, json } from '../_shared/http.ts';
 import * as K from '../_shared/kakao.ts';
-import { dataGoKrConfigured, ensureHolidays, syncHolidays } from '../_shared/datagokr.ts';
+import { dataGoKrConfigured, ensureHolidays, syncHolidays, tourEvents } from '../_shared/datagokr.ts';
+import { allEventRegions } from '../_shared/eventalerts.ts';
+import { EVENT_ALERT_POLICY_FROM, eventAlertKey, eventAlertText, pickEventAlerts } from '../_shared/eventalerts-core.ts';
 import { lastLawWatchAt, lawApiConfigured, runLawWatch } from '../_shared/lawapi.ts';
 
 export async function handler(req: Request): Promise<Response> {
@@ -37,7 +40,10 @@ export async function handler(req: Request): Promise<Response> {
     const kakaoOn = kakaoSwitch && K.kakaoConfigured();
     const linked = new Set(kakaoOn ? (await must(db.from('kakao_links').select('user_id'))).map((l) => l.user_id) : []);
     const workplaces = await must(db.from('workplaces').select('id, owner_id, base_date_override'));
-    const summary: { workplaceId: string; alerts: number; skipped: number; kakao: 'sent' | 'failed' | 'not-connected' | null }[] = [];
+    // 동네 행사 알림을 켠 사업장의 지역 (처리방침 변경 시행일부터, 행사 자료 키가 있을 때만)
+    const eventRegions = dataGoKrConfigured() && today >= EVENT_ALERT_POLICY_FROM ? await allEventRegions() : new Map();
+    let eventErrors = 0;
+    const summary: { workplaceId: string; alerts: number; events: number; skipped: number; kakao: 'sent' | 'failed' | 'not-connected' | null }[] = [];
     for (const wp of workplaces) {
       // 기준일을 고정한 데모 사업장은 그 날짜로 계산한다
       const base = wp.base_date_override ?? today;
@@ -56,15 +62,30 @@ export async function handler(req: Request): Promise<Response> {
         }
         fresh.push(d);
       }
+      // 동네 행사: 3일 뒤 · 내일 시작하는 행사 (같은 행사 · 같은 날은 한 번만). 행사 자료를 못 받아도 기한 알림은 그대로 보낸다
+      const freshEvents: ReturnType<typeof pickEventAlerts> = [];
+      const region = eventRegions.get(wp.id);
+      if (region) {
+        try {
+          for (const p of pickEventAlerts(await tourEvents(region.sido, region.sigungu, base, 3), base)) {
+            const { error: e2 } = await db.from('notification_log').insert({ workplace_id: wp.id, deadline_key: eventAlertKey(p.event, p.before), channel: 'inApp', sent_on: base, status: 'delivered' });
+            if (!e2) freshEvents.push(p);
+          }
+        } catch {
+          eventErrors++;
+        }
+      }
       let kakao: 'sent' | 'failed' | 'not-connected' | null = null;
-      if (fresh.length) {
+      if (fresh.length || freshEvents.length) {
         const first = fresh[0];
-        const text = `오늘 처리할 노무 일 ${fresh.length}건: ${first.title} ${first.status === 'overdue' ? '(기한 지남)' : first.dLabel}${fresh.length > 1 ? ` 외 ${fresh.length - 1}건` : ''}`;
+        const dueText = first ? `오늘 처리할 노무 일 ${fresh.length}건: ${first.title} ${first.status === 'overdue' ? '(기한 지남)' : first.dLabel}${fresh.length > 1 ? ` 외 ${fresh.length - 1}건` : ''}` : '';
+        const eventText = eventAlertText(freshEvents);
+        const text = [dueText, eventText].filter(Boolean).join('\n');
         let detail = '카카오 연결 대기 — 보내지 않음';
         kakao = 'not-connected';
         if (kakaoOn && linked.has(wp.owner_id)) {
           try {
-            await K.sendMemo(db, wp.owner_id, `[사람샘각] ${text}`);
+            await K.sendMemo(db, wp.owner_id, `[사람샘각] ${text}`, fresh.length ? '/owner/deadlines' : '/owner/work');
             await K.recordResult(db, wp.owner_id, base, null);
             kakao = 'sent';
             detail = '';
@@ -74,19 +95,16 @@ export async function handler(req: Request): Promise<Response> {
             detail = String(e instanceof Error ? e.message : e).slice(0, 200);
           }
         }
+        const keys = [...fresh.map((d) => d.key), ...freshEvents.map((p) => eventAlertKey(p.event, p.before))];
         await db.from('notification_log').insert(
-          fresh.map((d) => ({ workplace_id: wp.id, deadline_key: d.key, channel: 'kakao', sent_on: base, status: kakao === 'sent' ? 'delivered' : kakao!, detail })),
+          keys.map((key) => ({ workplace_id: wp.id, deadline_key: key, channel: 'kakao', sent_on: base, status: kakao === 'sent' ? 'delivered' : kakao!, detail })),
         );
-        await must(db.from('notifications').insert({
-          workplace_id: wp.id,
-          recipient: 'owner',
-          kind: 'dailyDigest',
-          text,
-          link: '/owner/deadlines',
-          kakao_status: kakao,
-        }));
+        if (dueText)
+          await must(db.from('notifications').insert({ workplace_id: wp.id, recipient: 'owner', kind: 'dailyDigest', text: dueText, link: '/owner/deadlines', kakao_status: kakao }));
+        if (eventText)
+          await must(db.from('notifications').insert({ workplace_id: wp.id, recipient: 'owner', kind: 'eventAlert', text: eventText, link: '/owner/work', kakao_status: kakao }));
       }
-      summary.push({ workplaceId: wp.id, alerts: fresh.length, skipped, kakao });
+      summary.push({ workplaceId: wp.id, alerts: fresh.length, events: freshEvents.length, skipped, kakao });
     }
     // 카카오 갱신 토큰은 2달 동안 안 쓰면 만료된다 — 만료 한 달 안쪽이면 오늘 미리 갱신해 둔다
     let kakaoRefreshed = 0;
@@ -116,7 +134,7 @@ export async function handler(req: Request): Promise<Response> {
         lawWatch = { error: String(e instanceof Error ? e.message : e).slice(0, 300) };
       }
     }
-    return json(req, { ok: true, date: today, workplaces: summary.length, summary, kakao: { on: kakaoOn, linked: linked.size, refreshed: kakaoRefreshed }, holidaySync, retention, lawWatch });
+    return json(req, { ok: true, date: today, workplaces: summary.length, summary, kakao: { on: kakaoOn, linked: linked.size, refreshed: kakaoRefreshed }, events: { regions: eventRegions.size, errors: eventErrors }, holidaySync, retention, lawWatch });
   } catch (e) {
     return handleError(req, e);
   }
