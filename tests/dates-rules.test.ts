@@ -48,6 +48,7 @@ describe('규칙 파일 (rules.json)', () => {
     expect(r.sources.some((s) => s.law === '근로기준법' && s.article === '제107조')).toBe(true);
     expect(r.sources.some((s) => s.law === '퇴직급여법' && s.article === '제43조')).toBe(true);
     expect(r.note).toContain('1~4명 사업장도 적용');
+    // 개정 시행 전날에는 이 값을 쓰지 않는다 (그 전 벌칙은 3년/3천만원)
     expect(resolveRule('penalty.wageArrears', '2026-10-07').ok).toBe(false);
   });
   it('출산·육아·벌칙 규칙 — 현행 원문 인용과 공포번호를 갖고, 1~4명에도 적용된다고 안내한다', () => {
@@ -118,4 +119,36 @@ describe('규칙 파일 (rules.json)', () => {
     const she = resolveRule('sexualHarassmentEducation', '2026-11-27');
     expect(she.ok && she.sources.some((s) => s.law === '남녀고용평등법' && !!s.quote?.includes('법인의 대표자, 상급자'))).toBe(true);
   });
+  it('11-20 반영한 벌칙 조문 시행 예정 7건 — 금액은 같고 시행일부터 근거가 새 판으로 바뀐다', () => {
+    const cases: [string, string, string, string, string][] = [
+      // [규칙, 시행 전날, 시행일, 조문, 새 판 공포번호]
+      ['hiring.gender', '2026-11-26', '2026-11-27', '남녀고용평등법#제2조', '제21700호'],
+      ['hiring.gender', '2026-11-26', '2026-11-27', '남녀고용평등법#제37조', '제21700호'],
+      ['leave.parental', '2026-11-26', '2026-11-27', '남녀고용평등법#제37조', '제21700호'],
+      ['leave.spouseBirth', '2026-11-26', '2026-11-27', '남녀고용평등법#제39조', '제21700호'],
+      ['leave.maternity', '2026-12-07', '2026-12-08', '근로기준법#제110조', '제21533호'],
+      ['leave.maternity', '2027-06-09', '2027-06-10', '근로기준법#제110조', '제21784호'],
+      ['penalty.main', '2026-12-07', '2026-12-08', '최저임금법#제28조', '제21534호'],
+      ['penalty.main', '2026-12-07', '2026-12-08', '근로기준법#제114조', '제21533호'],
+      ['penalty.main', '2026-12-31', '2027-01-01', '근로기준법#제116조', '제21472호'],
+      ['penalty.main', '2027-06-09', '2027-06-10', '근로기준법#제110조', '제21784호'],
+    ];
+    for (const [id, before, from, ref, no] of cases) {
+      const a = resolveRule(id, before);
+      const b = resolveRule(id, from);
+      expect(a.ok && b.ok, id).toBe(true);
+      if (!a.ok || !b.ok) continue;
+      expect(b.value, id).toEqual(a.value);
+      expect(b.effectiveFrom, id).toBe(from);
+      expect(b.note, id).toBeTruthy();
+      expect(
+        b.sources.some((s) => `${s.law}#${s.article}` === ref && s.check?.versionStatus === 'scheduled' && !!s.check.lawNumber?.includes(no)),
+        `${id} ${ref}`,
+      ).toBe(true);
+    }
+    // 바뀌지 않는 조문은 지금 판 그대로 (예: 출산전후휴가 일수 근거 제74조)
+    const mat = resolveRule('leave.maternity', '2026-12-08');
+    expect(mat.ok && mat.sources.filter((s) => s.article === '제74조').every((s) => s.check?.versionStatus === 'current')).toBe(true);
+  });
 });
+
